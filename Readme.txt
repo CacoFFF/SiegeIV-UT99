@@ -30,6 +30,7 @@ Example: GameProfile=SiegePub
 ImageDrop fixer:
 ==============================
 Setting is reflected in runtime, setting SiegeGI.bDisableIDropFix to true disables it
+Should only work with clients running XC_Engine without the default FCollisionHash. (too many crashes without it)
 
 
 ==============================
@@ -66,8 +67,7 @@ Other utils to check out
 Contact me for the private ones
 ==============================
 - AdminAlert - Moderate noobs and griefers removing buildings.
-- ExtendedClientMove - For better client simulation of jetpacks and antigravity stuff.
-- NetRateMod - (INCLUDED) - Ideal for super high traffic servers (>16 players).
+- NetRateMod - Ideal for super high traffic servers (>16 players).
 - FerBotz - Test AI, default bots won't work in this gametype.
 - CacusTeamBalancer - (Win32 Native) - 4way Siege supporting team balancer, contact Higor.
 - LCWeapons - Mod friendly lag compensation, supports Siege weapons as well.
