@@ -1,5 +1,11 @@
 //Dummy player pawn created with the purpose of debugging movement netcode
 
+/*
+Do not remove, enable this class whenever you want to experiment
+client simulation of physics and movement alterations done to
+the player.
+This is based on the default ut99 netcode.
+*/
 class SiegePlayer expands TBoss;
 
 

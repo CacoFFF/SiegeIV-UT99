@@ -1,4 +1,4 @@
-class sgSupplierQueuer expands Info;
+class sgSupplierQueuer expands SiegeActor;
 
 var float SupplierRadius;
 var pawn POwner;
@@ -44,7 +44,7 @@ event Tick( float DeltaTime)
 
 //ONLY CALL THIS IF I AM THE MAIN QUEUER!!!!
 //IGNORING SANITY CHECKS DUE TO SPEED REASONS
-function Push()
+function Pawn Push()
 {
 	local sgSupplierQueuer aQ;
 	
@@ -55,6 +55,7 @@ function Push()
 		aQ = aQ.nextQueuer;
 	aQ.nextQueuer = self;
 	nextQueuer = none;
+	return Master.QueuerList.POwner; //Now gives us the next pawn to be supplied
 }
 
 event Destroyed()

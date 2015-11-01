@@ -2,6 +2,13 @@
 // WildcardsPoisonGuardian.
 //
 // Optimized by Higor
+// Too many speed affecters will do funky stuff on the player... we need to
+// make it so speed affecters stack and apply each on top of the player's
+// default movement speed.
+// sgPlayerData could totally take care of this...
+//
+// MeshFX fatness and size should vary in real time - TODO later
+//
 //=============================================================================
 class WildcardsPoisonGuardian expands sgGuardian;
 

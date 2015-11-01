@@ -5,6 +5,7 @@
 // Null Orb - When attached to a building prevents the enemy from earning ru 
 // for attacking it
 //
+// Gotta deprecate this one day... without losing the idea of the Null Orb - HIGOR
 //=============================================================================
 class WildcardsOrbs expands Actor;
 

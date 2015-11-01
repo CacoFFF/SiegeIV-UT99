@@ -1,6 +1,9 @@
 //*********************************
 // Correct a player's location here
 //*********************************
+
+// Higor: since the collision hulls are movers now...
+// do we even need this to correct a player's position in a platform?
 class sgTouchCorrector expands SiegeActor;
 
 

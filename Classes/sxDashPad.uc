@@ -1,6 +1,13 @@
 //=============================================================================
 // sxDashPad.
 // Written By WILDCARD
+//
+// Higor notes:
+// We've got to fix this, probably rewrite it from scratch
+// We could use a simple 3d model that actually looks like a dash pad too
+// And in the meantime, make it directional as in Sonic games LELEL
+// The build could look like a simple platform...
+// but above a holographic pad is drawn with arrows and all marking direction
 //=============================================================================
 class sxDashPad extends sgBuilding;
 

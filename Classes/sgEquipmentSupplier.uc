@@ -12,6 +12,7 @@ var bool	bProtected;
 var bool AnnounceImmunity;
 var config int SuppProtectTimeSecs;
 var int Count;
+var int SupplyLoops; //How many times do we call Supply()?
 var string ProtectionExpired;
 var float PenaltyFactor;
 
@@ -22,7 +23,8 @@ var float RotationTime;
 simulated function CompleteBuilding()
 {
 	local pawn P;
-
+	local int i;
+	
 	if ( Role != ROLE_Authority )
         return;
 
@@ -42,13 +44,17 @@ simulated function CompleteBuilding()
 	P = FindTarget();
 	if ( P == none )
 		return;
-	Supply(P);
 
-	if ( QueuerList != none )
+	//For simple suppliers, gain ability to multi-supply on a Timer
+	For ( i=0 ; i<SupplyLoops ; i++ )
 	{
-		QueuerTimer -= 0.1;
-		if ( (QueuerList.nextQueuer != none) && (QueuerTimer <= 0) )
-			QueuerList.Push();
+		Supply(P);
+		if ( QueuerList != none )
+		{
+			QueuerTimer -= 0.1;
+			if ( (QueuerList.nextQueuer != none) && (QueuerTimer <= 0) )
+				P = QueuerList.Push();
+		}
 	}
 }
 
@@ -125,4 +131,5 @@ defaultproperties
      SkinRedTeam=None
      SkinBlueTeam=None
      RotationTime=0.2
+	 SupplyLoops=1
 }
