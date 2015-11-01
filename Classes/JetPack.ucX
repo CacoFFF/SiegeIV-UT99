@@ -1,0 +1,386 @@
+//=============================================================================
+// Jetpack.
+//=============================================================================
+class Jetpack extends TournamentPickup
+    config;
+
+#exec OBJ LOAD File=Extro.uax
+
+#exec OBJ LOAD FILE="Packages\JetpackTextures.utx" PACKAGE=SiegeXtreme-3-Eperimental
+#exec OBJ LOAD FILE="Packages\JetpackBlueFlame.utx" PACKAGE=SiegeXtreme-3-Eperimental
+#exec OBJ LOAD FILE="Packages\JetpackRedFlame.utx" PACKAGE=SiegeXtreme-3-Eperimental
+
+#exec mesh import mesh=JetpackFirefly anivfile=Models\JetpackFirefly_a.3d datafile=Models\JetpackFirefly_d.3d x=0 y=0 z=0 mlod=0
+#exec mesh origin mesh=JetpackFirefly x=0 y=0 z=0
+#exec mesh sequence mesh=JetpackFirefly seq=All startframe=0 numframes=1
+
+#exec meshmap new meshmap=JetpackFirefly mesh=JetpackFirefly
+//#exec meshmap scale meshmap=JetpackFirefly x=0.15625 y=0.15625 z=0.31250
+
+//#exec MESH ORIGIN MESH=JetpackFirefly X=0 Y=0 Z=-0 YAW=128 ROLL=0 PITCH=-64
+#exec MESH ORIGIN MESH=JetpackFirefly X=0 Y=0 Z=-0 YAW=0 ROLL=63.75 PITCH=127.5
+#exec meshmap scale meshmap=JetpackFirefly x=0.078125 y=0.078125 z=0.15625
+
+/*--- Data. -----------------------------------------------------------------*/
+
+var() float         MaxFuel,
+                    RechargeRate,
+                    Thrust,
+                    MaxVel,
+                    HorizThrust,
+                    MaxHorizVel,
+                    ThrustFrequency;
+var float           Fuel;           // Fuel left, measured in seconds
+var Effects         Trail;
+var bool            SimFall,
+                    ClientSim;
+var float           ThrustTimer;
+
+var config bool     bNoAutoBind;
+
+var config float TournamentFemale_Back, TFemale1_Back, TFemale2_Back, 
+		  TournamentMale_Back, TMale1_Back, TMale2_Back, TBoss_Back;
+
+replication
+{
+    reliable if ( Role < ROLE_Authority )
+        SetJetpack, ToggleJetpack;
+
+    reliable if ( Role == ROLE_Authority )
+        ClientSetBind, ClientActivate, ClientDeactivate;
+
+    unreliable if ( Role == ROLE_Authority )
+        Trail, Fuel, SimFall, ClientSim, MaxFuel, RechargeRate, Thrust, MaxVel,
+        HorizThrust, MaxHorizVel, ThrustFrequency;
+}
+
+function PostBeginPlay()
+{
+    Super.PostBeginPlay();
+    bAutoActivate = false;
+    Fuel = MaxFuel;
+}
+
+function GiveTo(Pawn other)
+{
+    Super.GiveTo(other);
+    if ( Owner == other )
+    {
+        if ( PlayerPawn(Owner) != None )
+        {
+            ClientSetBind();
+            ClientDeactivate();
+        }
+        GotoState('DeActivated');
+    }
+}
+
+/*--- Client Functions. -----------------------------------------------------*/
+function AnnounceAll(string sMessage)
+{
+    local Pawn p;
+
+    for ( p = Level.PawnList; p != None; p = p.nextPawn )
+	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
+          p.PlayerReplicationInfo != None  )
+		    p.ClientMessage(sMessage);
+}
+
+simulated function ClientSetBind()
+{
+    local int key;
+    local string keyName, bind, bindCaps;
+    local PlayerPawn playerOwner;
+
+    playerOwner = PlayerPawn(Owner);
+    if ( playerOwner == None || bNoAutoBind )
+        return;
+
+    for ( key = 0; key < 255; key++ )
+    {
+        keyName = playerOwner.ConsoleCommand("KEYNAME"@key);
+        bind = playerOwner.ConsoleCommand("KEYBINDING"@keyName);
+        bindCaps = Caps(bind);
+
+        if ( Left(bindCaps, 4) == "JUMP" || InStr(bindCaps, " JUMP") != -1 ||
+          InStr(bindCaps, "|JUMP") != -1 )
+        {
+            if ( Left(bindCaps, 10) != "SETJETPACK" &&
+              InStr(bindCaps, " SETJETPACK") == -1 &&
+              InStr(bindCaps, "|SETJETPACK") == -1 &&
+              Left(bindCaps, 13) != "TOGGLEJETPACK" &&
+              InStr(bindCaps, " TOGGLEJETPACK") == -1 &&
+              InStr(bindCaps, "|TOGGLEJETPACK") == -1 )
+            {
+                bind = "SetJetpack 1|"$bind$"|OnRelease SetJetpack 0";
+                playerOwner.ConsoleCommand("SET INPUT"@keyName@bind);
+            }
+        }
+    }
+
+    SaveConfig();
+}
+
+
+
+
+simulated function ClientActivate()
+{
+    if ( Role == ROLE_Authority )
+        return;
+
+    GotoState('Activated');
+}
+
+simulated function ClientDeactivate()
+{
+    if ( Role == ROLE_Authority )
+        return;
+
+    GotoState('DeActivated');
+}
+
+/*--- Console Functions. ----------------------------------------------------*/
+
+exec function ToggleJetpack()
+{
+    GotoState('Activated');
+}
+
+exec function SetJetpack(bool enabled)
+{
+    if ( enabled )
+        GotoState('Activated');
+    else
+        GotoState('DeActivated');
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE Activated.
+ * --------------------------------------------------------------------------*/
+
+state Activated
+{
+    simulated function BeginState()
+    {
+        local UT_Invisibility inv;
+        if ( Role == ROLE_Authority )
+        {
+            if ( Owner.Physics != PHYS_Falling || Fuel <= 0 )
+            {
+                GotoState('DeActivated');
+                return;
+            }
+
+            bActive = true;
+            ClientActivate();
+
+            // Effects
+	    inv = UT_Invisibility(Pawn(Owner).FindInventoryType(class'UT_Invisibility'));
+            if ( Trail == None )
+		if ( inv == None || inv.charge < 160)
+			{
+				Trail = Spawn(class'JetTrail', Owner);
+				Spawn(class'SmokePuff', Owner);
+			}
+
+        }
+        else
+            ThrustTimer = 0;
+
+
+        // Physics
+        if ( PlayerPawn(Owner) != None && SimFall )
+            Pawn(Owner).bSimFall = true;
+
+        // Timing
+        SetTimer(1 / ThrustFrequency, false);
+    }
+
+
+    simulated function EndState()
+    {
+        local sgSpeed sp;
+	sp = sgSpeed(Pawn(Owner).FindInventoryType(class'sgSpeed'));
+	if (sp != None)
+	{
+		sp.GotoState('Activated');
+	}
+        if ( Role == ROLE_Authority )
+        {
+            bActive = false;
+
+            ClientDeactivate();
+
+            // Effects
+            if ( Trail != None )
+            {
+                Trail.Destroy();
+                Trail = None;
+            }
+        }
+
+        // Physics
+        if ( PlayerPawn(Owner) != None )
+            Pawn(Owner).bSimFall = false;
+    }
+
+    simulated function Tick(float deltaTime)
+    {
+	local float pvd;
+
+	bTrailerSameRotation = true;
+	bTrailerPrePivot = true;
+
+/*	
+	if ( MultiSkins[4] == Texture'JetpackMeshFlameBlue' || MultiSkins[4] == Texture'JetpackMeshFlameRed' )
+		spawn(class'BlackSmoke',Owner);
+		*/
+	
+	if ( Owner != None )
+		{
+			if ( TournamentPlayer(Owner) != None )
+				{
+					if ( TournamentFemale(Owner) != None )
+						{
+							pvd = TournamentFemale_Back;
+
+							if ( TFemale1(Owner) != None )
+								pvd = TFemale1_Back;
+							if ( TFemale2(Owner) != None )
+								pvd = TFemale2_Back;
+						}
+					if ( TournamentMale(Owner) != None )
+						{
+							pvd = TournamentMale_Back;
+
+							if ( TMale1(Owner) != None )
+								pvd = TMale1_Back;
+							if ( TMale2(Owner) != None )
+								pvd = TMale2_Back;
+							if ( TBoss(Owner) != None )
+								pvd = TBoss_Back;
+						}
+				}
+			else
+				return;
+		}
+	else
+		return;
+
+	PrePivot = vector(Rotation) * pvd;
+        Fuel = FMax(Fuel - deltaTime, 0);
+		
+		if ( Pawn(owner) != None )
+			{
+				if ( Pawn(owner).PlayerReplicationInfo == None )
+					return;
+
+				if ( Pawn(owner).PlayerReplicationInfo.Team == 0 )
+					{
+						MultiSkins[3] = Texture'JetMetalRed';
+						MultiSkins[4] = Texture'JetpackMeshFlameRed';
+					}
+				if ( Pawn(owner).PlayerReplicationInfo.Team == 1 )
+					{
+						MultiSkins[3] = Texture'JetMetalBlue';
+						MultiSkins[4] = Texture'JetpackMeshFlameBlue';
+					}
+			}
+    }
+
+    simulated function Timer()
+    {
+        local vector horizVel;
+        local rotator rot;
+        local sgSpeed sp;
+
+
+        if ( Role == ROLE_Authority &&
+          (Owner.Physics != PHYS_Falling || Fuel <= 0) )
+        {
+            GotoState('DeActivated');
+            return;
+        }
+
+	sp = sgSpeed(Pawn(Owner).FindInventoryType(class'sgSpeed'));
+	if (sp != None)
+	{
+		sp.GotoState('DeActivated');
+	}
+
+        horizVel = Owner.Velocity;
+        horizVel.Z = 0;
+        rot.Yaw = Owner.Rotation.Yaw;
+        if ( cos((rotator(horizVel).Yaw - rot.Yaw)/32768*pi) *
+          VSize(horizVel) < MaxHorizVel )
+            Owner.Velocity += vector(rot) * HorizThrust * 1 / ThrustFrequency;
+
+        if ( Owner.Velocity.Z < MaxVel )
+            Owner.Velocity.Z = FMin(Owner.Velocity.Z + Thrust *
+              1 / ThrustFrequency, MaxVel);
+
+        SetTimer(1 / ThrustFrequency, false);
+    }
+
+    exec function ToggleJetpack()
+    {
+        GotoState('DeActivated');
+    }
+
+
+
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE DeActivated.
+ * --------------------------------------------------------------------------*/
+
+state DeActivated
+{
+    simulated function Tick(float deltaTime)
+    {
+        Fuel = FMin(Fuel + RechargeRate * deltaTime, MaxFuel);
+    }
+}
+
+defaultproperties
+{
+	 bhidden=False
+     bStatic=False
+     bOwnerNoSee=True
+     Physics=PHYS_Trailer
+     DrawType=DT_Mesh
+     Mesh=Mesh'JetpackFirefly'
+     bCollideWhenPlacing=True
+     MultiSkins(0)=Texture'JetMetal'
+     MultiSkins(1)=Texture'JetTanksLabled'
+     MultiSkins(2)=Texture'JetTanks'
+     MultiSkins(3)=Texture'JetMetalBlue'
+     MultiSkins(4)=FireTexture'JetpackMeshFlameBlue'
+     MaxFuel=3.000000
+     RechargeRate=0.800000
+     Thrust=1500.000000
+     MaxVel=350.000000
+     HorizThrust=250.000000
+     MaxHorizVel=400.000000
+     ThrustFrequency=20.000000
+     ClientSim=True
+     bActivatable=True
+     bDisplayableInv=True
+     PickupMessage="You got the Jetpack."
+     ItemName="Jetpack"
+     RespawnTime=60.000000
+     PickupViewMesh=LodMesh'UnrealI.AsbSuit'
+     ProtectionType1=ProtectNone
+     ProtectionType2=ProtectNone
+     Charge=150
+     MaxDesireability=3.000000
+     PickupSound=Sound'UnrealI.Pickups.FieldSnd'
+     Icon=Texture'UnrealShare.Icons.I_ShieldBelt'
+     bOwnerNoSee=True
+     bTrailerSameRotation=True
+     bGameRelevant=True
+     CollisionRadius=25.000000
+     CollisionHeight=10.000000
+}

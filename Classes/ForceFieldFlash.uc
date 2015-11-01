@@ -1,0 +1,30 @@
+//=============================================================================
+// 
+//=============================================================================
+class ForceFieldFlash expands AnimatedSprite;
+
+defaultproperties
+{
+     SpriteFrame(0)=Texture'ForceFieldFlash001'
+     SpriteFrame(1)=Texture'ForceFieldFlash002'
+     SpriteFrame(2)=Texture'ForceFieldFlash003'
+     SpriteFrame(3)=Texture'ForceFieldFlash004'
+     SpriteFrame(4)=Texture'ForceFieldFlash005'
+     SpriteFrame(5)=Texture'ForceFieldFlash006'
+     SpriteFrame(6)=Texture'ForceFieldFlash007'
+     SpriteFrame(7)=Texture'ForceFieldFlash008'
+     SpriteFrame(8)=Texture'ForceFieldFlash009'
+     SpriteFrame(9)=Texture'ForceFieldFlash010'
+     SpriteFrame(10)=Texture'ForceFieldFlash011'
+     SpriteFrame(11)=Texture'ForceFieldFlash012'
+     SpriteFrame(12)=Texture'ForceFieldFlash013'
+     SpriteFrame(13)=Texture'ForceFieldFlash014'
+     SpriteFrame(14)=Texture'ForceFieldFlash015'
+     SpriteFrame(15)=Texture'ForceFieldFlash016'
+     SpriteFrame(16)=Texture'ForceFieldFlash017'
+     SpriteFrame(17)=Texture'ForceFieldFlash018'
+     SpriteFrame(18)=Texture'ForceFieldFlash019'
+     SpriteFrame(19)=Texture'ForceFieldFlash020'
+     Frames=20
+     AnimationLength=0.250000
+}

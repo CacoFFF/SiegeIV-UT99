@@ -1,0 +1,88 @@
+class sgSupplierTrigger expands Triggers;
+
+var sgEquipmentSupplier Supplier;
+
+//Fixed array with a ceiling, these pawns are located between the supplier's effective radius and the outside boundaries of the collision box
+var Pawn oPawns[24];
+var Pawn iPawns;
+
+function Setup( sgEquipmentSupplier aSup)
+{
+	Supplier = aSup;
+	SetCollisionSize( aSup.SupplyRadius, aSup.SupplyRadius - (class'TournamentPlayer'.default.CollisionHeight - class'TournamentPlayer'.default.CollisionRadius) );
+}
+
+event Tick( float DeltaTime)
+{
+	local int i;
+
+	For ( i=0 ; i<iPawns ; i++ )
+	{
+		if ( oPawns[i] == none || oPawns[i].bDeleteMe || !InTriggerCylinder(oPawns[i]) )
+		{
+			oPawns[i--] = oPawns[--iPawns];
+			oPawns[iPawns] = none;
+		}
+		else if ( InSupplierSphere( oPawns[i] )
+		{
+			Spawn(class'sgSupplierQueuer').Setup( Supplier, oPawns[i]);
+			oPawns[i--] = oPawns[--iPawns];
+			oPawns[iPawns] = none;
+		}
+	}
+	if ( iPawns == 0 )
+		Disable('Tick');
+}
+
+event Touch( actor Other)
+{
+	if ( !Other.IsA('Pawn') || (Pawn(Other).PlayerReplicationInfo == none) || (Pawn(Other).PlayerReplicationInfo.Team != Supplier.Team) || PlayerInArray(Pawn(Other)) )
+		return;
+
+	//See that this player isn't already on queue
+	if ( InSupplierSphere( Pawn(Other) ) )
+	{
+		if ( !InSupplierQueue( Pawn(Other)) )
+			Spawn(class'sgSupplierQueuer').Setup( Supplier, Pawn(Other));
+		return;
+	}
+	oPawns[iPawns++] = Pawn(Other);
+	Enable('Tick');
+}
+
+function bool PlayerInArray( pawn Other)
+{
+	local int i;
+	For ( i=0 ; i<iPawns ; i++ )
+		if ( oPawns[i] == Other )
+			return true;
+	return false;
+}
+
+function bool InSupplierSphere( pawn Other)
+{
+	return (VSize(Other.Location - Supplier.Location) <= (Supplier.SupplyRadius + Other.CollisionRadius));
+}
+
+function bool InSupplierQueue( pawn Other)
+{
+	local sgSupplierQueuer aQ;
+
+	For ( aQ=Supplier.QueuerList ; aQ!=none ; aQ=aQ.nextQueuer )
+		if ( aQ.POwner == Other )
+			return true;
+	return false;
+}
+
+function bool InTriggerCylinder( pawn Other)
+{
+	return (abs(Other.Location.Z - Location.Z) <= CollisionHeight)
+		&&
+		(VSize( (Other.Location - Location) * vect(1,1,0)) < CollisionRadius) ;
+}
+
+defaultproperties
+{
+	bCollideWorld=False
+	bCollideActors=True
+}

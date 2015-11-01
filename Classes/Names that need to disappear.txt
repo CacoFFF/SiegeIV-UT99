@@ -1,0 +1,56 @@
+Update, i'm using my super obfuscator now lel
+=====
+These names MUST disappear to prevent any external modules from using them
+
+I'm using XVI32 hex editor to do it.
+
+nani
+nani2
+HackMe
+ffTmp
+ffRealHit
+ffOther
+ffPos
+ffDelta
+
+
+Obfuscation method:
+Count the characters this name has, then add+1 (previous char is char count including 00 end char).
+Remove the name and it's previous char (counter).
+There will be 6 other chars after that starting with 00,
+Make sure that sequence is 00 00 00 07 00 01
+After that sequence there's another name so be careful.
+
+Important
+EVERY SINGLE TIME you remove a character, count it
+
+After you finished counting, you must enlarge some critical names
+There's 2 functions we must protect which are ffSendHit and ffNoHit.
+The sum of characters should be 24 in this case.
+Find these 2 names, add between the both random gibberish control chars (1-20, 80-0A) all remaining 24 chars.
+Then alter the char counter on each so that the name size isn't wrong.
+This should be it.
+
+
+============>
+Repeat process for every name, and keep adding the removed chars to your counter.
+
+Now we must do the reverse process, find bogus1,2,etc names and add characters to them.
+These names must be unique or we'll get a crash.
+For every char you add to the bogus names, remember to sum to the char counter in front of it.
+(07 is counter, 62 6F 67 75 73 31 is the name)
+
+Let's add 18 chars to bogus1.  > bogusaaaaaaaaaaaaaaaaaa1. use the Insert char function to do it.
+And add 18(dec) to the counter, remember, result has to be in (HEX) representation.
+In this case it is (17 62 6F 67 75.................)
+
+And should be it, if it crashes, you did something wrong
+
+
+
+================
+APPENDIX:
+Names to protect:
+Tester
+ffSendHit
+ffNoHit

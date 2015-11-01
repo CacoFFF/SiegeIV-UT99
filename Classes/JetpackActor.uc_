@@ -1,0 +1,112 @@
+//=============================================================================
+// JetpackActor.
+//=============================================================================
+class JetpackActor extends Decoration config(SiegeUltimateRC14);
+
+
+#exec mesh import mesh=JetpackFirefly anivfile=Models\JetpackFirefly_a.3d datafile=Models\JetpackFirefly_d.3d x=0 y=0 z=0 mlod=0
+#exec mesh origin mesh=JetpackFirefly x=0 y=0 z=0
+#exec mesh sequence mesh=JetpackFirefly seq=All startframe=0 numframes=1
+
+#exec meshmap new meshmap=JetpackFirefly mesh=JetpackFirefly
+//#exec meshmap scale meshmap=JetpackFirefly x=0.15625 y=0.15625 z=0.31250
+
+//#exec MESH ORIGIN MESH=JetpackFirefly X=0 Y=0 Z=-0 YAW=128 ROLL=0 PITCH=-64
+#exec MESH ORIGIN MESH=JetpackFirefly X=0 Y=0 Z=-0 YAW=0 ROLL=63.75 PITCH=127.5
+#exec meshmap scale meshmap=JetpackFirefly x=0.078125 y=0.078125 z=0.15625
+
+var config float TournamentFemale_Back, TFemale1_Back, TFemale2_Back, 
+		  TournamentMale_Back, TMale1_Back, TMale2_Back, TBoss_Back;
+		  
+function FlameOn()
+{
+	// log("=== FLAME ON ===");
+	Color();
+}
+
+function FlameOff()
+{
+	// log("--- FLAME OFF ---");
+	MultiSkins[4] = Texture'FlakAmmoLED';
+	SaveConfig();
+}
+
+function Color()
+{
+	if ( Pawn(owner).PlayerReplicationInfo == None )
+		return;
+
+	if ( Pawn(owner).PlayerReplicationInfo.Team == 0 )
+		{
+			MultiSkins[3] = Texture'JetMetalRed';
+			MultiSkins[4] = Texture'JetpackMeshFlameRed';
+		}
+	if ( Pawn(owner).PlayerReplicationInfo.Team == 1 )
+		{
+			MultiSkins[3] = Texture'JetMetalBlue';
+			MultiSkins[4] = Texture'JetpackMeshFlameBlue';
+		}
+}
+
+simulated function Tick(float DeltaTime)
+{
+	local float pvd;
+	
+	bTrailerSameRotation = true;
+	bTrailerPrePivot = true;
+	
+	PrePivot = vector(Rotation) * pvd;
+	
+	if ( Owner != None )
+		{
+			if ( TournamentPlayer(Owner) != None )
+				{
+					if ( TournamentFemale(Owner) != None )
+						{
+							pvd = TournamentFemale_Back;
+
+							if ( TFemale1(Owner) != None )
+								pvd = TFemale1_Back;
+							if ( TFemale2(Owner) != None )
+								pvd = TFemale2_Back;
+						}
+					if ( TournamentMale(Owner) != None )
+						{
+							pvd = TournamentMale_Back;
+
+							if ( TMale1(Owner) != None )
+								pvd = TMale1_Back;
+							if ( TMale2(Owner) != None )
+								pvd = TMale2_Back;
+							if ( TBoss(Owner) != None )
+								pvd = TBoss_Back;
+						}
+				}
+			else
+				return;
+		}
+	else
+		return;
+}
+
+defaultproperties
+{
+   	 RemoteRole=ROLE_SimulatedProxy
+     bStatic=False
+     bOwnerNoSee=True
+     Physics=PHYS_Trailer
+     DrawType=DT_Mesh
+     Mesh=Mesh'JetpackFirefly'
+     bCollideWhenPlacing=True
+     MultiSkins(0)=Texture'JetMetal'
+     MultiSkins(1)=Texture'JetTanksLabled'
+     MultiSkins(2)=Texture'JetTanks'
+     MultiSkins(3)=Texture'JetMetalBlue'
+     MultiSkins(4)=FireTexture'JetpackMeshFlameBlue'
+     CollisionRadius=79.999817
+     CollisionHeight=40.000240
+     bCollideActors=True
+     bCollideWorld=True
+     bBlockActors=True
+     bBlockPlayers=False
+}

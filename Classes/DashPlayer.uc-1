@@ -1,0 +1,198 @@
+//=============================================================================
+// DashPlayer.
+//=============================================================================
+class DashPlayer expands WildcardsPlayerAffecters;
+
+var() float Slowness;
+var() float RecoverRate;
+var int choice;
+var AnimatedSprite FX;
+var Pawn DashPawn;
+var bool Chargeing;
+var float Charge;
+var float ClientLifeSpan;
+
+// Information from the DashPad
+var float MaxCharge;
+var float DashFactor;
+var float DashChargeRate;
+
+var sxDashPad PadHistory[16];
+var int PadIndex;
+
+
+replication
+{
+	reliable if ( Role==ROLE_Authority )
+		DashPawn, MaxCharge, ClientLifeSpan, PadHistory, Chargeing;
+}
+
+simulated function bool UsedPad( sxDashPad DP )
+{
+	local int i;
+	local int PadsVisited;
+	local int MultiDashLimit;
+	
+	log("UsedPad() Called");
+
+	log("");
+	log("");
+	log("===========================");
+	
+	PadsVisited = 0;
+	
+	for ( i = 0; i < 16; i++ ) 
+		{
+
+			if ( PadHistory[i] != None )
+				{
+					MultiDashLimit = PadHistory[i].DashMultiDashLimit;
+					PadsVisited++;
+				}
+				
+					
+			if ( PadsVisited > MultiDashLimit )
+				{
+					log("REACHED THE MAX MULTI DASH LIMIT!!");
+					log("===========================");
+					log("");
+					log("");
+					return true;
+				}
+			else
+				log("MultiDash Count:"@PadsVisited);			
+
+			if ( DP == PadHistory[i] )
+				{
+					log("PadHistory["$i$"] ="@PadHistory[i]$"    <-- Used Already! NO BOOST");
+					log("===========================");
+					log("");
+					log("");
+					return true;
+				}
+			else
+				log("PadHistory["$i$"] ="@PadHistory[i]);
+		}
+
+	log("Double Dash Boost!");
+	log("===========================");
+	log("");
+	log("");
+	return false;
+}
+
+simulated function Tick( float DeltaTime )
+{
+	local float Speed2D;
+	local DashTrail DT;
+
+    if ( DashPawn != None && Level.NetMode != NM_DedicatedServer )
+		{
+			// Turn On HUD
+			sgHUD(PlayerPawn(DashPawn).MyHUD).DashPlayerInstance = self;
+			
+			if ( Chargeing == true || DashPawn.Velocity == vect(0, 0, 0) )
+				{
+					DT = DashPawn.Spawn(class'DashTrail', DashPawn, , DashPawn.Location, DashPawn.Rotation);
+					DT.Velocity = ( (30+(40*FRand())) * Vect(0, 0, 1 ) );
+				}
+			// DashTrail
+			if ( !Level.bDropDetail && (DashPawn.Velocity != vect(0, 0, 0)) && Chargeing == false )
+				{
+					//log("Trail Spam");
+					DashPawn.Spawn(class'DashTrail', DashPawn, , DashPawn.Location, DashPawn.Rotation);
+				}
+		}
+
+	if ( Role != ROLE_Authority )
+		return;
+	  
+    if ( DashPawn == None || DashPawn.bIsPlayer == false ||
+	DashPawn.PlayerReplicationInfo == None || DashPawn.Health <= 0 )
+		{
+			
+			Destroy();
+		}
+	if ( Chargeing == true )
+		{
+			if ( Charge < MaxCharge )
+				Charge += DashChargeRate;
+			else
+				AmbientSound = Sound'DashCharged';
+			//log("Chargeing:"@Charge);
+			//log("DashChargeRate:"@DashChargeRate);
+			ClientLifeSpan = Charge;
+		}
+	else
+		{
+			if ( Charge != 0 )
+				{
+					LifeSpan = Charge;
+					Charge = 0;
+					DashPawn.AmbientSound = Sound'DashAmbient';
+				}
+			else
+				{
+					if ( LifeSpan <= 0 )
+						Destroy();
+				}
+			
+			Speed2D = Sqrt( DashPawn.Velocity.X * DashPawn.Velocity.X + DashPawn.Velocity.Y * DashPawn.Velocity.Y);
+			//if ( ( Speed2D / Pawn(Owner).GroundSpeed ) < 0.1 );
+			if ( DashPawn.Velocity == vect(0, 0, 0) )
+				LifeSpan -= DeltaTime;
+			
+			ClientLifeSpan = LifeSpan;
+			//log("LifeSpan:"@LifeSpan);
+			
+			// GroundSpeed
+			DashPawn.GroundSpeed = DashPawn.default.GroundSpeed + 
+			DashPawn.default.GroundSpeed*(LifeSpan*DashFactor);
+			// AirSpeed
+			DashPawn.AirSpeed = DashPawn.default.AirSpeed + 
+			DashPawn.default.AirSpeed*(LifeSpan*DashFactor);
+			// WaterSpeed
+			DashPawn.WaterSpeed = DashPawn.default.WaterSpeed + 
+			DashPawn.default.WaterSpeed*(LifeSpan*DashFactor);
+			// Acceleration
+			DashPawn.Acceleration = DashPawn.default.Acceleration + 
+			DashPawn.default.Acceleration*((LifeSpan*DashFactor)*100000);
+		}
+}
+
+simulated Event Destroyed()
+{
+	log("DASH ACTOR Destroyed()");
+	DashPawn.AmbientSound = None;
+	
+	// Turn the dashpad charge HUD off
+	if ( Role != ROLE_Authority )
+		{
+			log("");
+			log("");
+			log("Condition #1: We are running on the client.");
+			if ( DashPawn != None )
+				{
+					log("Condition #2: A DashPawn is present!");
+					if ( sgHUD(PlayerPawn(DashPawn).MyHUD) != None )
+						{
+							log("Condition #3: There is a HUD!");
+							log("*******| Turning Hud Off |*******");
+							log("");
+							log("");
+							sgHUD(PlayerPawn(DashPawn).MyHUD).DashPlayerInstance = None;
+						}
+				}
+		}
+}
+
+defaultproperties
+{
+     Slowness=4.000000
+     RecoverRate=0.125000
+     bHidden=True
+     bAlwaysRelevant=True
+     RemoteRole=ROLE_SimulatedProxy
+     Style=STY_Translucent
+     Texture=Texture'ToxicCloud015'
+}

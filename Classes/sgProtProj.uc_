@@ -1,0 +1,125 @@
+//=============================================================================
+// sgProtProj.
+// * Revised by 7DS'Lust
+//=============================================================================
+class sgProtProj extends Projectile;
+
+var bool bLighting;
+var float DelayTime;
+var class<Effects> ImpactClass;
+
+/////////////////////////////////////////////////////
+auto state Flying
+{
+	simulated function ProcessTouch( Actor other, Vector HitLocation )
+	{
+		local int hitdamage;
+		local vector hitDir;
+
+		if ( Role != ROLE_Authority || other == Instigator || sgProtector(owner) == None )
+			return;
+
+		if ( sgWarShell(other) != None )
+			return;
+		else if ( sgBuilding(other) != None )
+		{
+			if ( sgBuilding(other).Team == sgProtector(Owner).Team )
+				return;
+			if ( sgEquipmentSupplier(Other) != none )
+				sgEquipmentSupplier(Other).bProtected = false;
+		}
+		else if ( Pawn(other) != None && Pawn(other).PlayerReplicationInfo != None && Pawn(other).PlayerReplicationInfo.Team == sgProtector(Owner).Team )
+			return;
+
+		hitDir = Normal(Velocity);
+		if ( FRand() < 0.2 )
+			hitDir *= 5;
+		other.TakeDamage(Damage, Instigator, HitLocation,
+			MomentumTransfer * hitDir, 'sgSpecial');
+		other.PlaySound(MiscSound, SLOT_Misc, 0.7,,, 0.75+FRand()*0.5);
+	  	Spawn(ImpactClass);
+
+		Destroy();
+	}
+
+	simulated function HitWall( vector HitNormal, actor Wall )
+	{
+		Super.HitWall(HitNormal, Wall);	
+		if (FRand()<0.3) 
+			PlaySound(ImpactSound, SLOT_Misc, 0.5,,, 0.75+FRand()*0.5);
+		
+		MakeNoise(0.3);
+	  	Spawn(ImpactClass);
+		Destroy();
+	}
+
+	simulated function Timer()
+	{
+		local bubble1 b;
+		if (Level.NetMode!=NM_DedicatedServer)
+		{
+	 		b=spawn(class'Bubble1'); 
+ 			b.DrawScale= 0.1 + FRand()*0.2;
+ 			b.SetLocation(Location+FRand()*vect(2,0,0)+FRand()*Vect(0,2,0)+FRand()*Vect(0,0,2));
+ 			b.buoyancy = b.mass+(FRand()*0.4+0.1);
+ 		}
+		DelayTime+=FRand()*0.1+0.1;
+		SetTimer(DelayTime,False); 	
+	}
+
+	simulated function ZoneChange( Zoneinfo NewZone )
+	{
+		if (NewZone.bWaterZone) 
+		{
+			Velocity=0.7*Velocity;	
+			DelayTime=0.03;		
+			SetTimer(DelayTime,False);
+		}
+		else
+			SetTimer(0,false);
+	}
+
+	function BeginState()
+	{
+		local rotator RandRot;
+
+		Velocity = Vector(Rotation) * speed;
+		RandRot.Pitch = FRand() * 200 - 100;
+		RandRot.Yaw = FRand() * 200 - 100;
+		RandRot.Roll = FRand() * 200 - 100;
+		Velocity = Velocity >> RandRot;
+		if( Region.zone.bWaterZone )
+			Velocity=0.7*Velocity;
+	}
+}
+
+///////////////////////////////////////////////////////
+simulated function Explode(vector HitLocation, vector HitNormal)
+{
+}
+
+simulated function AnimEnd()
+{
+	Destroy();
+}
+
+defaultproperties
+{
+     ImpactClass=class'sgProjImp'
+     speed=1850.000000
+     Damage=15.000000
+     MomentumTransfer=7500
+     ImpactSound=Sound'sgMedia.SFX.sgProtPhitW'
+     MiscSound=Sound'sgMedia.SFX.sgProtPhitF'
+     RemoteRole=ROLE_SimulatedProxy
+     Style=STY_Translucent
+     Skin=Texture'sgMedia.GFX.sgProjFront'
+     Mesh=LodMesh'UnrealShare.plasmaM'
+     DrawScale=0.400000
+     ScaleGlow=2.000000
+     AmbientGlow=255
+     bUnlit=True
+     MultiSkins(1)=Texture'sgMedia.GFX.sgProjSide'
+     CollisionRadius=4.000000
+     CollisionHeight=4.000000
+}

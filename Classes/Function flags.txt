@@ -1,0 +1,8 @@
+02 00 is a common?
+02 03 was found in a simulated function
+03 01 in a simulated final function
+02 09 in a simulated event tick (native flag?)
+02 20 in a static function
+
+
+Size of this function: 00055388

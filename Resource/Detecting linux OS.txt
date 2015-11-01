@@ -1,0 +1,2 @@
+AD = PO.ConsoleCommand("get ini:engine.engine.audiodevice class");
+if ( AD == "Class'Galaxy.GalaxyAudioSubsystem'" ) {}

@@ -1,0 +1,34 @@
+// Cut whitespace from beginning and end of string
+final function string Chomp(string Text)
+{
+    local int i;
+    local string tmp; 
+
+    for (i=0; i<len(Text); i++) 
+    {    
+        if(left(Text,1)==" ")
+            Text = Right(Text, Len(Text)-1);
+    }    
+
+    for (i=0; i<len(Text); i++) 
+    {    
+        if(right(Text,1)==" ")
+            Text = Left(Text, Len(Text)-1);
+    }    
+
+    return Text;
+}
+
+// reverse a string
+function string Rev(string In)
+{
+    local string Out;
+
+    while (In!="")
+    {    
+        Out = Out $ right(In,1);
+        In = left(In,len(In)-1);
+    }        
+
+    return Out;
+}

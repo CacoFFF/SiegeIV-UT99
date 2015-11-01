@@ -1,0 +1,290 @@
+//=============================================================================
+// Jetpack.
+// Revised by AnthraX & Scarface (Shiva)
+//=============================================================================
+class Jetpack extends TournamentPickup
+    config;
+
+#exec OBJ LOAD File=Extro.uax
+
+/*--- Data. -----------------------------------------------------------------*/
+
+var() float         MaxFuel,
+                    RechargeRate,
+                    Thrust,
+                    MaxVel,
+                    HorizThrust,
+                    MaxHorizVel,
+                    ThrustFrequency;
+var float           Fuel;           // Fuel left, measured in seconds
+var Effects         Trail;
+var bool            SimFall,
+                    ClientSim;
+var float           ThrustTimer;
+var float           OldLTS;	   // TR independent jetpack
+
+var config bool     bNoAutoBind;
+
+var float aTimer;
+
+replication
+{
+    reliable if ( Role < ROLE_Authority )
+        SetJetpack, ToggleJetpack;
+
+    reliable if ( Role == ROLE_Authority )
+        ClientSetBind, ClientActivate, ClientDeactivate;
+
+    unreliable if ( Role == ROLE_Authority )
+        Trail, Fuel, SimFall, ClientSim, MaxFuel, RechargeRate, Thrust, MaxVel,
+        HorizThrust, MaxHorizVel, ThrustFrequency;
+}
+
+function PostBeginPlay()
+{
+    Super.PostBeginPlay();
+    bAutoActivate = false;
+    Fuel = MaxFuel;
+}
+
+function GiveTo(Pawn other)
+{
+    Super.GiveTo(other);
+    if ( Owner == other )
+    {
+        if ( PlayerPawn(Owner) != None )
+        {
+            ClientSetBind();
+            ClientDeactivate();
+        }
+        GotoState('DeActivated');
+    }
+}
+
+/*--- Client Functions. -----------------------------------------------------*/
+function AnnounceAll(string sMessage)
+{
+    local Pawn p;
+
+    for ( p = Level.PawnList; p != None; p = p.nextPawn )
+	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
+          p.PlayerReplicationInfo != None  )
+		    p.ClientMessage(sMessage);
+}
+
+simulated function ClientSetBind()
+{
+    local int key;
+    local string keyName, bind, bindCaps;
+    local PlayerPawn playerOwner;
+
+    playerOwner = PlayerPawn(Owner);
+    if ( playerOwner == None || bNoAutoBind )
+        return;
+
+    for ( key = 0; key < 255; key++ )
+    {
+        keyName = playerOwner.ConsoleCommand("KEYNAME"@key);
+        bind = playerOwner.ConsoleCommand("KEYBINDING"@keyName);
+        bindCaps = Caps(bind);
+
+        if ( Left(bindCaps, 4) == "JUMP" || InStr(bindCaps, " JUMP") != -1 ||
+          InStr(bindCaps, "|JUMP") != -1 )
+        {
+            if ( Left(bindCaps, 10) != "SETJETPACK" &&
+              InStr(bindCaps, " SETJETPACK") == -1 &&
+              InStr(bindCaps, "|SETJETPACK") == -1 &&
+              Left(bindCaps, 13) != "TOGGLEJETPACK" &&
+              InStr(bindCaps, " TOGGLEJETPACK") == -1 &&
+              InStr(bindCaps, "|TOGGLEJETPACK") == -1 )
+            {
+                bind = "SetJetpack 1|"$bind$"|OnRelease SetJetpack 0";
+                playerOwner.ConsoleCommand("SET INPUT"@keyName@bind);
+            }
+        }
+    }
+
+    SaveConfig();
+}
+
+
+
+
+simulated function ClientActivate()
+{
+    if ( Role == ROLE_Authority )
+        return;
+
+    GotoState('Activated');
+}
+
+simulated function ClientDeactivate()
+{
+    if ( Role == ROLE_Authority )
+        return;
+
+    GotoState('DeActivated');
+}
+
+/*--- Console Functions. ----------------------------------------------------*/
+
+exec function ToggleJetpack()
+{
+    GotoState('Activated');
+}
+
+exec function SetJetpack(bool enabled)
+{
+    if ( enabled )
+        GotoState('Activated');
+    else
+        GotoState('DeActivated');
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE Activated.
+ * --------------------------------------------------------------------------*/
+
+state Activated
+{
+	simulated function BeginState()
+	{
+		local UT_Invisibility inv;
+		if ( Role == ROLE_Authority )
+		{
+			if ( Owner.Physics != PHYS_Falling || Fuel <= 0 )
+			{
+				GotoState('DeActivated');
+				return;
+			}
+
+			bActive = true;
+			ClientActivate();
+
+			// Effects
+			inv = UT_Invisibility(Pawn(Owner).FindInventoryType(class'UT_Invisibility'));
+			if ( Trail == None )
+				if ( inv == None || inv.charge < 160)
+					Trail = Spawn(class'JetTrail', Owner);
+		}
+
+		// Physics
+		if ( PlayerPawn(Owner) != None && SimFall )
+			Pawn(Owner).bSimFall = true;
+		
+		aTimer = 1 / ThrustFrequency;
+	}
+
+
+	simulated function EndState()
+	{
+		local sgSpeed sp;
+
+		sp = sgSpeed(Pawn(Owner).FindInventoryType(class'sgSpeed'));
+		if (sp != None)
+			sp.GotoState('Activated');
+
+		if ( Role == ROLE_Authority )
+		{
+			bActive = false;
+
+			ClientDeactivate();
+
+			// Effects
+			if ( Trail != None )
+			{
+				Trail.Destroy();
+				Trail = None;
+			}
+		}
+
+		// Physics
+		if ( PlayerPawn(Owner) != None )
+			Pawn(Owner).bSimFall = false;
+	}
+	
+	simulated event Tick( float Delta)
+	{
+		if ( aTimer <= 0 )
+		{
+			aTimer += 1 / ThrustFrequency;
+			UserTimer();
+		}
+		aTimer -= Delta;
+		Fuel = FMax(Fuel - Delta, 0);		
+	}
+	
+	simulated function UserTimer()
+	{
+		local vector horizVel;
+		local rotator rot;
+		local sgSpeed sp;
+		
+		if ( Role == ROLE_Authority && (Owner.Physics != PHYS_Falling || Fuel <= 0) )
+		{
+			GotoState('DeActivated');
+			return;
+		}
+
+		sp = sgSpeed(Pawn(Owner).FindInventoryType(class'sgSpeed'));
+		if (sp != None)
+			sp.GotoState('DeActivated');
+	
+		horizVel = Owner.Velocity * vect(1,1,0);
+		rot.Yaw = Owner.Rotation.Yaw;
+		if ( cos((rotator(horizVel).Yaw - rot.Yaw)/32768*pi) *
+		  VSize(horizVel) < MaxHorizVel )
+			Owner.Velocity += vector(rot) * HorizThrust * 1 / ThrustFrequency;
+
+		if ( Owner.Velocity.Z < MaxVel )
+			Owner.Velocity.Z = FMin(Owner.Velocity.Z + Thrust * 1 / ThrustFrequency, MaxVel);
+
+	}
+
+	exec function ToggleJetpack()
+	{
+		GotoState('DeActivated');
+	}
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE DeActivated.
+ * --------------------------------------------------------------------------*/
+
+state DeActivated
+{
+	simulated event Tick( float DeltaTime)
+	{
+		Fuel = FMin(Fuel + RechargeRate * deltaTime, MaxFuel);
+	}
+}
+
+defaultproperties
+{
+    MaxFuel=3.00
+    RechargeRate=0.80
+    Thrust=1500.00
+    MaxVel=350.00
+    HorizThrust=250.00
+    MaxHorizVel=400.00
+    ThrustFrequency=20.00
+    ClientSim=True
+    bActivatable=True
+    bDisplayableInv=True
+    PickupMessage="You got the Jetpack."
+    ItemName="Jetpack"
+    RespawnTime=60.00
+    PickupViewMesh=LodMesh'UnrealI.AsbSuit'
+    ProtectionType1=ProtectNone
+    ProtectionType2=ProtectNone
+    Charge=150
+    MaxDesireability=3.00
+    PickupSound=Sound'UnrealI.Pickups.FieldSnd'
+    Icon=Texture'UnrealShare.Icons.I_ShieldBelt'
+    bOwnerNoSee=True
+    bTrailerSameRotation=True
+    Mesh=LodMesh'Botpack.ShieldBeltMeshM'
+    bGameRelevant=True
+    CollisionRadius=25.00
+    CollisionHeight=10.00
+}

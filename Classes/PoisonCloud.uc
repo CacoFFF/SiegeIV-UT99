@@ -1,0 +1,40 @@
+//=============================================================================
+// PoisonCloud.
+//=============================================================================
+class PoisonCloud expands AnimatedSprite;
+
+defaultproperties
+{
+     SpriteFrame(0)=Texture'ToxicCloud001'
+     SpriteFrame(1)=Texture'ToxicCloud002'
+     SpriteFrame(2)=Texture'ToxicCloud003'
+     SpriteFrame(3)=Texture'ToxicCloud004'
+     SpriteFrame(4)=Texture'ToxicCloud005'
+     SpriteFrame(5)=Texture'ToxicCloud006'
+     SpriteFrame(6)=Texture'ToxicCloud007'
+     SpriteFrame(7)=Texture'ToxicCloud008'
+     SpriteFrame(8)=Texture'ToxicCloud009'
+     SpriteFrame(9)=Texture'ToxicCloud010'
+     SpriteFrame(10)=Texture'ToxicCloud011'
+     SpriteFrame(11)=Texture'ToxicCloud012'
+     SpriteFrame(12)=Texture'ToxicCloud013'
+     SpriteFrame(13)=Texture'ToxicCloud014'
+     SpriteFrame(14)=Texture'ToxicCloud015'
+     SpriteFrame(15)=Texture'ToxicCloud016'
+     SpriteFrame(16)=Texture'ToxicCloud017'
+     SpriteFrame(17)=Texture'ToxicCloud018'
+     SpriteFrame(18)=Texture'ToxicCloud019'
+     SpriteFrame(19)=Texture'ToxicCloud020'
+     SpriteFrame(20)=Texture'ToxicCloud021'
+     SpriteFrame(21)=Texture'ToxicCloud022'
+     SpriteFrame(22)=Texture'ToxicCloud023'
+     SpriteFrame(23)=Texture'ToxicCloud024'
+     SpriteFrame(24)=Texture'ToxicCloud025'
+     SpriteFrame(25)=Texture'ToxicCloud026'
+     SpriteFrame(26)=Texture'ToxicCloud027'
+     SpriteFrame(27)=Texture'ToxicCloud028'
+     SpriteFrame(28)=Texture'ToxicCloud029'
+     SpriteFrame(29)=Texture'ToxicCloud030'
+     Frames=30
+     AnimationLength=2.000000
+}

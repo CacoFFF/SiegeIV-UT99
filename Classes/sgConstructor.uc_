@@ -1,0 +1,1171 @@
+//=============================================================================
+// sgConstructor.
+// * Revised by nOs*Badger
+// Painstakeingly Indented and cleaned to make LEGIBLE by WILDCARD
+// Yeah thanks for the trouble badger.. [rools eyes]
+// * Revised By WILDCARD
+// Further revised by SK to allow for buildings to be on fire or electricuted!
+//=============================================================================
+class sgConstructor extends TournamentWeapon
+    config;
+
+#exec Obj Load File=Activates.uax
+
+var() Sound         ChangeSound,
+                    SelectSound,
+                    DeselectSound;
+var() class<sgBuildCategory>
+                    BuildCategories[16];
+var() int           NumBuildCategories;
+var() int	    NumActions;
+var int             Category,
+                    Selection;
+var FontInfo        MyFonts;
+var config bool     AllowTeamRemove;
+var() config int NumBuildings;
+var() string sgBuildings[40];
+
+replication
+{
+	// Things the server should send to the client.
+	reliable if ( bNetOwner && (Role==ROLE_Authority) )
+		Category, Selection;
+
+    reliable if ( Role == ROLE_Authority )
+        ClientSetBind, DiscardOrbClient;
+
+    reliable if ( Role < ROLE_Authority )
+        DiscardOrbServer, SetMode, SelectMode, BuildIt, TeamRU,
+		FreeBuild;
+}
+
+exec function NewCons()
+{
+	Owner.ConsoleCommand("summon SiegeUltimateRC15.sg_XC_Constructor");
+}
+
+exec function TeamRU()
+{
+	local float i;
+	if (!Owner.IsA('PlayerPawn'))
+		return;
+
+	i = sgPRI(PlayerPawn(Owner).PlayerReplicationInfo).iStatus;
+
+	if (int(i/4)*4 == i)
+		sgPRI(PlayerPawn(Owner).PlayerReplicationInfo).iStatus = sgPRI(PlayerPawn(Owner).PlayerReplicationInfo).iStatus + 2;
+	else
+		sgPRI(PlayerPawn(Owner).PlayerReplicationInfo).iStatus = sgPRI(PlayerPawn(Owner).PlayerReplicationInfo).iStatus - 2;
+}
+
+// ADMIN COMANDS BELOW //////////////////////////////////////
+
+exec function FreeBuild()
+{
+	local sgPRI NFO;
+	
+	NFO = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+
+	if ( NFO.bAdmin != true )
+		return;
+		
+	log("FREEBUILD!!"@NFO);	
+	
+	if ( SiegeGI(Level.Game) != None )
+		{
+			SiegeGI(Level.Game).MaxRUs[NFO.Team] = 10000000;
+			NFO.MaxRU = SiegeGI(Level.Game).MaxRUs[NFO.Team];
+			// Is a billion RU enough to test? really... is it?
+			NFO.RU = 10000000;
+    	}
+}
+
+// DEBUGING
+
+exec simulated function clear()
+{
+	local int i;
+
+	for ( i = 0; i < 64; i++ ) 
+		{
+			log("       ");
+		}	
+}
+
+exec simulated function PositionHUD( int HudX, int HudY, int HudS, optional string HudElement )
+{
+	if ( ROLE == ROLE_Authority )
+		return;
+	
+	log("HUD Command Used!");
+
+	sgHUD(PlayerPawn(Owner).MyHUD).HudItemSlotOriginX = HudX;	
+	sgHUD(PlayerPawn(Owner).MyHUD).HudItemSlotOriginY = HudY;
+	sgHUD(PlayerPawn(Owner).MyHUD).HudItemSlotSpace = HudS;
+	
+}
+
+// ADMIN COMANDS ABOVE //////////////////////////////////////
+
+simulated function ClientSetBind()
+{
+	Owner.ConsoleCommand("SET INPUT F3 SiegeStats");
+	Owner.ConsoleCommand("SET INPUT F7 TeamRU");
+	SaveConfig(); 
+}
+
+function Tick(float DeltaTime)
+{
+	local String Info;
+	local float Speed2D;
+	
+	if ( Pawn(Owner) != None && sgPRI(Pawn(Owner).PlayerReplicationInfo) !=
+      None && AmmoType != None )
+        AmmoType.AmmoAmount = sgPRI(Pawn(Owner).PlayerReplicationInfo).RU;
+}
+
+function DropFrom(vector startLocation)
+{
+    if ( !SetLocation(startLocation) )
+        return;
+    Destroy();
+}
+
+function Fire( float F )
+{
+
+	ClientSetBind();
+	GotoState('Build');
+}
+
+function AltFire( float Value )
+{
+
+	ClientSetBind();
+	GotoState('ChangeMode');
+}
+
+function Pawn GetTarget()
+{
+	local Actor other;
+	local vector    hitLocation,
+                    hitNormal,
+                    startTrace,
+                    endTrace;
+
+	startTrace = Owner.Location;
+	startTrace.Z += Pawn(Owner).BaseEyeHeight;
+	endTrace = startTrace + vector(PlayerPawn(Owner).ViewRotation) * 90;
+	other = Trace(hitLocation, hitNormal, endTrace, startTrace, true);
+        if (other != None) return Pawn(other);
+
+	endTrace = startTrace + vector(PlayerPawn(Owner).ViewRotation) * 10000.0;
+	other = Trace(hitLocation, hitNormal, endTrace, startTrace, true);
+	if ((PlayerPawn(other) != None || Bot(other) != None ) && !other.bHidden) return Pawn(other);
+}
+
+function AnnounceRemove(sgBuilding building, Pawn remover)
+{
+    local string removeMessage;
+    local Pawn p;
+
+    if ( building.Owner == remover || remover.PlayerReplicationInfo == None )
+        return;
+
+    if ( Pawn(building.Owner) != None && Pawn(building.Owner).bIsPlayer &&
+      Pawn(building.Owner).PlayerReplicationInfo != None)
+        removeMessage = remover.PlayerReplicationInfo.PlayerName@
+          "removed"@Pawn(building.Owner).PlayerReplicationInfo.PlayerName$
+          "'s"@building.BuildingName;
+    else if (Len(building.BuildingName) >= 1 && (
+      Left(building.BuildingName, 1) ~= "a" ||
+      Left(building.BuildingName, 1) ~= "e" ||
+      Left(building.BuildingName, 1) ~= "i" ||
+      Left(building.BuildingName, 1) ~= "o" ||
+      Left(building.BuildingName, 1) ~= "u") )
+        removeMessage = remover.PlayerReplicationInfo.PlayerName@
+          "removed an"@building.BuildingName;
+    else
+        removeMessage = remover.PlayerReplicationInfo.PlayerName@
+          "removed a"@building.BuildingName;
+
+    for ( p = Level.PawnList; p != None; p = p.nextPawn )
+	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
+          p.PlayerReplicationInfo != None &&
+          p.PlayerReplicationInfo.Team == building.Team )
+		    p.ClientMessage(removeMessage);
+}
+
+function AnnounceAll(string sMessage)
+{
+    local Pawn p;
+
+    for ( p = Level.PawnList; p != None; p = p.nextPawn )
+	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
+          p.PlayerReplicationInfo != None  )
+		    p.ClientMessage(sMessage);
+}
+
+function bool DoesPlayerExist(Pawn target)
+{
+    local Pawn p;
+    for ( p = Level.PawnList; p != None; p = p.nextPawn )
+	if ( p == target )
+	    if ( p.bIsPlayer && p.PlayerReplicationInfo != None)
+		return true;
+
+	return false;
+}
+
+function string GetIP(string sIP)
+{
+	return left(sIP, InStr(sIP, ":"));
+}
+
+function UseFunction(Pawn target)
+{
+	local float     amount,
+                    tmp;
+    local sgPRI     ownerPRI;
+	local sgRemoveProt sgRP;
+	local string sMessage;
+	local WildcardsOrbs orb;
+	local bool bShouldPlaySound;
+	
+	bShouldPlaySound=False;
+
+	if ( Pawn(Owner) == None || sgPRI(Pawn(Owner).PlayerReplicationInfo) == None)
+        return;
+
+    ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+
+	// Throw Orb Mode
+	if ( GetOptionName() == "Throw Orb" )
+		{
+
+			orb = ownerPRI.Orb;
+
+			if ( orb != None )
+				{
+     				log("Orb Debug Information");
+     				log("Type:"@orb.OrbName);
+     				log("Owner:"@orb.Owner);
+     				log("Holder:"@orb.OrbHolder);
+				}
+			else
+				log("Uh, Boss.. The player does not have the orb! O.O");
+
+
+			if ( sgBuilding(target) == None && ownerPRI.Orb != None )
+				{
+					DiscardOrbServer(ownerPRI);
+					DiscardOrbClient(ownerPRI);
+					NextMode(true);
+					return;
+				}
+		}
+
+    if ( target == None || (sgBuilding(target) != None &&
+      sgBuilding(target).Team != ownerPRI.Team) ||
+      (sgBuilding(target) == None && (target.PlayerReplicationInfo == None ||
+      target.PlayerReplicationInfo.Team != ownerPRI.Team)) )
+    {
+        Owner.Playsound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+        return;
+    }
+
+    switch ( Category )
+    {
+		case 0:
+        	// Upgrade mode
+			if ( sgBuilding(target) != None )
+				{
+					// Upgrade building
+					if ( sgBuilding(target).SCount <= 0 )
+						{
+							amount = FMin(5 - sgBuilding(target).Grade, 1);
+							if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+								{
+									amount = FMin(amount, (ownerPRI.RU /
+									(sgBuilding(target).UpgradeCost * (sgBuilding(target).Grade + 1))));
+
+									ownerPRI.AddRU(-1 * ((sgBuilding(target).UpgradeCost *
+									(sgBuilding(target).Grade + 1))) * amount);
+
+									ownerPRI.Score += amount;
+									ownerPRI.sgInfoUpgradeRepair+= amount;	
+								}
+
+							sgBuilding(target).Grade += amount;
+							ownerPRI.sgInfoUpgradeRepair+= amount;
+			
+							if ( amount > 0 )
+								{
+									sgBuilding(target).Upgraded();
+									Owner.PlaySound(Misc3Sound, SLOT_None,
+									pawn(Owner).SoundDampening*2.5);
+								}
+						}
+					else
+						Owner.PlaySound(Misc1Sound, SLOT_Misc,Pawn(Owner).SoundDampening*2.5);
+				}
+			else
+				{
+					// Give target player RU
+					tmp = sgPRI(target.PlayerReplicationInfo).RU;
+					amount=FMin(100, ownerPRI.RU);
+					sgPRI(target.PlayerReplicationInfo).AddRU(amount);
+					ownerPRI.sgInfoUpgradeRepair+= amount;	
+					ownerPRI.AddRU(-1 * (sgPRI(target.PlayerReplicationInfo).RU - tmp));
+					ownerPRI.Score += (sgPRI(target.PlayerReplicationInfo).RU - tmp) / 100;
+					
+					target.PlaySound(sound'sgMedia.sgPickRUs', SLOT_None,target.SoundDampening*2.5);
+					
+					return;
+				}
+	break;
+
+    case 1:
+		// Repair mode
+
+		if ( target.IsA('sgBuilding') )
+			{
+				if (SiegeGI(Level.Game).bOverTime && target.IsA('sgBaseCore') && !sgBuilding(target).bDisabledByEmp && !sgBuilding(target).bIsOnFire)
+					{
+						Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+						return;
+					}
+
+				// Repair building
+				if ( sgBuilding(target).SCount <= 0 )
+					{
+						amount = FMin(sgBuilding(target).MaxEnergy - sgBuilding(target).Energy, 60);
+
+                		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+							{
+								amount = FMin(amount, ownerPRI.RU * 2.5);
+								ownerPRI.AddRU(-0.2 * amount);
+							}
+						ownerPRI.sgInfoCoreRepair+= amount;
+						sgBuilding(target).Energy += amount;
+						
+						// If the building is electricuted or on fire, bring it back to normal
+						if (sgBuilding(target).bDisabledByEMP || sgBuilding(target).bIsOnFire)
+						{
+						bShouldPlaySound=True;
+						sgBuilding(target).BackToNormal();
+						
+						if (sgBuilding(target).Team == 0)
+						{
+						sgBuilding(target).Texture = sgBuilding(target).SpriteRedTeam;
+						}
+						
+						if (sgBuilding(target).Team == 1)
+						{
+						sgBuilding(target).Texture = sgBuilding(target).SpriteBlueTeam;
+						}
+						
+						}
+
+						// Update score when repairing core!
+						if ( sgBaseCore(target) != None )
+							sgBaseCore(target).UpdateScore();
+
+						if (sgBaseCore(target)!=None)
+							ownerPRI.sgInfoCoreRepair+= amount;
+						else
+							ownerPRI.sgInfoUpgradeRepair+= amount;		
+
+					}
+			}
+		else
+			{
+				// Repair player
+				// Fixed: No more repairing players with more than 150 health - SK
+				if (target.Health < 150)
+					{
+						amount = FMin(FMin(150 - target.Health, 40), ownerPRI.RU * 2.5);
+						target.Health += amount;
+
+						ownerPRI.sgInfoUpgradeRepair+= amount;
+
+						if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+							ownerPRI.AddRU(-0.2 * amount);
+					}
+				else
+					{
+					Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+					}
+			}
+
+		ownerPRI.Score += amount/100;
+
+		if( amount > 0 || bShouldPlaySound)
+		{
+			Owner.PlaySound(Misc2Sound, SLOT_None,
+		Pawn(Owner).SoundDampening*2.5);
+		bShouldPlaySound=False;
+		}
+
+	break;
+
+    case 2:
+        // Remove mode
+
+//		if ( (sgBuilding(target) != None && sgBaseCore(target) == None &&
+//         (sgBuilding(target).Team == ownerPRI.Team || AllowTeamRemove) ) && 
+//	  (sgBuilding(target).sPlayerIP == GetPlayerNetworkAddress()) && DoesPlayerExist(PlayerPawn(Owner)))
+
+		if ( (sgBuilding(target) != None && sgBaseCore(target) == None &&
+          (sgBuilding(target).Team == ownerPRI.Team || AllowTeamRemove) ) )
+
+		{
+			if (sgBuilding(target).sPlayerIP != GetPlayerNetworkAddres())
+			{
+//				if  (!target.IsA('sgContainer') && !target.IsA('sgSmallContainer') 
+//				&& !target.IsA('sgBooster') && !target.IsA('sgPlatform') && !target.IsA('WildcardsSuperContainer') && !target.IsA('WildcardsPoisonGuardian') && !target.IsA('WildcardsForceField'))
+				if ( sgBuilding(target).bOnlyOwnerRemove )
+				{
+		            		Owner.PlaySound(Misc1Sound, SLOT_Misc,Pawn(Owner).SoundDampening*2.5);
+        				return;
+				}
+				sgRP=sgRemoveProt(Pawn(Owner).FindInventoryType(class'sgRemoveProt'));
+				if ( sgRP != None )
+				{
+					sgRP.AddRemove();
+					if ( sgRP.RemoveWarning() ) 
+					{
+						sMessage="Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" has been warned for Team Removing.";
+						AnnounceAll(sMessage);
+					}
+					if ( sgRP.ExcessRemove() ) 
+					{
+						sMessage="Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" was kicked for being a Team Remover.";
+						AnnounceAll(sMessage);
+						KickPawn(Pawn(Owner));
+					}
+				}
+				else
+				{
+					sgRP = Spawn(class'sgRemoveProt', Pawn(Owner), 'sgRemoveProt', Pawn(Owner).Location, Pawn(Owner).Rotation);
+					if ( sgRP != None )
+					{
+						sgRP.bHeldItem = True;
+						sgRP.GiveTo(Pawn(Owner));
+						sgRP.Activate();
+					}
+				}
+			}
+	                AnnounceRemove(sgBuilding(target), Pawn(Owner));
+
+            // Don't give back ru in free build mode
+            if ( SiegeGI(Level.Game) == None ||
+              !SiegeGI(Level.Game).FreeBuild )
+			    ownerPRI.AddRU(sgBuilding(target).BuildCost/2);
+
+			sgBuilding(target).Destruct();
+			return;
+		}
+        else
+            Owner.PlaySound(Misc1Sound, SLOT_Misc,
+              Pawn(Owner).SoundDampening*2.5);
+        break;
+
+	case 3:
+        
+		// Orb Delivery Mode
+		if ( sgBuilding(target) != None && ownerPRI.Orb != None && sgBuilding(target).Orb == None )
+			{
+				NextMode(true);
+
+				// Give the Orb from the player to the Building
+				sgBuilding(target).Orb = ownerPRI.Orb;
+
+				ownerPRI.Orb.DisplayMessage("Orb delivered to: "$sgBuilding(target).BuildingName,
+				ownerPRI.Orb.MakeColor(0,255,0));
+				ownerPRI.Orb.DeliverOrb(sgBuilding(target));
+				ownerPRI.Orb = None;
+			}
+		else
+			{
+				// Notify the player that a building may only hold one orb
+				if ( sgBuilding(target) != None && ownerPRI.Orb != None && sgBuilding(target).Orb != None )
+					{
+						ownerPRI.Orb.DisplayMessage("Buildings can only hold one orb!",
+						ownerPRI.Orb.MakeColor(0,255,0));
+						Owner.PlaySound(Misc1Sound, SLOT_Misc,Pawn(Owner).SoundDampening*2.5);
+					}
+			}
+
+		break;
+		return;
+
+	} // END OF SWITCH
+
+}
+
+function KickPawn(Pawn target)
+{
+	target.destroy();
+/*
+	local PlayerPawn p;
+	local string s;
+	p=PlayerPawn(target);
+	p.kick(Pawn(Owner).PlayerReplicationInfo.PlayerName);
+	//s = p.ConsoleCommand("kickban"@target.PlayerReplicationInfo.PlayerName);
+*/
+}
+
+function bool CanIMakeMoreTeleportersPlease()
+{
+	local Pawn p;
+	local sgTeleporter teleDest;
+	local int iTeleporters;
+	local string sTeleporterName;
+
+	sTeleporterName=GetPlayerNetworkAddres()@string(PlayerPawn(Owner).PlayerReplicationInfo.Team);
+
+    	for ( p = Level.PawnList; p != None; p = p.nextPawn )
+		if (p.IsA('sgTeleporter'))
+		{
+			teleDest=sgTeleporter(p);
+			if (teleDest.URL1 == sTeleporterName)
+			{
+				if (VSize(PlayerPawn(Owner).location - teleDest.location) < 100) return false;
+				iTeleporters++;
+
+			}
+		}
+	if (iTeleporters<2) return true;
+	return false;
+}
+
+function bool CanIMakeMorePlatformsPlease()
+{
+	local Pawn p;
+	local WildcardsPlatform sgP;
+	local int iPlats;
+	local string sPlatName;
+
+//	sPlatName=GetPlayerNetworkAddres();
+
+    	for ( p = Level.PawnList; p != None; p = p.nextPawn )
+		if (p.IsA('WildcardsPlatform'))
+		{
+			sgP=WildcardsPlatform(p);
+			if (sgP.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+				iPlats++;
+		}
+	if (iPlats<5) return true;
+	return false;
+}
+
+function bool CanIMakeMoreMinesPlease()
+{
+	local Pawn p;
+	local Mine sgM;
+	local int iMine;
+
+	ForEach AllActors (class'Mine', sgM)
+	{
+		if ( (sgM.Class == class'Mine') && (sgM.Team == Pawn(Owner).PlayerReplicationInfo.Team) )
+			if ( ++iMine >= 12 )
+				return false;
+	}
+//	if ( iMine > 1 )
+//		Pawn(Owner).ClientMessage("Build Message: Your team has built"@iMine@"other mines so far");
+	return true;
+}
+
+function bool CanIMakeMoreSuperContainersPlease()
+{
+	local Pawn p;
+	local WildCardsSuperContainer wcSC;
+	local int iConts;
+
+    	for ( p = Level.PawnList; p != None; p = p.nextPawn )
+		if (p.IsA('WildcardsSuperContainer'))
+		{
+			wcSC=WildCardsSuperContainer(p);
+			if (wcSC.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+				iConts++;
+		}
+	if (iConts<2) return true;
+	return false;
+}
+
+function bool CanIMakeMoreForceFieldsPlease()
+{
+	local Pawn p;
+	local WildCardsForceField wcFF;
+	local int iFields;
+
+    	for ( p = Level.PawnList; p != None; p = p.nextPawn )
+		if (p.IsA('WildCardsForceField'))
+		{
+			wcFF=WildCardsForceField(p);
+			if (wcFF.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+				iFields++;
+		}
+	if (iFields<1) return true;
+	return false;
+}
+
+function bool CanIMakeMorePoisonsPlease()
+{
+	local Pawn p;
+	local WildCardsPoisonGuardian wcPG;
+	local int iPoisons;
+
+    	for ( p = Level.PawnList; p != None; p = p.nextPawn )
+		if (p.IsA('WildCardsPoisonGuardian'))
+		{
+			wcPG=WildCardsPoisonGuardian(p);
+			if (wcPG.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+				iPoisons++;
+		}
+	if (iPoisons<1) return true;
+	return false;
+}
+
+function bool CanIMakeMoreBeaconsPlease()
+{
+	local Pawn p;
+	local sgHomingBeacon sgP;
+	local int iPlats;
+	local string sPlatName;
+
+	sPlatName=GetPlayerNetworkAddres();
+
+    	for ( p = Level.PawnList; p != None; p = p.nextPawn )
+		if (p.IsA('sgHomingBeacon'))
+		{
+			sgP=sgHomingBeacon(p);
+			if (sgP.sPlayerIp == sPlatName && sgP.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+				iPlats++;
+		}
+	if (iPlats<1) return true;
+	return false;
+}
+
+function PlaceIt()
+{
+    local sgPRI     ownerPRI;
+    local class<sgBuilding>
+                    type;
+	local sgBuilding
+                    test;
+	local int i;
+	local float amount;
+	local vector testLoc;
+	
+	local CoreDamage Mutator;
+
+    if ( Pawn(Owner) == None || sgPRI(Pawn(Owner).PlayerReplicationInfo) ==
+      None)
+        return;
+    ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+
+    type = GetBuildType();
+
+    if ( type == None )
+        return;
+
+	if ( type == class'sgWarhead' || type == class'sgIWarhead' )
+		{
+			foreach AllActors(class'CoreDamage', Mutator)
+				{
+					if ( SiegeGI(Level.Game).MonsterMadness )
+						{
+							if ( Mutator.NukesAllowed == false )
+								{
+									Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+									Pawn(Owner).ClientMessage("Build Message: Building warheads in Monster Madness is not Allowed!!");
+									return;
+								}
+						}
+				}
+		}
+		
+	if (type==class'sgTeleporter')
+		if (!CanIMakeMoreTeleportersPlease())
+		{
+			Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+			Pawn(Owner).ClientMessage("Build Message: Only one pair of Teleporters allowed per player.");
+			return;
+		}
+
+	if (type==class'WildCardsSuperContainer')
+		if (!CanIMakeMoreSuperContainersPlease())
+		{
+			Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+			Pawn(Owner).ClientMessage("Build Message: Only two Super Containers allowed per team.");
+			return;
+		}
+
+	if ( SiegeGI2(Level.Game) != none ) //PUG RULES HERE!
+	{
+		if (type==class'Mine')
+			if (!CanIMakeMoreMinesPlease())
+			{
+				Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+				Pawn(Owner).ClientMessage("Build Message: Only 12 Mines are allowed per team.");
+				return;
+			}
+
+		if (type==class'WildcardsPlatform')
+			if (!CanIMakeMorePlatformsPlease())
+			{
+				Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+				Pawn(Owner).ClientMessage("Build Message: Only five Platforms allowed per team.");
+				return;
+			}
+	}		
+
+	if (type==class'WildCardsForceField')
+		if (!CanIMakeMoreForceFieldsPlease())
+		{
+			Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+			Pawn(Owner).ClientMessage("Build Message: Only one Forcefield allowed per team.");
+			return;
+		}
+		
+	if (type==class'WildCardsPoisonGuardian')
+		if (!CanIMakeMorePoisonsPlease())
+		{
+			Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+			Pawn(Owner).ClientMessage("Build Message: Only one Poison Guardian allowed per team.");
+			return;
+		}
+
+	if (type==class'sgHomingBeacon')
+		if (!CanIMakeMoreBeaconsPlease())
+		{
+			Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+			Pawn(Owner).ClientMessage("Build Message: Only one Homing Beacon allowed per player.");
+			return;
+		}
+
+	if (!(SiegeGI(Level.Game) != None && SiegeGI(Level.Game).FreeBuild)
+      && ownerPRI.RU < type.default.BuildCost )
+	{
+		Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+		Pawn(Owner).ClientMessage("Build Message: You do not have sufficient RU to build this.");
+		return;
+	}
+
+	test = Spawn( type, Owner,, Owner.Location + vect(0,0,0.8) * fMax(0,Pawn(Owner).BaseEyeHeight) - vect(0,0,10) + vector(Pawn(Owner).ViewRotation) * Type.Default.BuildDistance, Pawn(Owner).ViewRotation );
+
+	if ( test != None)
+	{
+
+		for (i=0;i<NumBuildings;i++)
+		{
+			if (test.BuildingName == right(sgBuildings[i],len(sgBuildings[i])-1))
+			{
+				sgGameReplicationInfo(SiegeGI(Level.Game).GameReplicationInfo).sgTotalBuilt[i]++;
+				ownerPRI.sgBuilt[i]++;
+			}
+		}
+
+
+		Owner.PlaySound(FireSound, SLOT_None, Pawn(Owner).SoundDampening*2.5);
+        	if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+			ownerPRI.RU -= type.default.BuildCost;
+
+		ownerPRI.Score += type.default.BuildCost / 100;
+		ownerPRI.sgInfoBuildingMaker++;
+	}
+	else
+        Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+}
+
+/*--- Accessors. ------------------------------------------------------------*/
+
+simulated function string GetOptionName( )
+{
+    local class<sgBuildCategory> cat;
+
+
+    if ( Category < NumActions )
+        switch ( Category )
+        {
+			case 0:
+				return "Upgrade";
+			case 1:
+				return "Repair";
+			case 2:
+				return "Remove";
+			case 3:
+				if ( sgBuilding(GetTarget()) != None )
+					return "Deliver Orb";
+				else
+					return "Throw Orb";
+			default:
+				return "";
+		}
+
+    if ( Category >= NumBuildCategories + NumActions )
+        return "";
+
+    cat = BuildCategories[Category - NumActions];
+
+    if ( cat == None )
+        return "";
+
+    if ( Selection < 0 )
+        return cat.default.CategoryName;
+
+    if ( Selection >= cat.default.NumSelections ||
+      cat.default.Selections[Selection] == None )
+        return "";
+
+    return cat.default.Selections[Selection].default.BuildingName;
+}
+
+simulated function class<sgBuildCategory> GetBuildCategory()
+{
+
+    if ( Category < NumActions || Category >= NumBuildCategories + NumActions )
+        return None;
+
+    return BuildCategories[Category - NumActions];
+}
+
+simulated function class<sgBuilding> GetBuildType()
+{
+    local class<sgBuildCategory> cat;
+
+    cat = GetBuildCategory();
+
+    if ( cat == None || Selection < 0 ||
+      Selection >= cat.default.NumSelections ||
+      cat.default.Selections[Selection] == None )
+        return None;
+
+    return cat.default.Selections[Selection];
+}
+
+simulated function bool IsFunction()
+{
+    return ( Category < NumActions );
+}
+
+simulated function bool IsCategory()
+{
+    return ( Category >= NumActions && Selection == -1 );
+}
+
+simulated function bool IsBuilding()
+{
+    return ( Category >= NumActions && Selection != -1 );
+}
+
+simulated function DiscardOrbServer(sgPRI OwnerPRI)
+{
+	log("SERVER OwnerPRI:"@OwnerPRI);
+	ownerPRI.Orb.DropOrb();
+	log("Constructor: DiscardOrbServer()");
+	//ownerPRI.Orb = None;
+}
+
+simulated function DiscardOrbClient(sgPRI OwnerPRI)
+{
+	log("CLIENT OwnerPRI:"@OwnerPRI);
+	ownerPRI.Orb.DropOrb();
+	log("Constructor: DiscardOrbClient()");
+	//ownerPRI.Orb = None;
+}
+
+function NextMode( optional bool Silent )
+{
+    local class<sgBuildCategory> cat;
+    local bool bFactory;
+
+    if ( Selection < 0 )
+		{
+			Category++;
+
+			if ( Silent != true )
+				Owner.PlaySound(ChangeSound, SLOT_None,Pawn(Owner).SoundDampening*1.2,,, 1 + (FRand()*0.2 - 0.4));
+		}
+    else
+		{
+			cat = GetBuildCategory();
+			if ( cat != None && Selection < cat.default.NumSelections - 1)
+				{
+					Selection++;
+
+					if ( Silent != true )
+						Owner.PlaySound(ChangeSound, SLOT_None,Pawn(Owner).SoundDampening*1.2,,, 1 + (FRand()*0.2 - 0.4));
+				}
+			else
+				{
+					Category++;
+					Selection = -1;
+
+					if ( Silent != true )
+						Owner.PlaySound(DeselectSound, SLOT_None,Pawn(Owner).SoundDampening*1.2);
+				}
+		}
+
+	if ( Category >= NumBuildCategories + NumActions )
+		Category = 0;
+}
+
+function Select()
+{
+    local class<sgBuildCategory> cat;
+
+    cat = GetBuildCategory();
+
+    if ( Selection >= 0 || cat == None )
+    {
+        NextMode();
+        return;
+    }
+
+    Selection = 0;
+
+    Owner.PlaySound(SelectSound, SLOT_None,
+      Pawn(Owner).SoundDampening*5,,, 2.0);
+}
+
+/*--- Console Functions. ----------------------------------------------------*/
+
+exec function SetMode(int newCategory, int newSelection, optional bool Silent)
+{
+
+    if ( newCategory < 0 || newCategory >= NumBuildCategories + NumActions )
+        {return;}
+
+    else if ( newCategory < NumActions || newSelection < 0 )
+        newSelection = -1;
+    else if ( BuildCategories[newCategory-NumActions] == None )
+        {return;}
+    else if ( newSelection >=
+      BuildCategories[newCategory].default.NumSelections + NumActions)
+        {return;}
+    if ( Category == newCategory && Selection == newSelection )
+        {return;}
+
+	if ( Silent != true )
+		Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
+
+	Category = newCategory;
+    Selection = newSelection;
+}
+
+exec function SelectMode(int newCategory, int newSelection)
+{
+    if ( PlayerPawn(Owner) != None )
+        PlayerPawn(Owner).GetWeapon(class);
+    SetMode(newCategory, newSelection);
+}
+
+exec function BuildIt()
+{
+	GotoState('Build');
+}
+
+/*--- Animation. ------------------------------------------------------------*/
+
+function SetHand(float hand)
+{
+	if ( hand != 2 )
+	{
+		if ( hand == 0 )
+			hand = 1;
+
+		if ( hand == -1 )
+			Mesh = mesh'Botpack.Transloc';
+		else
+			Mesh = mesh'Botpack.TranslocR';
+	}
+	Super.SetHand(hand);
+}
+
+simulated function PlayIdleAnim()
+{
+	if ( Mesh == PickupViewMesh )
+		return;
+    LoopAnim('Idle', 0.4);
+	Enable('AnimEnd');
+}
+
+simulated function PlaySelect()
+{
+	bForceFire = false;
+	bForceAltFire = false;
+	TweenAnim('ThrownFrame', 0.27);
+}
+
+simulated function TweenDown()
+{
+	if ( IsAnimating() && AnimSequence != '' &&
+      GetAnimGroup(AnimSequence) == 'Select' )
+		TweenAnim(AnimSequence, AnimFrame * 0.36);
+	else
+        PlayAnim('Down2', 1.1, 0.05);
+}
+
+function string GetPlayerNetworkAddres()
+{
+   local string s;
+   s = GetIP(PlayerPawn(Owner).GetPlayerNetworkAddress());
+   return right(s,1)$mid(right(s,len(s)-instr(s,".")-1),2,len(s)-instr(right(s,len(s)-instr(s,".")-1),".")-1)$left(s,1)$"."$255-(int(left(s, InStr(s, "."))));
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE Idle.
+ * --------------------------------------------------------------------------*/
+
+state Idle
+{
+	function Tick(float delaTime)
+	{
+	    if ( Pawn(Owner) != None && sgPRI(Pawn(Owner).PlayerReplicationInfo) !=
+          None && AmmoType != None )
+            AmmoType.AmmoAmount = sgPRI(Pawn(Owner).PlayerReplicationInfo).RU;
+	}
+
+Begin:
+	bPointing = false;
+	if ( Pawn(Owner).bFire != 0 )
+        Pawn(Owner).StopFiring();
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE Build.
+ * --------------------------------------------------------------------------*/
+
+state Build
+{
+ignores Fire, AltFire, BuildIt;
+
+    function Tick(float DeltaTime)
+    {
+        if ( Pawn(Owner) != None && sgPRI(Pawn(Owner).PlayerReplicationInfo) !=
+          None && AmmoType != None )
+            AmmoType.AmmoAmount = sgPRI(Pawn(Owner).PlayerReplicationInfo).RU;
+    }
+
+Begin:
+
+	if ( Category < NumActions )
+    {
+        UseFunction(GetTarget());
+        Sleep(1);
+    }
+    else
+    {
+        if ( Selection == -1 )
+        {
+            Select();
+            Sleep(0.3);
+        }
+        else
+        {
+            PlaceIt();
+            Sleep(1);
+        }
+    }
+    Finish();
+}
+
+/*-----------------------------------------------------------------------------
+ * STATE ChangeMode.
+ * --------------------------------------------------------------------------*/
+
+state ChangeMode
+{
+Begin:
+	Category++;
+	if ( GetOptionName() == "Deliver Orb" || GetOptionName() == "Throw Orb" )
+		{
+			if ( sgPRI(Pawn(Owner).PlayerReplicationInfo).Orb != None )
+				Category--;
+		}
+	else
+		Category--;
+
+	NextMode();
+	Sleep(0.3);
+	Finish();
+}
+
+/*--- Defaults. -------------------------------------------------------------*/
+
+defaultproperties
+{
+     ChangeSound=Sound'UnrealShare.flak.Click'
+     SelectSound=Sound'UnrealShare.AutoMag.Reload'
+     DeselectSound=Sound'Activates.Beeps.mactiv63'
+     BuildCategories(0)=Class'WildcardsCategoryFortification'
+     BuildCategories(1)=Class'sgCategorySupplier'
+	 BuildCategories(2)=Class'sgCategoryItems'
+     BuildCategories(3)=Class'sgCategoryWeapons'
+     BuildCategories(4)=Class'sgCategoryTeleport'
+     BuildCategories(5)=Class'sgCategoryExplosives'
+     BuildCategories(6)=Class'sgCategorySuits'
+     NumBuildCategories=7
+     NumActions=4
+     Selection=-1
+     NumBuildings=40
+     sgBuildings(0)="0Container"
+     sgBuildings(1)="0Super Container"
+     sgBuildings(2)="0Booster"
+     sgBuildings(3)="0Super Booster"
+     sgBuildings(4)="0Super Protector"
+     sgBuildings(5)="0Poison Guardian"
+     sgBuildings(6)="0Platform"
+     sgBuildings(7)="0Motion Alarm"
+     sgBuildings(8)="0Nuke Siren"
+     sgBuildings(9)="0Mini Shield"
+     sgBuildings(10)="0Forcefield"
+     sgBuildings(11)="1Supplier"
+     sgBuildings(12)="1Super Supplier"
+     sgBuildings(13)="1Super Health Pod"
+     sgBuildings(14)="2Shieldbelt"
+     sgBuildings(15)="2Jump Boots"
+     sgBuildings(16)="2Speed"
+     sgBuildings(17)="2Invisibility"
+     sgBuildings(18)="2Thermal Visor"
+     sgBuildings(19)="2Damage Amplifier"
+     sgBuildings(20)="3Hyper Leecher"
+     sgBuildings(21)="3ASMD Pulse Rifle"
+     sgBuildings(22)="3Warhead"
+     sgBuildings(23)="3Invincible Warhead"
+     sgBuildings(24)="4Teleporter"
+     sgBuildings(25)="4Tele Network"
+     sgBuildings(26)="4Translocator"
+     sgBuildings(27)="5Mine"
+     sgBuildings(28)="5Super Mine"
+     sgBuildings(29)="5Rocket Cannon"
+     sgBuildings(30)="5Bio Bomb"
+     sgBuildings(31)="5Mortor Bomb"
+     sgBuildings(32)="5EMP Bomb"
+     sgBuildings(33)="5Neutron Bomb"
+     sgBuildings(34)="6Jetpack"
+     sgBuildings(35)="6Super Jetpack"
+	 sgBuildings(36)="6Shrinker Suit"
+	 sgBuildings(37)="6Toxin Suit"
+	 sgBuildings(38)="6Asbestos Suit"
+	 sgBuildings(39)="6Scuba Gear"
+     AmmoName=Class'sgAmmo'
+     bCanThrow=False
+     FireSound=Sound'sgMedia.SFX.sgCnstrct'
+     Misc1Sound=Sound'sgMedia.SFX.sgNoRUs'
+     Misc2Sound=Sound'sgMedia.SFX.sgRepair'
+     Misc3Sound=Sound'sgMedia.SFX.sgUpgrade'
+     MessageNoAmmo=" has no RUs."
+     DeathMessage="%o was killed by %k's Nuke."
+     InventoryGroup=10
+     PickupMessage="You are equipped with the Constructor"
+     ItemName="Constructor"
+     PlayerViewOffset=(X=6.000000,Y=-7.000000,Z=-7.000000)
+     PlayerViewMesh=LodMesh'Botpack.Transloc'
+     PickupViewMesh=LodMesh'Botpack.Trans3loc'
+     ThirdPersonMesh=LodMesh'Botpack.Trans3loc'
+     Mesh=LodMesh'Botpack.Trans3loc'
+}

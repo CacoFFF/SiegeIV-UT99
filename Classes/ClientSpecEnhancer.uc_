@@ -1,0 +1,170 @@
+class ClientSpecEnhancer expands Actor;
+
+var PlayerPawn LocalPlayer;
+var Pawn ViewTarget;
+var int iTicks;
+
+var Inventory InvList[128];
+var int iInv;
+
+var float LastCheckTime;
+var bool bWeapNeedsAmmo;
+
+
+auto state Action
+{
+Begin:
+	Sleep(0.0);
+	if ( LocalPlayer == none )
+		Goto('Begin');
+Waiting:
+	if ( Pawn(LocalPlayer.ViewTarget) == none )
+	{
+		Sleep(0.0);
+		Goto('Waiting');
+	}
+NewView:
+	ViewTarget = Pawn(LocalPlayer.ViewTarget);
+	CatchInv();
+	Sleep(0.0);
+InvIntegrity:
+	if ( LocalPlayer.ViewTarget != ViewTarget )
+	{
+		While ( iInv > 0 )
+		{
+			if ( InvList[--iInv] != none )
+			{
+				InvList[iInv].Inventory = none;
+				InvList[iInv].Instigator = none;
+				InvList[iInv] = none;
+			}
+			ViewTarget.Inventory = none;
+			bWeapNeedsAmmo = false;
+		}
+		LastCheckTime = 0;
+		Goto('Waiting');
+	}
+	if ( LastCheckTime >= (Level.TimeSeconds - 1) )
+	{
+		CleanList();
+		CatchInv();
+	}
+	Sleep(0.0);
+	Goto('InvIntegrity');
+}
+
+function CatchInv()
+{
+	local inventory I;
+	local Weapon BadWeap;
+	local int k, j;
+	
+	LastCheckTime = Level.TimeSeconds;
+	ForEach ViewTarget.ChildActors (class'Inventory', I)
+	{
+		if ( I.Instigator != ViewTarget )
+		{
+			I.Instigator = ViewTarget;
+			if ( iInv > 0 )
+				InvList[iInv-1].Inventory = I;
+			else
+				ViewTarget.Inventory = I;
+			InvList[iInv++] = I;
+			if ( (Weapon(I) != none) && (Weapon(I).AmmoName != none) && (Weapon(I).AmmoType == none) && !bWeapNeedsAmmo )
+			{
+				bWeapNeedsAmmo = true;
+				BadWeap = Weapon(I);
+			}
+		}
+	}
+
+	if ( bWeapNeedsAmmo )
+	{
+		bWeapNeedsAmmo = false;
+		if ( BadWeap != none )
+		{
+			I = BadWeap;
+			Goto PROCEED_NOW;
+		}
+
+		I = ViewTarget.Inventory;
+		while ( I != none )
+		{
+			BadWeap = Weapon(I);
+			if ( BadWeap != none && (BadWeap.AmmoName != none) && (BadWeap.AmmoType == none) )
+			{
+				PROCEED_NOW:
+				For ( j=0 ; j<iInv ; j++ )
+				{
+					if ( InvList[j].class == BadWeap.AmmoName )
+					{
+						BadWeap.AmmoType = Ammo(InvList[j]);
+						break;
+					}
+				}
+				if ( BadWeap.AmmoType == none )
+					bWeapNeedsAmmo = true;
+			}
+			I = I.Inventory;
+		}
+	}
+}
+
+
+//This function effectively compacts a static array that uses a MAX index
+//Optimization is maximum
+//var Inventory InvList[infinite];
+//var int iInv;
+function CleanList()
+{
+	local int i, iExtra;
+	local Inventory Inv;
+	
+	while ( (InvList[i] != none) && !InvList[i].bDeleteMe ) //Leave this loop when InvList[i] is invalid
+		i++;
+	if ( i == iInv ) //List didn't lose elements
+		return;
+	Assert( i < iInv ); //Crash if we went over the list erroneously
+
+	//We must enter this section with InvList[i] being invalid
+	INC_GAPS:
+	while ( InvList[i+(++iExtra)] == none || InvList[i+iExtra].bDeleteMe ) //iExtra counts empty gaps we found
+	{
+		if ( InvList[i+iExtra] != none )
+			InvList[i+iExtra].Instigator = none;
+		if ( i == iInv-iExtra ) //Last(plural?) element is the one that disappeared
+		{
+			FINISH_COMPACTING:
+			While ( iInv-- > i )
+				InvList[iInv] = none;
+			if ( i == 0 )				ViewTarget.Inventory = none;
+			else				InvList[i-1].Inventory = none;
+			return;
+		}
+	}
+
+	if ( i == 0 )		ViewTarget.Inventory = InvList[iExtra];
+	else		InvList[i-1].Inventory = InvList[i+iExtra];
+	
+
+	//We must enter this section with InvList[i+iExtra] being valid
+	COMPACT_ONE:	//Pop block until next invalid pointer
+	InvList[i] = InvList[i+iExtra];
+	if ( InvList[(++i)+iExtra] != none ) //Increase i until invalid pointer
+		Goto COMPACT_ONE;
+
+	Assert( i <= iInv-iExtra); //Compacted block went beyond MAX-GAPS, crash
+
+	if ( i == iInv-iExtra ) //End of list, nullify pointers beyond shrunken limits
+		Goto FINISH_COMPACTING;
+	//Below the old ceiling, keep looking for more invalid pointers in the middle of our array
+	Goto INC_GAPS;
+	Assert("WHAT THE HELL? THIS CONDITION SHOULD NEVER RUN!" == "" );
+}
+
+
+defaultproperties
+{
+	RemoteRole=ROLE_None
+	bHidden=True
+}

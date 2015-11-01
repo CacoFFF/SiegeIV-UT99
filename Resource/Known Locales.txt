@@ -1,0 +1,9 @@
+ .DET - German
+ .EST - Spanish
+ .FRT - French
+ .INT - English
+ .ITT - Italian
+ .KOT - Korean
+ .TCT - Czech
+ .RUT - Russian
+
