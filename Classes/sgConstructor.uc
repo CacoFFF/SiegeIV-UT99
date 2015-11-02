@@ -96,6 +96,7 @@ var color WhiteColor;
 var color GrayColor;
 var Texture FunctionBkgs[3];
 var Pawn HitPawn;
+var int CachedCategory, CachedCBuildCount;
 
 //Localized
 var(test) config string Functions[3], OrbTexts[3];
@@ -1384,43 +1385,119 @@ simulated function bool BuildingOwned( sgBuilding sgB)
 
 simulated event RenderOverlays( canvas Canvas )
 {
-	if ( (Pawn(Owner) != none) )
+	local rotator NewRot;
+	local bool bPlayerOwner;
+	local int Hand;
+	local PlayerPawn PlayerOwner;
+	local vector DrawOffset, WeaponBob;
+	local Pawn PawnOwner;
+	local float WideScreenFactor, FovFactor;
+
+	if ( bHideWeapon )
+		return;
+	PawnOwner = Pawn(Owner);
+	if ( PawnOwner == None ) 
+		return;
+
+	PlayerOwner = PlayerPawn(Owner);
+
+	if ( PlayerOwner != None )
 	{
-		if ( TeamSet < 0 )
+		if ( PlayerOwner.DesiredFOV != PlayerOwner.DefaultFOV )
+			return;
+		bPlayerOwner = true;
+		Hand = PlayerOwner.Handedness;
+
+		if (  (Level.NetMode == NM_Client) && (Hand == 2) )
 		{
-			if ( Pawn(Owner).PlayerReplicationInfo != none )
-				TeamSet = Pawn(Owner).PlayerReplicationInfo.Team;
-			else
+			bHideWeapon = true;
+			return;
+		}
+	}
+
+	if ( TeamSet < 0 )
+	{
+		if ( PawnOwner.PlayerReplicationInfo != none )
+			TeamSet = PawnOwner.PlayerReplicationInfo.Team;
+/*		else //Is the below block necessary? TEST IN DEMOPLAY!
+		{
+			ForEach Owner.ChildActors( class'PlayerReplicationInfo', Pawn(Owner).PlayerReplicationInfo )
 			{
-				ForEach Owner.ChildActors( class'PlayerReplicationInfo', Pawn(Owner).PlayerReplicationInfo )
-				{
-					TeamSet = Pawn(Owner).PlayerReplicationInfo.Team;
-					break;
-				}
+				TeamSet = Pawn(Owner).PlayerReplicationInfo.Team;
+				break;
 			}
 		}
-		if ( TeamSet > 3 )
-			WetTexture'BGL_PSwap'.Palette = ColorPals[4].Palette;
-		else
-			WetTexture'BGL_PSwap'.Palette = ColorPals[TeamSet].Palette;
+*/		TeamSet = Min( TeamSet, 4);
 	}
-	if ( LocalOwner() )
+	
+	if ( !bPlayerOwner || (PlayerOwner.Player == None) )
+		PawnOwner.WalkBob = vect(0,0,0);
+
+	WideScreenFactor = (Canvas.ClipY / Canvas.ClipX) ** 0.7; //Smaller on HD, bigger on square screens
+	
+//	DrawOffset = ((0.9/PawnOwner.FOVAngle * PlayerViewOffset) >> PawnOwner.ViewRotation);
+	FovFactor = (90/PawnOwner.FOVAngle);
+	DrawOffset = FovFactor * 0.01 * PlayerViewOffset;
+	DrawOffset.X *= Square(FovFactor) / WideScreenFactor;
+	DrawOffset.Y /= WideScreenFactor;
+	DrawOffset.Z *= (1.f + WideScreenFactor) * 0.5;
+	DrawOffset = DrawOffset >> PawnOwner.ViewRotation;
+
+	if ( (Level.NetMode == NM_DedicatedServer) 
+		|| ((Level.NetMode == NM_ListenServer) && (Owner.RemoteRole == ROLE_AutonomousProxy)) )
+		DrawOffset += (PawnOwner.BaseEyeHeight * vect(0,0,1));
+	else
+	{	
+		DrawOffset += (PawnOwner.EyeHeight * vect(0,0,1));
+		WeaponBob = BobDamping * PawnOwner.WalkBob;
+		WeaponBob.Z = (0.45 + 0.55 * BobDamping) * PawnOwner.WalkBob.Z;
+		DrawOffset += WeaponBob;
+	}
+	
+	SetLocation( Owner.Location + DrawOffset );
+	NewRot = PawnOwner.ViewRotation;
+
+	if ( Hand == 0 )
+		newRot.Roll = -2 * Default.Rotation.Roll;
+	else
+		newRot.Roll = Default.Rotation.Roll * Hand;
+
+	SetRotation(newRot);
+	WetTexture'BGL_PSwap'.Palette = ColorPals[TeamSet].Palette;
+	if ( LocalOwner() ) //I have to find out a way to make this render on other viewtargets
 		ScriptedTexture'BGL_Script'.NotifyActor = self;
-	Super.RenderOverlays( Canvas);
+	Canvas.DrawActor(self, false);
 	ScriptedTexture'BGL_Script'.NotifyActor = none;
 }
+
 
 simulated event RenderTexture( ScriptedTexture Tex)
 {
 	local font F, SF;
 	local texture TmpTex;
-
+	local string RuleString;
+	local byte DenyBuild;
+	local int RUReq, i;
+	local sgPRI PRI;
+	
 	if ( Pawn(Owner) == none || Pawn(Owner).PlayerReplicationInfo == none || CatActor == none )
 		return;
+	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
 	//Left HAND only for now
 	F = MyFonts.GetBigFont(1280);
-	SF = MyFonts.GetBigFont( 800);
+	SF = MyFonts.GetBigFont( 640);
+	
+	For ( i=3+CatActor.iCat ; i>=0 ; i-- )
+	{
+		if ( i == 3 ) //Don't draw the orb for now
+			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_D', false);
+		else if ( i == Category )
+			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_A', false);
+		else
+			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_N', false);
+	}
+	
 	if ( Category < 3 )
 	{
 		Tex.DrawTile( 54, 75, 64, 64, 0, 0, 64, 64, Texture'GUI_Border4_F', false);
@@ -1439,14 +1516,14 @@ simulated event RenderTexture( ScriptedTexture Tex)
 			Tex.DrawTile( 180, 70, 32, 32, 0, 0, 64, 64, FunctionBkgs[Category], true);
 			if ( HitPawn.PlayerReplicationInfo != none )
 			{
-				Tex.DrawText( 50, 52, "> "$HitPawn.PlayerReplicationInfo.PlayerName, F);
+				Tex.DrawText( 40, 52, "> "$HitPawn.PlayerReplicationInfo.PlayerName, F);
 				TmpTex = GetStatusIcon( HitPawn);
 				if ( TmpTex != none ) //128x224
 					Tex.DrawTile( 62, 75, 96, 168, 0, 0, 128, 224, TmpTex, true);
 			}
 			else if ( sgBuilding(HitPawn) != none )
 			{
-				Tex.DrawText( 50, 52, "> "$sgBuilding(HitPawn).BuildingName, F);
+				Tex.DrawText( 40, 52, "> "$sgBuilding(HitPawn).BuildingName, F);
  				if ( sgBuilding(HitPawn).GUI_Icon != none)
 					Tex.DrawTile( 54, 75, 128, 128, 0, 0, 128, 128, sgBuilding(HitPawn).GUI_Icon, true);
 			}
@@ -1454,10 +1531,16 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	}
 	else if ( Category > 3 )
 	{
-			Tex.DrawTile( 54, 75, 64, 64, 0, 0, 64, 64, Texture'GUI_Border4_F', false);
-			Tex.DrawTile( 118, 75, 64, 64, 63, 0, -64, 64, Texture'GUI_Border4_F', false);
-			Tex.DrawTile( 54, 139, 64, 64, 0, 63, 64, -64, Texture'GUI_Border4_F', false);
-			Tex.DrawTile( 118, 139, 64, 64, 63, 63, -64, -64, Texture'GUI_Border4_F', false);
+		if ( Category != CachedCategory  )
+		{
+			CachedCategory = Category;
+			CachedCBuildCount = CatActor.CountCategoryBuilds( Category - 4);
+		}
+			
+		Tex.DrawTile( 54, 75, 64, 64, 0, 0, 64, 64, Texture'GUI_Border4_F', false);
+		Tex.DrawTile( 118, 75, 64, 64, 63, 0, -64, 64, Texture'GUI_Border4_F', false);
+		Tex.DrawTile( 54, 139, 64, 64, 0, 63, 64, -64, Texture'GUI_Border4_F', false);
+		Tex.DrawTile( 118, 139, 64, 64, 63, 63, -64, -64, Texture'GUI_Border4_F', false);
 
 		if ( SelectedBuild == none )
 		{
@@ -1467,7 +1550,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 		else
 		{
 			Tex.DrawColoredText( 34, 32, CatActor.NetCategories[Category-4], F, PurpleColor);
-			Tex.DrawText( 50, 52, "> "$SelectedBuild.default.BuildingName, F);
+			Tex.DrawText( 40, 52, "> "$SelectedBuild.default.BuildingName, F);
 			if ( SelectedBuild.default.GUI_Icon != none )
 			{
 				Tex.DrawTile( 180, 70, 32, 32, 0, 0, 64, 64, Texture'GUI_UpgradeFront', true);
@@ -1475,9 +1558,17 @@ simulated event RenderTexture( ScriptedTexture Tex)
 			}
 			else
 				Tex.DrawTile( 86, 107, 64, 64, 0, 0, 64, 64, Texture'GUI_UpgradeFront', true);
-			if ( !CatActor.RulesAllow( SelectedIndex) )
-			{
-			}
+			RuleString = CatActor.GetRuleString( SelectedIndex, DenyBuild);
+			if ( DenyBuild > 0 ) //Denied!
+				Tex.DrawColoredText( 24, 200, RuleString, SF, PurpleColor );
+			else
+				Tex.DrawColoredText( 24, 200, RuleString, SF, OrangeColor );
+			RUReq = CatActor.BuildCost( SelectedIndex);
+			if ( PRI != none && PRI.RU >= RUReq ) //Enough RU
+				Tex.DrawColoredText( 24, 218, "Cost: "$string(RUReq), SF, OrangeColor );
+			else
+				Tex.DrawColoredText( 24, 218, "Cost: "$string(RUReq), SF, PurpleColor );
+
 		}
 	}
 }
@@ -2705,7 +2796,7 @@ defaultproperties
      InventoryGroup=10
      PickupMessage="You are equipped with the Constructor"
      ItemName="Constructor"
-     PlayerViewOffset=(X=5.500000,Y=-6.000000,Z=-6.000000)
+     PlayerViewOffset=(X=4.200000,Y=-6.100000,Z=-6.800000)
      PlayerViewMesh=LodMesh'Constructor'
      PickupViewMesh=LodMesh'Botpack.Trans3loc'
      ThirdPersonMesh=LodMesh'Botpack.Trans3loc'
@@ -2752,6 +2843,7 @@ defaultproperties
      PurpleColor=(R=255,G=0,B=255)
      WhiteColor=(R=255,G=255,B=255)
      GrayColor=(R=202,G=204,B=200)
+	 CachedCategory=-1
      FunctionBkgs(0)=Texture'GUI_OrbFront'
      FunctionBkgs(1)=Texture'GUI_Settings'
      FunctionBkgs(2)=Texture'GUI_RemoveFront'

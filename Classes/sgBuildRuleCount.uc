@@ -24,7 +24,7 @@ replication
 	reliable if ( !bPersistantTimer && Role==ROLE_Authority )
 		TargetTimer, BuildCount, TargetCount, bOverTimeReached;
 	reliable if ( bNetinitial && Role==ROLE_Authority )
-		bPersistantTimer, bOverTime;
+		BuildClass, bPersistantTimer, bOverTime;
 	reliable if ( bPersistantTimer && Role==ROLE_Authority )
 		MyTimer;
 }
@@ -41,6 +41,8 @@ simulated function string GetRuleString( optional bool bNegative)
 			return "Wait:"@int(MyTimer)@"seconds";
 		return "Cooldown ready ("$int(TargetTimer)$")";
 	}
+	if ( BuildClass == none ) //Debug
+		return "Error: no class";
 	if ( bNegative )
 	{
 		if ( TargetTimer > 0 )

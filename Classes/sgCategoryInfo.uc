@@ -348,6 +348,15 @@ simulated final function int PrevCategory( int From)
 	return j;
 }
 
+simulated final function int CountCategoryBuilds( int Category)
+{
+	local int i, j;
+	For ( i=0 ; i<iBuilds ; i++ )
+		if ( NetCategory[i] == Category )
+			j++;
+	return j;
+}
+
 simulated final function int FirstCatBuild( int Category)
 {
 	local int i;
@@ -387,15 +396,13 @@ simulated final function string GetRuleString( byte i, out byte bDenyBuild)
 		bDenyBuild = 0;
 		return "";
 	}
-	bDenyBuild = byte(NetRules[i].IsEnabled());
+	bDenyBuild = byte(!NetRules[i].IsEnabled());
 	return NetRules[i].GetRuleString();
 }
 
 simulated final function bool RulesAllow( byte i)
 {
-	if ( NetRules[i] == none )
-		return true;
-	return NetRules[i].IsEnabled();
+	return (NetRules[i] == none) || NetRules[i].IsEnabled();
 }
 
 simulated final function SetRule( int idx, sgBaseBuildRule Other)
