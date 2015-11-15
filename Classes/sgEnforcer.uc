@@ -38,6 +38,39 @@ simulated function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNo
 	}		
 }
 
+//Avoid creating a sgEnforcer entry, use Enforcer instead
+function SetSwitchPriority(pawn Other)
+{
+	local int i;
+	local name temp, carried;
+
+	if ( PlayerPawn(Other) != None )
+	{
+		for ( i=0; i<ArrayCount(PlayerPawn(Other).WeaponPriority); i++)
+			if ( PlayerPawn(Other).WeaponPriority[i] == 'Enforcer' )
+			{
+				AutoSwitchPriority = i;
+				return;
+			}
+		// else, register this weapon
+		carried = 'Enforcer';
+		for ( i=AutoSwitchPriority; i<ArrayCount(PlayerPawn(Other).WeaponPriority); i++ )
+		{
+			if ( PlayerPawn(Other).WeaponPriority[i] == '' )
+			{
+				PlayerPawn(Other).WeaponPriority[i] = carried;
+				return;
+			}
+			else if ( i<ArrayCount(PlayerPawn(Other).WeaponPriority)-1 )
+			{
+				temp = PlayerPawn(Other).WeaponPriority[i];
+				PlayerPawn(Other).WeaponPriority[i] = carried;
+				carried = temp;
+			}
+		}
+	}		
+}
+
 function SetTwoHands()
 {
 	if ( SlaveEnforcer == None )
