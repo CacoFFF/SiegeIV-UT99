@@ -27,6 +27,7 @@ replication
 event Spawned()
 {
 	local PlayerStart P;
+	local sgEquipmentSupplier ES;
 	local byte aTeam;
 
 	Super.Spawned();
@@ -36,9 +37,19 @@ event Spawned()
 
 	aTeam = Pawn(Owner).PlayerReplicationInfo.Team;
 	ForEach RadiusActors (class'PlayerStart', P, 105)
-	{
 		if ( P.TeamNumber != aTeam )
 		{
+			if ( PlayerPawn(Owner) != none )
+				Pawn(Owner).ClientMessage("Cannot mine enemy spawn points.");
+			Destroy();
+			return;
+		}
+	ForEach RadiusActors (class'sgEquipmentSupplier', ES, 100)
+	{
+		if ( ES.bProtected && (ES.Team != aTeam) )
+		{
+			if ( PlayerPawn(Owner) != none )
+				Pawn(Owner).ClientMessage("Cannot mine enemy main suppliers.");
 			Destroy();
 			return;
 		}
