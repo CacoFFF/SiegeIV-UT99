@@ -1983,7 +1983,7 @@ function BuildingCreated( sgBuilding sgNew)
 
 	ForEach AllActors (class'sgBuilding', sgB)
 	{
-		if ( sgB != sgNew )
+		if ( sgB.bNotifyCreated && (sgB != sgNew) )
 			sgB.BuildingCreated( sgNew);
 	}
 	
@@ -2001,7 +2001,7 @@ function BuildingDestroyed( sgBuilding sgOld)
 
 	ForEach AllActors (class'sgBuilding', sgB)
 	{
-		if ( sgB != sgOld )
+		if ( sgB.bNotifyDestroyed && (sgB != sgOld) )
 			sgB.BuildingDestroyed( sgOld);
 	}
 }

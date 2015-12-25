@@ -68,7 +68,10 @@ var Texture GUI_Icon;
 
 var bool bNoUpgrade;
 var bool bNoFractionUpgrade;
-var bool bNoNotify;
+var bool bNoNotify; //Cannot emit destruction/creation notifies (for game shutdown usage)
+var bool bNotifyDestroyed; //Can receive BuildingDestroyed notifies
+var bool bNotifyCreated; //Can receive BuildingCreated notifies
+
 
 var bool bSmokeStatus;
 var sgSmokeGenerator MyGen;
@@ -468,8 +471,8 @@ function Destruct( optional pawn instigatedBy)
 
 
 //Notifications
-function BuildingCreated( sgBuilding sgNew);
-function BuildingDestroyed( sgBuilding sgOld)
+function BuildingCreated( sgBuilding sgNew); //Needs bNotifyCreated
+function BuildingDestroyed( sgBuilding sgOld) //Needs bNotifyDestroyed
 {
 	//Reinitialize path blocking to find new candidates
 //	if ( bBlocksPath && (VSize(Location - sgOld.Location) < BlockScanDist) )

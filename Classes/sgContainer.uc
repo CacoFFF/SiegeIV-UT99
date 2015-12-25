@@ -7,27 +7,32 @@
 class sgContainer extends sgBuilding;
 
 var int StorageAmount, BaseStorage;
-var sgBuilding sgRelated[48];
+var native sgBuilding sgRelated[48];
 var int iRelated;
 var float BaseEnergy; //Used for upgrade health scaling
+var float HealAmount; //Base (non-upgraded)
 
 simulated function CompleteBuilding()
 {
 	local int i;
-	local float mult;
+	local float MaxHeal;
 
 	if ( Role != ROLE_Authority  || bDisabledByEMP )
 		return;
 	if ( FRand() < 0.05 ) //Container can move around, just in case...
 		RebuildRelated();
 
-	mult = 1;
-	if ( SiegeGI(Level.Game).bOverTime )
-		mult = 0.5;
+	if ( iRelated < 1 )
+		return;
+
+	MaxHeal = HealAmount + Grade*0.2;
+	if ( SiegeGI(Level.Game) != none && SiegeGI(Level.Game).bOverTime )
+		MaxHeal *= 0.5;
+
 	While ( i < iRelated ) //Self always gets healing, so iRelated is always above 0
 	{
-		if ( !sgRelated[i].bDisabledByEMP && (sgRelated[i].Energy < sgRelated[i].MaxEnergy) && (FRand() <= 0.5 + Grade*0.2 ))
-			sgRelated[i].Energy = FMin(sgRelated[i].Energy + (1 + Grade*0.2) * mult, sgRelated[i].MaxEnergy);
+		if ( (sgRelated[i] != none) && !sgRelated[i].bDisabledByEMP && (sgRelated[i].Energy < sgRelated[i].MaxEnergy) && (FRand() <= 0.5 + Grade*0.2 ))
+			sgRelated[i].Energy = FMin(sgRelated[i].Energy + MaxHeal, sgRelated[i].MaxEnergy);
 		++i;
 	}
 }
@@ -38,14 +43,15 @@ simulated function FinishBuilding()
 
 	SetCollision(true, true, true);
 	bProjTarget = true;
-	BaseEnergy = MaxEnergy;
-	BaseStorage = StorageAmount;
+	if ( BaseEnergy == 0 )
+		BaseEnergy = MaxEnergy;
+	if ( BaseStorage == 0 )
+		BaseStorage = StorageAmount;
 
 	if ( SiegeGI(Level.Game) != None )
 	{
 		SiegeGI(Level.Game).MaxRus[Team] += StorageAmount;
-		SiegeGI(Level.Game).MaxRus[Team] =
-		FMax(SiegeGI(Level.Game).MaxRUs[Team], 300);
+		SiegeGI(Level.Game).MaxRus[Team] = FMax(SiegeGI(Level.Game).MaxRUs[Team], 300);
 	}
 }
 
@@ -60,23 +66,28 @@ function PostBuild()
 function RebuildRelated()
 {
 	local sgBuilding sgB;
-	local float ScanRadius;
 
 	iRelated = 0;
-	ScanRadius = 150 + CollisionRadius + CollisionHeight + CollisionRadius * Grade * 0.5;
-	foreach RadiusActors(class'sgBuilding', sgB, ScanRadius)
+	foreach RadiusActors(class'sgBuilding', sgB, ScanRadius() )
 		if ( (sgBaseCore(sgB) == None) && (sgB.Team == Team) && (iRelated < 48) )
 			sgRelated[iRelated++] = sgB;
+}
+
+function float ScanRadius()
+{
+	return 150 + CollisionRadius + CollisionHeight + CollisionRadius * Grade * 0.5;
 }
 
 event Destroyed()
 {
 	Super.Destroyed();
-
-	if ( DoneBuilding && SiegeGI(Level.Game) != None )
+	if ( SiegeGI(Level.Game) == none )
+		return;
+	
+	if ( DoneBuilding )
 		SiegeGI(Level.Game).MaxRUs[Team] -= StorageAmount;
 
-	if ( bBuildInitialized && (SiegeGI(Level.Game) != None) )
+	if ( bBuildInitialized )
 	{
 		if ( BaseStorage == 0 )
 			SiegeGI(Level.Game).MaxFutureRUs[Team] -= (StorageAmount + 250);
@@ -89,11 +100,11 @@ event Destroyed()
 function BuildingCreated( sgBuilding sgNew)
 {
 	local float InRadius;
-
+	
 	if ( bBuildInitialized && (sgNew.Team == Team) && (sgBaseCore(sgNew) == None) && (iRelated < ArrayCount(sgRelated)) )
 	{
-		InRadius = 224+16*Grade + sgNew.CollisionRadius;
-		if ( VSize(Location - sgNew.Location) <= InRadius )
+		InRadius = ScanRadius();
+		if ( VSize(Location - sgNew.Location) <= InRadius + sgNew.CollisionRadius )
 			sgRelated[iRelated++] = sgNew;
 	}
 }
@@ -103,7 +114,7 @@ function BuildingDestroyed( sgBuilding sgOld)
 	local int i;
 
 	Super.BuildingDestroyed( sgOld);
-	if ( sgOld.Team != Team )
+	if ( sgOld.Team != Team || (VSize(Location-sgOld.Location) < ScanRadius() + sgOld.CollisionRadius) )
 		return;
 
 	For ( i=iRelated-1 ; i>=0 ; i-- )
@@ -120,7 +131,6 @@ function BuildingDestroyed( sgBuilding sgOld)
 function Upgraded()
 {
 	local float percent, scale;
-	local sgBuilding sgB;
 
 	if ( SiegeGI(Level.Game) != None )
 	{
@@ -164,6 +174,7 @@ static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int 
 defaultproperties
 {
      StorageAmount=50
+	 HealAmount=1.0
      BuildingName="Container"
      BuildCost=125
      UpgradeCost=25
@@ -188,5 +199,7 @@ defaultproperties
      CollisionHeight=36.000000
 	 bCollideWhenPlacing=True
 	 bBlocksPath=True
+	 bNotifyDestroyed=True
+	 bNotifyCreated=True
 	 GUI_Icon=Texture'GUI_Container'
 }

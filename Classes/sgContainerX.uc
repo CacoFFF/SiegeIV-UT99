@@ -14,6 +14,7 @@ simulated function FinishBuilding()
 defaultproperties
 {
      StorageAmount=250
+	 HealAmount=1.2
      BuildDistance=50
      BuildingName="ContainerX"
      BuildCost=750
