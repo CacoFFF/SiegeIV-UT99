@@ -1805,7 +1805,7 @@ function CheckRandomSpawner()
 	{
 		DebugShout("RandomSpawnerMap["$string(i)$"]: "$RandomSpawnerMap[i]);
 		DebugShout("GetURLMap("$string(i)$"): "$GetURLMap());
-		if ( GetURLMap() == RandomSpawnerMap[i] )
+		if ( GetURLMap() ~= RandomSpawnerMap[i] )
 		{
 			DebugShout("Found a map location in the INI!");
 			
@@ -2324,11 +2324,13 @@ defaultproperties
      RandomSpawnerLocation(2)=(X=3958,Y=-124,Z=40)
      RandomSpawnerLocation(3)=(X=0,Y=0,Z=1624)
      RandomSpawnerLocation(4)=(X=1125,Y=-74,Z=336)
+	 RandomSpawnerLocation(5)=(X=-450,Y=927,Z=-130)
      RandomSpawnerMap(0)="CTF-Niven.unr"
      RandomSpawnerMap(1)="CTF-McSwartzly2004]I[x.unr"
      RandomSpawnerMap(2)="CTF-DeNovo.unr"
      RandomSpawnerMap(3)="CTF-Clarion[SwS].unr"
      RandomSpawnerMap(4)="CTF-'uK-BraveHeart[REVISED]"
+	 RandomSpawnerMap(5)="CTF-Icepost"
      Weapons(0)="Botpack.ImpactHammer"
      Weapons(1)="SiegeIV_0020.sgPulseGun"
      Weapons(2)="Botpack.ShockRifle"
