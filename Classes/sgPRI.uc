@@ -39,8 +39,7 @@ var bool bGameStarted;
 var bool bHideIdentify;
 
 //Spawn protection
-var float pTimer;
-var int ProtectCount;
+var float ProtectCount;
 var Weapon WhosGun;
 var int WhosAmmoCount;
 
@@ -263,7 +262,9 @@ function Tick(float deltaTime)
 		Disable('Tick');
 		return;
 	}
-
+	if ( Pawn(Owner) == none )
+		return;
+	
 	if ( AccRU != 0 )
 		AccRUTimer += DeltaTime;
 	if ( AccRUTimer > 0.5 * Level.TimeDilation )
@@ -328,12 +329,10 @@ function Tick(float deltaTime)
 
 	if ( ProtectCount > 0 )
 	{
-		PTimer -= DeltaTime;
-		if ( PTimer <= 0 )
-		{
-			PTimer += 1;
+		if ( (ProtectCount -= DeltaTime) <= 0 )
+			ClearProt();
+		else
 			ProtTimer();
-		}
 	}
 
     if(bIpToCountry)
@@ -377,23 +376,30 @@ function Tick(float deltaTime)
 function ProtTimer()
 {
 	local Pawn P;
+
 	P = Pawn(Owner);
-	if ( P == None )
+	if ( sgConstructor(P.Weapon) != none )
 		return;
-	if ( --ProtectCount <= 0 )
-	{
-		ClearProt();
-		return;
-	}
 	if ( WhosGun == None )
 	{
 		WhosGun = P.Weapon;
 		if ( (WhosGun != none) && (WhosGun.AmmoType != none) )
 			WhosAmmoCount = P.Weapon.AmmoType.AmmoAmount;
+		return;
 	}
-	if ( (WhosGun != None) && (P != none) )
-		if (P.Weapon != WhosGun || (WhosGun.AmmoType != none && P.Weapon.AmmoType.AmmoAmount != WhosAmmoCount) )
+	if ( P.Weapon != WhosGun ) //Weapon changed
+		ClearProt();
+	else if ( WhosGun.AmmoType != none ) 
+	{
+		if ( P.Weapon.AmmoType.AmmoAmount < WhosAmmoCount ) //Ammo was fired
 			ClearProt();
+		else if ( P.Weapon.AmmoType.AmmoAmount > WhosAmmoCount ) //Ammo was gained
+		{
+			WhosAmmoCount = P.Weapon.AmmoType.AmmoAmount;
+			if ( P.bFire + P.bAltFire > 0 ) //Disallow firing from suppliers
+				ClearProt();
+		}
+	}
 }
 
 function ClearProt()
@@ -401,7 +407,6 @@ function ClearProt()
 	WhosGun = none;
 	WhosAmmoCount = 0;
 	ProtectCount = 0;
-	PTimer = 1;
 	Pawn(Owner).ClientMessage("Siege spawn protection off");
 }
 

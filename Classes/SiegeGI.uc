@@ -343,9 +343,17 @@ function InitGame(string options, out string error)
 		CategoryInfo[i].Team = i;
 	}
 
-    for ( i = 0; i < 16; i++ )
-        if ( Weapons[i] != "" )
-            WeaponClasses[i] = class<Weapon>(DynamicLoadObject(Weapons[i],class'Class'));
+	//Load custom weapons, no package means load straight from this SiegeIV file
+	sParse = string( class);
+	sParse = Left( sParse, InStr(sParse,".") ) $ ".";
+	for ( i=0; i<16 ; i++ )
+		if ( Weapons[i] != "" )
+		{
+			opt = Weapons[i];
+			if ( InStr(opt,".") == -1 )
+				opt = sParse $ opt;
+            WeaponClasses[i] = class<Weapon>(DynamicLoadObject(opt,class'Class'));
+		}
 
     RURecovery = spawn(class'sgRURecovery');
 
@@ -1068,8 +1076,7 @@ function AddDefaultInventory(Pawn playerPawn)
     for ( i = 0; i < 12; i++ )
         if ( WeaponClasses[i] != None )
             GivePlayerWeapon(playerPawn, WeaponClasses[i]);
-
-
+	PlayerPawn.SwitchToBestWeapon(); //Now weapon priority is a thing
 	BaseMutator.ModifyPlayer(PlayerPawn);
 }
 
@@ -1108,19 +1115,19 @@ function Weapon GivePlayerWeapon(Pawn playerPawn, class<Weapon> weaponClass )
 		newWeapon.bHeldItem = true;
 		newWeapon.GiveAmmo(playerPawn);
 		newWeapon.SetSwitchPriority(playerPawn);
-		newWeapon.WeaponSet(playerPawn);
 		newWeapon.AmbientGlow = 0;
+		playerPawn.PendingWeapon = None;
 		if ( PlayerPawn(playerPawn) != None )
 			newWeapon.SetHand(PlayerPawn(playerPawn).Handedness);
 		else
 			newWeapon.GotoState('Idle');
 
-        	if ( playerPawn.Weapon != None )
-		    playerPawn.Weapon.GotoState('DownWeapon');
+		if ( playerPawn.Weapon != None )
+		{
+			playerPawn.Weapon.GotoState('DownWeapon');
+			playerPawn.Weapon = none; //Instant down
+		}
 
-		playerPawn.PendingWeapon = None;
-        	newWeapon.WeaponSet(playerPawn);
-		playerPawn.Weapon = newWeapon;
 
 		if ( Enforcer(newWeapon) != None )
 		{
@@ -1513,22 +1520,19 @@ function bool RestartPlayer(Pawn p)
                     startSpot;
 	local bool      foundStart;
 
-	if ( (PlayerPawn(P) != none) && SpawnProtSecs > 0 )
+	if ( (sgPRI(p.PlayerReplicationInfo) != none) && SpawnProtSecs > 0 )
 	{
-		PlayerPawn(P).ClientMessage("Siege spawn protection on");
+		p.ClientMessage("Siege spawn protection on");
 		sgPRI(P.PlayerReplicationInfo).ProtectCount = SpawnProtSecs;
-		sgPRI(P.PlayerReplicationInfo).PTimer = 1;
 		sgPRI(P.PlayerReplicationInfo).bReachedSupplier = false;
 		sgPRI(P.PlayerReplicationInfo).SupplierTimer = 3.3;
 	}
 
-    p.DrawScale = p.default.DrawScale;
-    p.GroundSpeed = p.default.GroundSpeed;
-    p.SetCollisionSize(p.default.CollisionRadius,
-      p.default.CollisionHeight);
+	p.DrawScale = p.default.DrawScale;
+	p.GroundSpeed = p.default.GroundSpeed;
+	p.SetCollisionSize(p.default.CollisionRadius, p.default.CollisionHeight);
 
-	if ( bRestartLevel && Level.NetMode != NM_DedicatedServer &&
-      Level.NetMode != NM_ListenServer )
+	if ( bRestartLevel && Level.NetMode != NM_DedicatedServer && Level.NetMode != NM_ListenServer )
 		return true;
 
 	if ( p.PlayerReplicationInfo != None &&
@@ -2332,39 +2336,39 @@ defaultproperties
      RandomSpawnerMap(4)="CTF-'uK-BraveHeart[REVISED]"
 	 RandomSpawnerMap(5)="CTF-Icepost"
      Weapons(0)="Botpack.ImpactHammer"
-     Weapons(1)="SiegeIV_0020.sgPulseGun"
+     Weapons(1)="sgPulseGun"
      Weapons(2)="Botpack.ShockRifle"
      Weapons(3)="Botpack.UT_FlakCannon"
      Weapons(4)="Botpack.ut_biorifle"
-     Weapons(5)="SiegeIV_0020.sgMinigun"
+     Weapons(5)="sgMinigun"
      Weapons(6)="Botpack.SniperRifle"
      Weapons(7)="Botpack.ripper"
      Weapons(8)="Botpack.UT_Eightball"
-     Weapons(9)="SiegeIV_0020.sgNukeLauncher"
-     Weapons(10)="SiegeIV_0020.sgConstructor"
-     Weapons(11)="SiegeIV_0020.sgEnforcer"
+     Weapons(9)="sgNukeLauncher"
+     Weapons(10)="sgConstructor"
+     Weapons(11)="sgEnforcer"
      Weapons(12)="Botpack.Chainsaw"
-	 Weapons(13)="SiegeIV_0020.FlameThrower"
-	 Weapons(14)="SiegeIV_0020.ASMDPulseRifle"
-	 Weapons(15)="SiegeIV_0020.HyperLeecher"
-	 Weapons(16)="SiegeIV_0020.SiegeInstagibRifle"
+	 Weapons(13)="FlameThrower"
+	 Weapons(14)="ASMDPulseRifle"
+	 Weapons(15)="HyperLeecher"
+	 Weapons(16)="SiegeInstagibRifle"
      WeaponClasses(0)=Class'Botpack.ImpactHammer'
-     WeaponClasses(1)=Class'SiegeIV_0020.sgPulseGun'
+     WeaponClasses(1)=Class'sgPulseGun'
      WeaponClasses(2)=Class'Botpack.ShockRifle'
      WeaponClasses(3)=Class'Botpack.UT_FlakCannon'
      WeaponClasses(4)=Class'Botpack.ut_biorifle'
-     WeaponClasses(5)=Class'SiegeIV_0020.sgMinigun'
+     WeaponClasses(5)=Class'sgMinigun'
      WeaponClasses(6)=Class'Botpack.SniperRifle'
      WeaponClasses(7)=Class'Botpack.ripper'
      WeaponClasses(8)=Class'Botpack.UT_Eightball'
-     WeaponClasses(9)=Class'SiegeIV_0020.sgNukeLauncher'
-     WeaponClasses(10)=Class'SiegeIV_0020.sgConstructor'
-     WeaponClasses(11)=Class'SiegeIV_0020.sgEnforcer'
+     WeaponClasses(9)=Class'sgNukeLauncher'
+     WeaponClasses(10)=Class'sgConstructor'
+     WeaponClasses(11)=Class'sgEnforcer'
      WeaponClasses(12)=Class'Botpack.ChainSaw'
-	 WeaponClasses(13)=Class'SiegeIV_0020.FlameThrower'
-	 WeaponClasses(14)=Class'SiegeIV_0020.ASMDPulseRifle'
-	 WeaponClasses(15)=Class'SiegeIV_0020.HyperLeecher'
-	 WeaponClasses(16)=Class'SiegeIV_0020.SiegeInstagibRifle'
+	 WeaponClasses(13)=Class'FlameThrower'
+	 WeaponClasses(14)=Class'ASMDPulseRifle'
+	 WeaponClasses(15)=Class'HyperLeecher'
+	 WeaponClasses(16)=Class'SiegeInstagibRifle'
      SupplierProtection=True
      StartingMaxRU=300.000000
      StartingRU=1.000000
