@@ -1,4 +1,7 @@
 ﻿[Public]
-Object=(Name=SiegeIV_0020.SiegeGI,Class=Class,MetaClass=Botpack.TournamentGameInfo)
-Object=(Name=SiegeIV_0020.FreeSiegeGI,Class=Class,MetaClass=Botpack.TournamentGameInfo)
-Preferences=(Caption="SiegeIV",Parent="Game Types",Class=SiegeIV_0020.SiegeGI,Immediate=True)
+Object=(Name=SiegeIV_0021.SiegeGI,Class=Class,MetaClass=Botpack.TournamentGameInfo)
+Object=(Name=SiegeIV_0021.FreeSiegeGI,Class=Class,MetaClass=Botpack.TournamentGameInfo)
+Object=(Name=SiegeIV_0021.sgConstructor,Class=Class,MetaClass=Botpack.TournamentWeapon,Description="Siege Constructor")
+Object=(Name=SiegeIV_0021.SiegeInstagibRifle,Class=Class,MetaClass=Botpack.TournamentWeapon,Description="Siege Instagib Rifle")
+Object=(Name=SiegeIV_0021.sgNukeLauncher,Class=Class,MetaClass=Botpack.TournamentWeapon,Description="Nuke Launcher")
+Preferences=(Caption="SiegeIV",Parent="Game Types",Class=SiegeIV_0021.SiegeGI,Immediate=True)

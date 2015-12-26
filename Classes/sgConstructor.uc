@@ -7,7 +7,7 @@
 class sgConstructor extends TournamentWeapon;
 
 
-#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0020.Constructor
+#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0021.Constructor
 
 //Pick up view mesh contributed by DeepakOV
 #exec mesh import mesh=ConstructorPick anivfile=Models\ConstructorPick_a.3d datafile=Models\ConstructorPick_d.3d x=0 y=0 z=0 mlod=0
