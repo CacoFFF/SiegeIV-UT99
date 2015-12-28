@@ -8,6 +8,17 @@ class sgWarhead extends sgItem;
 var class<CriticalEventPlus> MessageClass;
 var string sBuildMessage;
 
+//Decrease nuke counter
+function bool RemovedBy( pawn Other, optional bool bWasLeech, optional float CheatMargin)
+{
+	if ( Super.RemovedBy( Other, bWasLeech, CheatMargin) )
+	{
+		if ( Other != none && sgPRI(Other.PlayerReplicationInfo) != none )
+			sgPRI(Other.PlayerReplicationInfo).sgInfoWarheadMaker--;
+		return true;
+	}
+}
+
 function AnnounceTeam(string sMessage, int iTeam)
 {
     local Pawn p;

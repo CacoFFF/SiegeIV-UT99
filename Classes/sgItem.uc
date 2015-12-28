@@ -11,6 +11,7 @@ var() bool          SwitchToWeapon, PlayPickupSound;
 var() bool bFullAmmoRestock;
 var() bool bTakeProductVisual;
 var() bool bTouchMechanics; //Make product use simple pickup methods
+var() bool bOwnerlessCheck; //sgItem is particularly expensive when ownerless, check every 2 ticks instead
 var() int ProductCount;
 
 var Inventory MyProduct; //Safety checks, Inventory chain isn't replicated
@@ -36,26 +37,30 @@ simulated function CompleteBuilding()
 
 	if ( bDisabledByEMP || (Role != ROLE_Authority) )
 		return;
-
-	if ( (Owner != none) && !Owner.bDeleteMe )
+		
+	P = Pawn(Owner);
+	if ( (P != none) && !P.bDeleteMe )
 	{
-		if ( Spectator(Owner) != none )
+		if ( Spectator(P) != none )
 		{
 			if ( Level.TimeSeconds - LastOwnerCheck > 300 )
 				Goto ALLOW_PICKUP;
 			return;
 		}
 		LastOwnerCheck = Level.TimeSeconds;
-		if ( VSize(Owner.Location - Location) < 48 + Owner.CollisionRadius )
+		if ( P.bCollideActors && P.bIsPlayer && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
 		{
-			P = Pawn(Owner);
-			if ( P.bIsPlayer && P.Health > 0 && P.PlayerReplicationInfo != None && P.PlayerReplicationInfo.Team == Team && GiveItems(P) )
+			if ( (VSize(P.Location - Location) < 44 + P.CollisionRadius) && GiveItems(P) )
 				Destroy();
 		}
 	}
 	else if ( Level.TimeSeconds - LastOwnerCheck > 15 )
 	{
 		ALLOW_PICKUP:
+		//Once every 2 timers
+		bOwnerlessCheck = !bOwnerlessCheck;
+		if ( bOwnerlessCheck )
+			return;
 		foreach RadiusActors(class'Pawn', P, 48)
 			if ( P.bIsPlayer && P.Health > 0 && P.PlayerReplicationInfo != None && P.PlayerReplicationInfo.Team == Team && GiveItems(P) )
 	        {
