@@ -1932,8 +1932,9 @@ simulated Event Timer()
 function Logout( pawn Exiting )
 {
 	local bool bMessage;
-	local Actor A ;
-
+	local Actor A;
+	local PlayerPawn P;
+	
 	bMessage = true;
 	if ( Exiting.IsA('PlayerPawn') )
 	{
@@ -1947,25 +1948,45 @@ function Logout( pawn Exiting )
 			NumPlayers--;
 	}
 	if( bMessage && (Level.NetMode==NM_DedicatedServer || Level.NetMode==NM_ListenServer) )
-		{
-			BroadcastMessage( Exiting.PlayerReplicationInfo.PlayerName$LeftMessage, false );
-			foreach AllActors( class'Actor',A)
-				{
-					if ( PlayerPawn(A) != None )
-						{
-							if ( PlayerPawn(A) != Exiting )
-								PlayerPawn(A).PlaySound(Sound'RageQuit',,10);
-						}
-				}
-		}
+	{
+		BroadcastMessage( Exiting.PlayerReplicationInfo.PlayerName$LeftMessage, false );
+		ForEach AllActors( class'PlayerPawn', P)
+			if ( P != Exiting )
+				P.PlaySound(Sound'RageQuit',,10);
+	}
 
-
-
-
+	if ( Exiting.PlayerReplicationInfo != none )
+		CleanupProjectiles( Exiting);
+	
 	if ( LocalLog != None )
 		LocalLog.LogPlayerDisconnect(Exiting);
 	if ( WorldLog != None )
 		WorldLog.LogPlayerDisconnect(Exiting);
+}
+
+//Prevent disconnect + damage exploits
+function CleanupProjectiles( Pawn Other)
+{
+	local Projectile Proj;
+	local byte OutTeam;
+	local bool bDestructProj;
+
+	OutTeam = Other.PlayerReplicationInfo.Team;
+	if ( OutTeam < 5 )
+	{
+		bDestructProj = Cores[OutTeam] == none || Cores[OutTeam].bDeleteMe;
+		ForEach AllActors (class'Projectile', Proj)
+			if ( Proj.Instigator == Other )
+			{
+				if ( bDestructProj )
+					Proj.Destroy();
+				else
+				{
+					Proj.Instigator = Cores[OutTeam];
+					Proj.SetOwner( Cores[OutTeam]);
+				}
+			}
+	}
 }
 
 //General event system, a building has been created and initialized

@@ -146,11 +146,10 @@ simulated event TakeDamage(int Damage, Pawn instigatedBy, Vector hitLocation,
 	local float tempScore;
 	local TournamentPlayer p;
 
-	if ( Role < ROLE_Authority || Level.Game == None || bCoreDisabled)
+	if ( Role < ROLE_Authority || Level.Game == None || bCoreDisabled || instigatedBy == self )
 		return;
 	
-	actualDamage = Level.Game.ReduceDamage(Damage, DamageType, Self,
-		instigatedBy);
+	actualDamage = Level.Game.ReduceDamage(Damage, DamageType, Self, instigatedBy);
 
 	if ( instigatedBy != None && instigatedBy.bIsPlayer )
 		{

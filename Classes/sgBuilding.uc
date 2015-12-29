@@ -290,7 +290,7 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 	local int actualDamage;
 	local float tempScore, tmpRU;
 
-	if ( Role < ROLE_Authority || Level.Game == None || !bBuildInitialized )
+	if ( Role < ROLE_Authority || Level.Game == None || !bBuildInitialized || instigatedBy == self  )
 		return;
 
 	actualDamage = Level.Game.ReduceDamage(Damage, DamageType, Self, instigatedBy);
