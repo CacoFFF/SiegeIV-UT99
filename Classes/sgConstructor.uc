@@ -86,8 +86,8 @@ var(test) byte SelectedIndex; //Index in categoryInfo
 
 var(test) int Category, Selection; //0 = upgrade, 1 = repair, 2 = remove, 3 = orb
 var(test) float SpecialPause;
-var(test) bool bActionReady;
-var(test) bool bActionLatent;
+var(test) float ExtraTimer;
+var(test) float BindAgain;
 
 //RenderTexture
 var color OrangeColor;
@@ -121,8 +121,6 @@ var int TeamSet; //Bypass PURE's PRI protection
 
 //Simulation stuff
 var bool bClientUp;
-var float BindAgain;
-var float ExtraTimer;
 var float LastDelta;
 var float LastFired;
 
@@ -144,7 +142,7 @@ var string TeamNames[5], TeamNumbers[5]; //For summon
 replication
 {
 	reliable if ( Role<ROLE_Authority )
-		ClientSetCat, ClientSetBuild, ClientSetMode, ClientBuildIt, GuiState, ClientOpenGui, ClientCloseGui, FreeBuild, ForceCorrect, GetConstructor, SummonB, AntiLeech, ClientSelectMode;
+		ClientSetCat, ClientSetBuild, ClientSetMode, ClientBuildIt, GuiState, ClientOpenGui, ClientCloseGui, FreeBuild, ForceCorrect, GetConstructor, SummonB, AntiLeech, InstantSelect;
 	reliable if ( Role==ROLE_Authority )
 		CorrectStuff, bFreeBuild, bUseAmbient;
 }
@@ -314,15 +312,14 @@ exec function GetConstructor()
 
 exec simulated function SelectMode(int newCategory, int newSelection)
 {
-	ClientSelectMode(newCategory, newSelection);
-	ForceCorrect();
+	SetMode( newCategory, newSelection);
+	InstantSelect();
 	if ( (Level.NetMode == NM_Client) && (Pawn(Owner).bFire + Pawn(Owner).bAltFire == 0) && (Pawn(Owner).Weapon != self) )
 		Pawn(Owner).ClientPutDown( Pawn(Owner).Weapon, self);
 }
 
-function ClientSelectMode(int newCategory, int newSelection, optional bool Silent) //Server version of the function
+function InstantSelect() //Immediate weapon select
 {
-	ClientSetMode(newCategory, newSelection, Silent);
 	if ( Pawn(Owner).Weapon != self && (Pawn(Owner).bFire + Pawn(Owner).bAltFire == 0) )
 	{
 		Pawn(Owner).PendingWeapon = self;
@@ -573,11 +570,11 @@ simulated function PrimaryFunc( optional float Code)
 		return;
 	}
 
-	if ( SpecialPause < 0 || GuiState > 0 )
+	if ( GuiState > 0 )
 		return;
 
 	ONLY_BUILD:
-	if ( bActionReady )
+	if ( SpecialPause > 0 )
 		return;
 
 	if ( Category == 0 ) //Upgrade
@@ -589,55 +586,27 @@ simulated function PrimaryFunc( optional float Code)
 				UpgradeFunction( 1);
 				return;
 			}
-			bResult = UpgradeFunction( LastDelta);
-			if ( SpecialPause == 1 )
-			{
-				GotoState('Active','Action');
-				return;
-			}
-			else if ( SpecialPause >= 0 )
-				SpecialPause = -0.01; //No need for simulation anyways
-			if ( bResult && AmmoType.AmmoAmount > 2)
-				AmbientTimer = 0.12;
-			if ( !bActionLatent )
-				GotoState('Active','UnInputWait');
-			return;
+			UpgradeFunction( 0.10);
 		}
 		return;
 	}
 	if ( Category == 1 ) //Repair
 	{
 		if ( Level.NetMode != NM_Client )
-		{	if ( Code == 333 )
+		{
+			if ( Code == 333 )
 			{
 				RepairFunction( 1);
-				LockAction( 0.95);
 				return;
 			}
-			bResult = RepairFunction( LastDelta * 1.05);
-			if ( SpecialPause == 1 )
-			{
-				GotoState('Active','Action');
-				return;
-			}
-			SpecialPause = -0.01; //No need for simulation anyways
-			if ( bResult && AmmoType.AmmoAmount > 2)
-				AmbientTimer = 0.12;
-			if ( !bActionLatent )
-				GotoState('Active','UnInputWait');
-			return;
+			RepairFunction( 0.10);
 		}
-		else if ( Code == 333 )
-			LockAction( 0.95);
-//		else
-//			SpecialPause = -0.2; //We're assuming
 		return;
 	}
 	if ( Category == 2 ) //Remove
 	{
 		if ( Level.NetMode != NM_Client )
 			RemoveFunction();
-		LockAction( 0.95);
 		return;
 	}
 	if ( Category == 3 ) //XC_Orb handling
@@ -666,7 +635,7 @@ simulated function PrimaryFunc( optional float Code)
 				aOrb.DropAt();
 			}
 		}
-		LockAction( 0.95);
+		SpecialPause = 1;
 		return;
 	}
 
@@ -676,11 +645,9 @@ simulated function PrimaryFunc( optional float Code)
 		SelectedBuild = CatActor.GetBuild( SelectedIndex );
 		Selection = 0;
 		Owner.PlaySound(SelectSound, SLOT_None, Pawn(Owner).SoundDampening*5,,, 2.0);
-		SpecialPause = ExtraTimer - 0.3;
+		SpecialPause = -999; //Do something interesting here later
 		if ( !ListenPlayer() )
 			ServerAcceptSound();
-		if ( !bActionLatent )
-			GotoState('Active','UnInputWait');
 		return;
 	}
 
@@ -689,12 +656,10 @@ simulated function PrimaryFunc( optional float Code)
 		//Do not simulate
 		if ( Level.NetMode == NM_Client )
 			return;
-		if ( BindAgain > Level.TimeSeconds ) //Lock in effect
-			return;
 		if ( !CanAfford(SelectedBuild, SelectedIndex) || IsRestricted(SelectedBuild, SelectedIndex) )
 		{
 			ServerDenySound();
-			LockAction( 0.95);
+			SpecialPause = 0.99;
 			return;
 		}
 
@@ -727,7 +692,7 @@ simulated function PrimaryFunc( optional float Code)
 		}
 		else
 	        ServerDenySound();
-		LockAction( 0.95);
+		SpecialPause = 0.99;
 		return;
 	}
 }
@@ -827,10 +792,8 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 simulated function LockAction( float ActionTime)
 {
 	SpecialPause = ActionTime;
-	ExtraTimer = 0;
-	bActionReady = true;
+	ExtraTimer = 1; //Avoid insta switch
 	BindAgain = Level.TimeSeconds + ActionTime;
-	GotoState('Active','Action');
 }
 
 simulated function bool CanAfford( class<sgBuilding> sgB, byte MyIndex)
@@ -879,7 +842,7 @@ function bool IsRestricted( class<sgBuilding> sgB, byte aIndex)
 /*--- State code. -----------------------------------------------------------*/
 //Let's let the client manage his constructor choices
 
-simulated state Active
+State Active
 {
 	function Fire( float Value) {Global.Fire(Value); }
 	function AltFire( float Value) {Global.AltFire(Value); }
@@ -900,88 +863,67 @@ simulated state Active
 			GuiState = 0;
 			return false; //Close gui
 		}
-
-		if ( SpecialPause < 0 )
-			return false;
-
 		CycleForward();
-		SpecialPause = -0.3 + ExtraTimer;
-		ExtraTimer = 0;
-		if ( Value != 2.5 )
-			GotoState('Active','UnInputWait');
+		ExtraTimer = 0.3;
 		return false;
 	}
 
 	simulated event Tick( float DeltaTime)
 	{
+		local Pawn P;
 		Global.Tick( DeltaTime);
-		if ( SpecialPause < 0 )
+		P = Pawn(Owner);
+		if ( P == none )
+			return;
+
+		//AutoCycle
+		if ( ExtraTimer > 0 )
 		{
-			if ( DeltaTime > abs(SpecialPause) )
-				ExtraTimer = SpecialPause + DeltaTime;
-			SpecialPause = fMin(SpecialPause + DeltaTime, 0);
+			ExtraTimer -= DeltaTime;
+			if ( (P.bAltFire > 0) && (P.bFire == 0) && ExtraTimer <= 0 )
+			{
+				CycleForward();
+				ExtraTimer += 0.3;
+			}
+		}
+		if ( SpecialPause > 0 )
+		{
+			if ( (SpecialPause -= DeltaTime) < 0 )
+			{
+				SpecialPause = 0;
+				if ( P.bFire > 0 )
+					PrimaryFunc( 0.0);
+			}
+		}
+		else if ( SpecialPause < 0 )
+		{
+			if ( (SpecialPause += DeltaTime) >= 0 )
+			{
+				SpecialPause = 0;
+				if ( P.bFire > 0 )
+					PrimaryFunc( 0.0);
+			}
 		}
 	}
 	simulated event EndState()
 	{
-		bActionReady = False;
+//		if ( Level.NetMode == NM_Client )
+//			Log("Leaving ClientActive:" @ AnimSequence @ IsAnimating() @ AnimFrame @ bAnimLoop );
 	}
 	function bool PutDown()
 	{
 		GotoState('DownWeapon');
 		return true; 
 	}
-//Simple action, needs timeout
-Action:
-	if ( SpecialPause > 0 )
-	{
-		bActionReady = true;
-		ExtraTimer = 0;
-		Sleep( SpecialPause);
-		SpecialPause = 0;
-	}
-UnInputWait:
-	bActionReady = false;
-	if ( (GuiState > 0) || !OnHand() || ((Pawn(Owner).bFire == 0) && (Pawn(Owner).bAltFire == 0)) )
-	{
-		SpecialPause = 0;
-		Goto('Idle');
-	}
-	Sleep(0.0);
-	bActionLatent = True;
-	if ( SpecialPause == 0 )
-	{
-		if ( Pawn(Owner).bFire > 0 )
-			PrimaryFunc(0);
-		else if ( Pawn(Owner).bAltFire > 0 )
-		{
-			CycleForward();
-			SpecialPause = -0.3 + ExtraTimer;
-			ExtraTimer = 0;
-		}
-	}
-	bActionLatent = false;
-	if ( SpecialPause < 0 )
-		Goto('UnInputWait');
+//Serverside correction if necessary
 Begin:
-Idle:
-	bActionReady = false;
-	Sleep(0.2);
-	if ( Pawn(Owner).bFire + Pawn(Owner).bAltFire > 0 )
-		Goto('UnInputWait'); //Prevent retart locks
-	Sleep(0.2);
-	if ( Pawn(Owner).bFire + Pawn(Owner).bAltFire > 0 )
-		Goto('UnInputWait');
-	Sleep(0.2);
-	if ( Pawn(Owner).bFire + Pawn(Owner).bAltFire > 0 )
-		Goto('UnInputWait');
-	Sleep(1.5);
-	CorrectStuff( Category, Selection, SelectedBuild, SelectedIndex);
-AfterIdle:
-	Sleep(0.2);
-	if ( Pawn(Owner).bFire + Pawn(Owner).bAltFire > 0 )
-		Goto('UnInputWait');
-	Goto( 'AfterIdle');
+	if ( Level.TimeSeconds - LastFired > 2.0 )
+	{
+		LastFired = 9999999999;
+		CorrectStuff( Category, Selection, SelectedBuild, SelectedIndex);
+	}
+	Sleep( 0.2);
+	Goto('Begin');
 }
 
 State ClientActive
@@ -1004,7 +946,7 @@ State ClientActive
 		bForceAltFire = false;
 		bWeaponUp = false;
 		PlaySelect();
-		GotoState('Active','Idle');
+		GotoState('Active');
 	}
 
 	simulated function EndState()
@@ -1159,9 +1101,6 @@ function bool RepairFunction( float DeltaRep)
 	local sgPri OwnerPRI;
 	local float fPri;
 
-	if ( bActionReady ) //Wait before we can repair again
-		return false;
-
 	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
 	HitActor = BestRepairCandidate( ownerPRI.Team);
@@ -1184,11 +1123,11 @@ function bool RepairFunction( float DeltaRep)
 			sgBest.BackToNormal();
 			SpecialPause = 1;
 		}
-		if (DeltaRep == 1)
-			SpecialPause = 1;
 
+		SpecialPause = DeltaRep;
 		if ( SpecialPause == 1)
 			Owner.PlaySound(Misc2Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+//		else SETUP AMBIENT (0.10) every repair
 		
 		if (sgBaseCore(sgBest)!=None)
 			ownerPRI.sgInfoCoreRepair += fPri;
@@ -1224,21 +1163,17 @@ function bool UpgradeFunction( float DeltaRep)
 	local float fPri, Priority;
 	local sgPri OwnerPRI;
 
-	if ( bActionReady ) //Wait before we can up build again
-		return false;
 
 	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
 	HitActor = BestUpgradeCandidate( ownerPRI.Team);
 	sgBest = sgBuilding(HitActor);
-
+	SpecialPause = DeltaRep;
+	
 	if ( sgBest != none )
 	{
-		if (/*Owner.Physics == PHYS_Falling*/ true) //Amazing, ppl keeps bitching and moaning, i'm giving them the old repair
-		{
-			DeltaRep = 1;
-			SpecialPause = 1;
-		}
+		DeltaRep = 1;
+		SpecialPause = -1;
 		fPri = FMin( fMin(5,int(sgBest.Grade+1.001)) - sgBest.Grade, 1 * DeltaRep);
 
 		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
@@ -1261,7 +1196,6 @@ function bool UpgradeFunction( float DeltaRep)
 			if ( DeltaRep == 1 )
 				Owner.PlaySound(Misc3Sound, SLOT_None, pawn(Owner).SoundDampening*2.5);
 		}
-		SpecialPause = -1;
 		return true;
 	}
 
@@ -1281,6 +1215,7 @@ function bool UpgradeFunction( float DeltaRep)
 	}
 	if ( DeltaRep == 1 )
 		ServerDenySound();
+	SpecialPause = 0; //No repair... tick again immediately
 	return false;
 }
 
@@ -1291,7 +1226,7 @@ function bool RemoveFunction()
 	local string sMessage;
 	local sgRemoveProt sgRP;
 
-	if ( bActionReady || (sgPRI(Pawn(Owner).PlayerReplicationInfo) != none && sgPRI(Pawn(Owner).PlayerReplicationInfo).RemoveTimer < 45) ) //Wait before we can remove again, wait before being able to remove at all
+	if ( (sgPRI(Pawn(Owner).PlayerReplicationInfo) != none && sgPRI(Pawn(Owner).PlayerReplicationInfo).RemoveTimer < 45) ) //Wait before we can remove again, wait before being able to remove at all
 		return false;
 
 	sgBest = BestRemoveCandidate( Pawn(Owner).PlayerReplicationInfo.Team);
@@ -1332,7 +1267,11 @@ function bool RemoveFunction()
 			}
 		}
 	}
-	return sgBest.RemovedBy( pawn(Owner) );
+	if ( sgBest.RemovedBy( pawn(Owner)) )
+	{
+		SpecialPause = 1;
+		return true;
+	}
 }
 
 simulated function sgBuilding OrbCandidate( byte aTeam)
@@ -1714,8 +1653,6 @@ simulated function SimCloseGui()
 {
 	SpecialPause = 0.3;
 	GuiState = 0;
-	if ( !bActionReady )
-		GotoState('Active','Action');
 	if ( !ListenPlayer() )
 		ClientCloseGui();
 }
@@ -1724,8 +1661,6 @@ function ClientCloseGui()
 {
 	SpecialPause = 0.3;
 	GuiState = 0;
-	if ( !bActionReady )
-		GotoState('Active','Action');
 }
 
 simulated function DrawGui( canvas Canvas)
@@ -2178,10 +2113,10 @@ static function color SwapBack( color aColor)
 
 simulated function AnimEnd()
 {
-	if ( bClientUp && IsInState('Active') )
-		GotoState('Active','Begin');
-//	if ( (AnimSequence == 'Select') )
-//		LoopAnim('Still',0.2,0.0);
+	if ( bClientUp && !IsInState('Active') )
+		GotoState('Active');
+	if ( Pawn(Owner) != none && Pawn(Owner).Weapon == self )
+		AnimationControl( 0.0);
 }
 
 simulated function bool ClientFire( float Value )
@@ -2270,17 +2205,12 @@ simulated final function bool LoopingAnim( name AnimName)
 	return IsAnimating() && bAnimLoop && (AnimSequence == AnimName);
 }
 
-simulated function AnimationControl( float DeltaTime, optional bool bOldMesh)
+simulated function AnimationControl( float DeltaTime)
 {
-	if ( (GetStateName() != 'Active') && AnimSequence != 'Down' )
-		GotoState( 'Active');
-	if ( bOldMesh )
-	{
-		if ( !LoopingAnim( 'Still') )
-			LoopAnim( 'Still', 1);
+	if ( (AnimSequence == 'Select') && (DeltaTime != 0.0) )
 		return;
-	}
-	Disable('AnimEnd');
+	if ( bClientUp && (GetStateName() != 'Active') && AnimSequence != 'Down' )
+		GotoState( 'Active');
 	if ( Category == 0 )
 	{
 		if ( !LoopingAnim( 'Point') )
@@ -2299,7 +2229,8 @@ simulated function AnimationControl( float DeltaTime, optional bool bOldMesh)
 			LoopAnim( 'Open', 1, 0.4);
 		return;
 	}
-	LoopAnim('Still', 1);
+	if ( !LoopingAnim('Still') )
+		LoopAnim('Still', 1);
 }
 
 simulated function Tick(float DeltaTime)
@@ -2354,7 +2285,7 @@ simulated function Tick(float DeltaTime)
 	}
 
 	//Animation control
-	if ( bClientUp && (Pawn(Owner).PendingWeapon == none) )
+	if ( Pawn(Owner).PendingWeapon == none )
 		AnimationControl( DeltaTime);
 
 	if ( LocalOwner() )
@@ -2389,7 +2320,7 @@ simulated function Tick(float DeltaTime)
 
 	aState = GetStateName();
 	if ( (aState == 'ClientActive') || (aState == 'ClientFiring') || (aState == 'ClientAltFiring') || (aState == 'sgConstructor') )
-		GotoState('Active','Idle');
+		GotoState('Active');
 }
 
 simulated function GuiControls( float DeltaTime)
@@ -2695,14 +2626,15 @@ simulated function PlaySelect()
 	bForceFire = false;
 	bForceAltFire = false;
 	bCanClientFire = false;
-	if ( !IsAnimating() || (AnimSequence != 'Select') )
+	if ( AnimSequence != 'Select' )
 		PlayAnim('Select',0.2,0.0);
 //	Owner.PlaySound(SelectSound, SLOT_Misc, Pawn(Owner).SoundDampening);	
 	if ( Level.NetMode == NM_Client )
 		bClientUp = true;
 	else if ( PlayerPawn(Owner) != none && ViewPort(PlayerPawn(Owner).Player) != none )
 		bClientUp = true; //HAX
-	GotoState('Active','Idle');
+	if ( !IsInState('Active') )
+		GotoState('Active');
 }
 
 simulated function TweenDown()
@@ -2744,7 +2676,8 @@ simulated function PlayPostSelect()
 	if ( Level.NetMode == NM_Client )
 	{
 		bClientUp = true;
-		GotoState('Active','Idle');
+		if ( !IsInState('Active') )
+			GotoState('Active');
 	}
 }
 

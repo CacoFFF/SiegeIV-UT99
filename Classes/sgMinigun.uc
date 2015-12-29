@@ -8,7 +8,6 @@
 //==================================================================================
 class sgMinigun extends minigun2;
 
-
 state NormalFire
 {
 	function Tick( float DeltaTime )
@@ -19,12 +18,8 @@ state NormalFire
 			return;
 		}
 
-		if ( Pawn(owner).PlayerReplicationInfo.bFeigningDeath == true && SiegeGI(Level.Game).AllowMultiGunning == false )
-			{
-				log("MultiGunning is Forbidden!");
-				GotoState('FinishFire');
-			}
-
+		if ( Pawn(owner).PlayerReplicationInfo.bFeigningDeath == true )
+			GotoState('FinishFire');
 	}
 }
 
@@ -42,11 +37,8 @@ state AltFiring
 		if	( bFiredShot && ((pawn(Owner).bAltFire==0) || bOutOfAmmo) ) 
 			GoToState('FinishFire');
 
-		if ( Pawn(owner).PlayerReplicationInfo.bFeigningDeath == true && SiegeGI(Level.Game).AllowMultiGunning == false )
-		{
-			log("MultiGunning is Forbidden!");
+		if ( Pawn(owner).PlayerReplicationInfo.bFeigningDeath == true  )
 			GotoState('FinishFire');
-		}
 	}
 }
 

@@ -14,7 +14,6 @@ var config int		RUsPerTeam;
 
 // Special Options
 var config bool debug;
-var config bool AllowMultiGunning;
 var() config int SpawnProtSecs;
 var() config float TranslocBaseForce;
 var() config float TranslocLevelForce;
@@ -1932,7 +1931,6 @@ simulated Event Timer()
 function Logout( pawn Exiting )
 {
 	local bool bMessage;
-	local Actor A;
 	local PlayerPawn P;
 	
 	bMessage = true;

@@ -125,15 +125,14 @@ state AltFiring
 			return;
 		}
 
-		if ( Pawn(owner).PlayerReplicationInfo.bFeigningDeath == true && SiegeGI(Level.Game).AllowMultiGunning == false )
-			{
-				log("MultiGunning is Forbidden!");
-				//Finish();
-				Pawn(owner).bAltFire = 0;
-				Finish();
-				return;
-				//GotoState('Idle');
-			}
+		if ( Pawn(owner).PlayerReplicationInfo.bFeigningDeath )
+		{
+			//Finish();
+			Pawn(owner).bAltFire = 0;
+			Finish();
+			return;
+			//GotoState('Idle');
+		}
 
 		if ( (P.bAltFire == 0) || (P.IsA('Bot')
 					&& ((P.Enemy == None) || (Level.TimeSeconds - Bot(P).LastSeenTime > 5))) )
