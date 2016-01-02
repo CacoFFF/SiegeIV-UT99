@@ -9,7 +9,7 @@ var sgProtProj nextProj;
 var byte Team;
 var bool bLighting;
 var bool bWasWater;
-var class<Effects> ImpactClass;
+var class<sgProjImp> ImpactClass;
 
 /////////////////////////////////////////////////////
 state Inactive

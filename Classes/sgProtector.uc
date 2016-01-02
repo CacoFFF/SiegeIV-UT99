@@ -23,6 +23,9 @@ function CompleteBuilding()
 function PostBuild()
 {
 	local XC_ProtProjStorage ST;
+	local sgBuilding sgB;
+	local int FriendlySplash;
+
 	Super.PostBuild();
 	
 	if (Team == 0)
@@ -42,6 +45,19 @@ function PostBuild()
 			Store = ST;
 			break;
 		}
+
+	//Protectors splashing other buildings can be removed
+	ForEach VisibleCollidingActors (class'sgBuilding', sgB, 135)
+	{
+		if ( Mine(sgB) != none || sgB.RuRewardScale < 0.9 || sgProtector(sgB) != none )
+			continue;
+		if ( ++FriendlySplash >= 2 )
+		{
+			bOnlyOwnerRemove = false;
+			break;
+		}
+	}
+
 	if ( Store == none )
 	{
 		Store = Spawn(class'XC_ProtProjStorage',none);

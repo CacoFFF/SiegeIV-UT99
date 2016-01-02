@@ -1332,21 +1332,6 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	}
 
 	//////////////////////// HUD ITEM //////////////////////////////////////
-	//////////////////////// DASH PAD METER ////////////////////////////////
-/*
-	if ( DashPlayerInstance != None )
-		{
-			OrbX = 384;
-			OrbSpace = 24;
-			Canvas.SetPos(HudItemSlotOriginX,YOffset - HudItemSlotY);			
-			Canvas.DrawColor = NewColor(128,128,128);
-			DashPercent = FClamp(DashPlayerInstance.ClientLifeSpan / DashPlayerInstance.MaxCharge,0, 1);
-			Canvas.DrawTile(texture'IconDashPadChargeBar', 128 * DashPercent, 32, 0, 0, 128 * DashPercent, 32);	
-			Canvas.SetPos(HudItemSlotOriginX,YOffset - HudItemSlotY);			
-			Canvas.DrawTile(texture'IconDashPadFrame', 128, 32, 0, 0, 128, 32);
-			HudItemSlotY += HudItemSlotSpace;
-		}
-		*/
 		/*
 		log("SiegeGI(Level.Game).MonsterMadness"@SiegeGI(Level.Game).MonsterMadness);
 		log("SiegeGI(Level.Game).MonsterMadness"@SiegeGI(Level.Game).MonstersLeft);
@@ -1376,7 +1361,23 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	{
 		Canvas.DrawColor = GreyColor;
 		Canvas.SetPos(XL, YOffset);
-		Canvas.DrawText( int(PRI.RU)@"/"@ int(PRI.MaxRU), false);
+		Canvas.DrawText( int(PRI.RU), false);
+		Canvas.CurY = YOffset;
+//		Canvas.DrawText( int(PRI.RU)@"/"@ int(PRI.MaxRU), false);
+		if ( PRI.Cores[PRI.Team] != none )
+			j = PRI.Cores[PRI.Team].StoredRU;
+		if ( PRI.Cores[PRI.Team] != none && Abs(j) > 2 )
+		{
+			if ( j < 0 )
+				Canvas.DrawColor = NewColor( 250, 20, 20);
+			else
+				Canvas.DrawColor = NewColor( 20, 200, 250);
+			Canvas.DrawText( "[" $ int(Abs(j)) $ "]", false);
+			Canvas.CurY = YOffset;
+			Canvas.DrawColor = GreyColor;
+		}
+		Canvas.DrawText( " /"@ int(PRI.MaxRU), false);
+
 		if ( GainedRU != 0 )
 		{
 			Canvas.SetPos( Canvas.CurX + XL*0.3, YOffset);
@@ -1384,12 +1385,13 @@ simulated function DrawGameSynopsis(canvas Canvas)
 			if ( GainedRU > 0 )
 			{
 				Canvas.DrawColor = NewColor( 10, 200*Fade, 10);
-				Canvas.DrawText( "+"@int(GainedRU));
+				Canvas.DrawText( "+"$int(GainedRU));
 			}
 			else
 			{
 				Canvas.DrawColor = NewColor( 250*Fade, 60*Fade, 10);
-				Canvas.DrawText( "-"@int(abs(GainedRU)));
+				Canvas.DrawText( int(GainedRU));
+//				Canvas.DrawText( "-"$int(abs(GainedRU)));
 			}
 			if ( Fade <= 0 )
 				GainedRU = 0;

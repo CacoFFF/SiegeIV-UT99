@@ -121,7 +121,6 @@ var int TeamSet; //Bypass PURE's PRI protection
 
 //Simulation stuff
 var bool bClientUp;
-var float LastDelta;
 var float LastFired;
 
 //=====GUI STATE OPTIONS
@@ -382,7 +381,7 @@ exec simulated function SetBuild( class<sgBuilding> sgB, optional byte idx, opti
 {
 	local int i;
 
-	if ( (CatActor == none) || (sgB == none) )
+	if ( (sgB == none) || !FindCatActor() )
 		return;
 
 	if ( !ListenPlayer() )
@@ -414,7 +413,7 @@ function ClientSetBuild( class<sgBuilding> sgB, byte idx, optional bool bSilent)
 {
 	local int i;
 
-	if ( (CatActor == none) || (sgB == none) )
+	if ( (sgB == none) || !FindCatActor() )
 		return;
 
 	//Locate category and build
@@ -438,6 +437,9 @@ simulated function CycleForward()
 {
 	local int i;
 
+	if ( !FindCatActor() )
+		return;
+	
 	Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 	if ( !ListenPlayer() )
 		ServerCycleSound();
@@ -476,7 +478,7 @@ exec simulated function SetMode(int newCategory, int newSelection, optional bool
 	if ( Level.NetMode == NM_Client )
 		ClientSetMode( newCategory, newSelection, Silent);
 
-	if ( CatActor == none )
+	if ( !FindCatActor() )
 		return;
 
 	if ( !Silent && ((newCategory != Category) || (newSelection != Selection)) )		Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
@@ -508,7 +510,7 @@ function ClientSetMode(int newCategory, int newSelection, optional bool Silent) 
 {
 	local int i, j;
 
-	if ( CatActor == none )
+	if ( !FindCatActor() )
 		return;
 
 	if ( !Silent && ((newCategory != Category) || (newSelection != Selection)) )		Owner.PlayOwnedSound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
@@ -561,6 +563,7 @@ simulated function PrimaryFunc( optional float Code)
 	local sg_XC_Orb aOrb;
 	local bool bResult;
 
+	
 	if ( Code == 333 )
 		Goto ONLY_BUILD;
 
@@ -639,6 +642,9 @@ simulated function PrimaryFunc( optional float Code)
 		return;
 	}
 
+	if ( !FindCatActor() )
+		return;
+	
 	if ( (SelectedBuild == none) && (Category >= 4) )
 	{
 		SelectedIndex = CatActor.FirstCatBuild( Category - 4);
@@ -664,7 +670,6 @@ simulated function PrimaryFunc( optional float Code)
 		}
 
 		sgNew = Spawn( SelectedBuild, Owner,, Owner.Location + vect(0,0,0.8) * fMax(0,Pawn(Owner).BaseEyeHeight) - vect(0,0,10) + vector(Pawn(Owner).ViewRotation) * SelectedBuild.Default.BuildDistance, Pawn(Owner).ViewRotation );
-
 		if ( (sgNew != None) && !sgNew.bDeleteMe )
 		{
 			//HIGOR: Game build count is broken anyways, will only fix this once that works
@@ -702,6 +707,9 @@ function bool BotBuild( int Idx, optional bool bCheat, optional vector FixedLoc)
 	local sgBuilding sgNew;
 	local sgPRI ownerPRI;
 	local class<sgBuilding> classToBuild;
+	
+	if ( !FindCatActor() )
+		return false;
 	
 	classToBuild = CatActor.GetBuild(Idx);
 	if ( classToBuild != none )
@@ -807,7 +815,7 @@ simulated function bool CanAfford( class<sgBuilding> sgB, byte MyIndex)
 		return false;
 	if ( bFreeBuild )
 		return true;
-	if ( CatActor.HasCustomCost( SelectedIndex) )
+	if ( FindCatActor() && CatActor.HasCustomCost( SelectedIndex) )
 		return ownerPRI.RU >= CatActor.CustomCost(MyIndex);
 	return ownerPRI.RU >= sgB.default.BuildCost;
 }
@@ -815,6 +823,8 @@ simulated function bool CanAfford( class<sgBuilding> sgB, byte MyIndex)
 //False means allow
 function bool IsRestricted( class<sgBuilding> sgB, byte aIndex)
 {
+	if ( !FindCatActor() )
+		return true;
 	if ( Pawn(Owner).PlayerReplicationInfo == none )
 		return false;
 
@@ -868,48 +878,8 @@ State Active
 		return false;
 	}
 
-	simulated event Tick( float DeltaTime)
-	{
-		local Pawn P;
-		Global.Tick( DeltaTime);
-		P = Pawn(Owner);
-		if ( P == none )
-			return;
-
-		//AutoCycle
-		if ( ExtraTimer > 0 )
-		{
-			ExtraTimer -= DeltaTime;
-			if ( (P.bAltFire > 0) && (P.bFire == 0) && ExtraTimer <= 0 )
-			{
-				CycleForward();
-				ExtraTimer += 0.3;
-			}
-		}
-		if ( SpecialPause > 0 )
-		{
-			if ( (SpecialPause -= DeltaTime) < 0 )
-			{
-				SpecialPause = 0;
-				if ( P.bFire > 0 )
-					PrimaryFunc( 0.0);
-			}
-		}
-		else if ( SpecialPause < 0 )
-		{
-			if ( (SpecialPause += DeltaTime) >= 0 )
-			{
-				SpecialPause = 0;
-				if ( P.bFire > 0 )
-					PrimaryFunc( 0.0);
-			}
-		}
-	}
 	simulated event EndState()
-	{
-//		if ( Level.NetMode == NM_Client )
-//			Log("Leaving ClientActive:" @ AnimSequence @ IsAnimating() @ AnimFrame @ bAnimLoop );
-	}
+	{	}
 	function bool PutDown()
 	{
 		GotoState('DownWeapon');
@@ -1419,7 +1389,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	local int RUReq, i;
 	local sgPRI PRI;
 	
-	if ( Pawn(Owner) == none || Pawn(Owner).PlayerReplicationInfo == none || CatActor == none )
+	if ( !FindCatActor() )
 		return;
 	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
@@ -1533,6 +1503,9 @@ simulated function PostRender( canvas Canvas)
 		return;
 	}
 
+	if ( !FindCatActor() )
+		return;
+	
 	if ( GuiState > 0 )
 	{
 		DrawGui( Canvas);
@@ -1668,7 +1641,7 @@ simulated function DrawGui( canvas Canvas)
 	local float XL, YL, aX, aY, aScale, tH, tV, cX, cY, cZ;
 	local int i, j, k;
 
-	if ( ClientActor == none )
+	if ( !FindClientActor() )
 		return;
 
 	if ( !ClientActor.bUseSmallGui )
@@ -2181,7 +2154,7 @@ simulated function PostBeginPlay()
 	
 	if ( !bDeleteMe )
 		GetFonts();
-
+		
 	if ( Role == ROLE_Authority )
 	{
 		if ( (SiegeGI(Level.Game) == none) || (SiegeGI(Level.Game).FreeBuild) )
@@ -2233,26 +2206,54 @@ simulated function AnimationControl( float DeltaTime)
 		LoopAnim('Still', 1);
 }
 
+simulated function HandleTimers( float DeltaTime, Pawn P)
+{
+	//AutoCycle
+	if ( ExtraTimer > 0 )
+	{
+		ExtraTimer -= DeltaTime;
+		if ( (P.bAltFire > 0) && (P.bFire == 0) && ExtraTimer <= 0 )
+		{
+			CycleForward();
+			ExtraTimer += 0.3;
+		}
+	}
+	if ( SpecialPause > 0 )
+	{
+		if ( (SpecialPause -= DeltaTime) < 0 )
+		{
+			SpecialPause = 0;
+			if ( (P.Weapon == self) && (P.bFire > 0) )
+				PrimaryFunc( 0.0);
+		}
+	}
+	else if ( SpecialPause < 0 )
+	{
+		if ( (SpecialPause += DeltaTime) >= 0 )
+		{
+			SpecialPause = 0;
+			if ( (P.Weapon == self) && (P.bFire > 0) )
+				PrimaryFunc( 0.0);
+		}
+	}
+}
+
 simulated function Tick(float DeltaTime)
 {
 	local String Info;
 	local float Speed2D;
 	local name aState;
+	local Pawn P;
 
-	if ( Pawn(Owner) == none )
+	P = Pawn(Owner);
+	if ( P == none )
 	{
 		AmbientSound = none;
 		AmbientTimer = 0;
 		return;
 	}
 
-	LastDelta = DeltaTime;
-
-	if ( (CatActor == none) && (Owner != none) )
-		FindCatActor();
-
-	if ( (ClientActor == none) && LocalOwner() )
-		FindClientActor();
+	HandleTimers( DeltaTime, P);
 
 	if ( bCanOpenGui && Pawn(Owner).bAltFire == 0 )
 		bCanOpenGui = False;
@@ -2277,7 +2278,7 @@ simulated function Tick(float DeltaTime)
 		AmbientSound = Sound'cons_loop1';
 	else
 		AmbientSound = none;
-
+		
 	if ( Pawn(Owner).Weapon != self )
 	{
 		bClientUp = false;
@@ -2309,14 +2310,6 @@ simulated function Tick(float DeltaTime)
 
 	if ( Pawn(Owner).bFire + Pawn(Owner).bAltFire > 0 )
 		LastFired = Level.TimeSeconds;
-
-/*	if ( LocalOwner() )
-	{
-		if ( PlayerPawn(Owner) != none && PlayerPawn(Owner).Handedness == -1 )
-			Mesh = LodMesh'ConstructorL';
-		else
-			Mesh = LodMesh'Constructor';
-	}*/
 
 	aState = GetStateName();
 	if ( (aState == 'ClientActive') || (aState == 'ClientFiring') || (aState == 'ClientAltFiring') || (aState == 'sgConstructor') )
@@ -2497,29 +2490,39 @@ simulated function PlayerClick()
 simulated function PlayerDrag(float dX, float dY);
 simulated function PlayerRelease();
 
-simulated function FindCatActor()
+simulated final function bool FindCatActor()
 {
 	local sgCategoryInfo aC;
 	
+	if ( Pawn(Owner) == none || Pawn(Owner).PlayerReplicationInfo == none )
+		return false;
+	if ( CatActor != none && CatActor.Team == Pawn(Owner).PlayerReplicationInfo.Team )
+		return true;
 	ForEach AllActors ( class'sgCategoryInfo', aC)
 	{
 		if ( aC.Team != Pawn(Owner).PlayerReplicationInfo.Team )
 			continue;
 		CatActor = aC;
-		return;
+		return true;
 	}
 }
 
-simulated function FindClientActor()
+simulated final function bool FindClientActor()
 {
 	local sgClient aC;
 	
-	ForEach AllActors ( class'sgClient', aC)
+	if ( ClientActor != none )
+		return true;
+	if ( LocalOwner() )
 	{
-		ClientActor = aC;
-		return;
+		ForEach AllActors ( class'sgClient', aC)
+		{
+			ClientActor = aC;
+			return true;
+		}
+		ClientActor = Spawn( class'sgClient');
+		return true;
 	}
-	ClientActor = Spawn( class'sgClient');
 }
 
 simulated function bool ActiveOrbs()
@@ -2567,12 +2570,12 @@ function string GetIP(string sIP)
 	return left(sIP, InStr(sIP, ":"));
 }
 
-simulated function bool ListenPlayer()
+simulated final function bool ListenPlayer()
 {
 	return (Level.NetMode != NM_Client) && LocalOwner();
 }
 
-simulated function bool LocalOwner()
+simulated final function bool LocalOwner()
 {
 	return (PlayerPawn(Owner) != none) && (ViewPort(PlayerPawn(Owner).Player) != none);
 }

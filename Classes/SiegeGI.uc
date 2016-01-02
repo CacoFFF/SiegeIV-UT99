@@ -859,7 +859,9 @@ function bool AddBot()
 {
     // Ugly hack to spawn the correct type of PRI
 	class'Bot'.default.PlayerReplicationInfoClass = class'sgPRI';
+	SetHulls( false);
 	Super.AddBot();
+	SetHulls( true);
     class'Bot'.default.PlayerReplicationInfoClass = class'BotReplicationInfo';
 
 }
@@ -873,7 +875,9 @@ event PlayerPawn Login(string portal, string options, out string error,
     // Ugly hack to spawn the correct type of PRI ===> MOVED TO SIEGEMUTATOR
 //	priClass = spawnClass.default.PlayerReplicationInfoClass;
 //	spawnClass.default.PlayerReplicationInfoClass = class'sgPRI';
+	SetHulls( false);
 	newPlayer = Super.Login(portal, options, error, spawnClass);
+	SetHulls( true);
 //	spawnClass.default.PlayerReplicationInfoClass = priClass;
 
 	if ( newPlayer != none && (sgPRI(newPlayer.PlayerReplicationInfo) == none) )
@@ -1187,10 +1191,9 @@ function ScoreKill(Pawn killer, Pawn other)
 
 	if ( killer == other || killer == None )
 	{
-		if ( other.PlayerReplicationInfo != None )
-			other.PlayerReplicationInfo.Score -= 1;
 		if ( aVictim != None )
 		{
+			aVictim.Score -= 1;
 			aVictim.AddRU( KillRUReward(none, true) * RuMult );
 			aVictim.sgInfoSpreeCount = Max( 0, aVictim.sgInfoSpreeCount-1);
 			aVictim.Deaths -= 1; //Prevents suicide altering eff
@@ -1203,15 +1206,15 @@ function ScoreKill(Pawn killer, Pawn other)
 		killer.KillCount++;
 		if ( killer.bIsPlayer && other.bIsPlayer )
    		{
-			if ( killer.PlayerReplicationInfo.Team != other.PlayerReplicationInfo.Team )
+			if ( aKiller.Team != aVictim.Team )
 			{
-				killer.PlayerReplicationInfo.Score += 1;
+				aKiller.Score += 1;
 				if ( (aKiller != none) && (aVictim != none) && aVictim.bReachedSupplier && (aVictim.SupplierTimer > 0) )
 				{
 					aKiller.sgInfoSpreeCount += 3;
 					aKiller.AddRU( KillRUReward(none, true) * RuMult);
-					Cores[killer.playerreplicationinfo.Team].DeniedRU += Teams[killer.playerreplicationinfo.Team].Size * 5 * Cores[killer.playerreplicationinfo.Team].Grade;
-					PenalizeTeamForKill( Other, Killer.PlayerReplicationInfo.Team);
+					Cores[aKiller.Team].StoredRU -= aVictim.SupplierTimer + Teams[aKiller.Team].Size * 5 * Cores[aKiller.Team].Grade;
+					PenalizeTeamForKill( Other, aKiller.Team);
 					aVictim.AddRU(10 * RuMult);
 					aVictim.sgInfoSpreeCount = 0;
 				}
@@ -1225,7 +1228,7 @@ function ScoreKill(Pawn killer, Pawn other)
 			else
 			{
 				bTeamKill = true;
-				killer.PlayerReplicationInfo.Score -= 1;
+				aKiller.Score -= 1;
 				if ( aKiller != None )
 				{
 					aKiller.sgInfoKiller--; //Don't award the pusher with a kill
@@ -1546,8 +1549,9 @@ function bool RestartPlayer(Pawn p)
 		    p.GotoState('GameEnded');
 		    return false;
 	    }
-
+		SetHulls( false);
 	    startSpot = FindPlayerStart(p, 255);
+		SetHulls( true);
 	    if ( startSpot == None )
 		    return false;
 		
@@ -2304,8 +2308,9 @@ function float KillRUReward( sgPRI Victim, bool bNegative)
 	return (35 + Victim.GetEff( true) * 0.25 + float(Victim.sgInfoSpreeCount)**1.4) * Factor;
 }
 
-function SharedReward( sgPRI Awarded, byte Team, float Award)
+function SharedReward( sgPRI Awarded, byte Team, float Award, optional float Waste)
 {
+	Waste = fClamp( Waste, 0, 1);
 	if ( (Awarded != none) && (Awarded.RU < Awarded.MaxRU) && (Awarded.Team == Team) )
 	{
 		if ( Awarded.RU <= (Awarded.MaxRU - Award) )
@@ -2321,7 +2326,14 @@ function SharedReward( sgPRI Awarded, byte Team, float Award)
 	}
 	
 	if ( Award > 0 )
-		Cores[Team].AddRU += Award;
+		Cores[Team].StoredRU += Award * (1-Waste);
+}
+
+function SetHulls( bool bEnable)
+{
+	local sgBuildingCH CH;
+	ForEach AllActors (class'sgBuildingCH', CH)
+		CH.SetCollision(bEnable);
 }
 
 defaultproperties
@@ -2399,7 +2411,7 @@ defaultproperties
      FragLimit=0
      TimeLimit=80
      bChangeLevels=True
-     StartUpMessage="4th Generation Siege - build 20"
+     StartUpMessage="4th Generation Siege"
      TourneyMessage=""
      ReadyMessage="You are READY for Battle!"
      StartMessage="The Battle has begun!"

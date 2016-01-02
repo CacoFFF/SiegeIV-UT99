@@ -7,16 +7,15 @@ class sgBaseCore extends sgBuilding;
 var float LastMsgSpam;
 var bool bCoreDisabled;
 var float RuMultiplier;
-var float DeniedRU; //Core won't give this amount of ru until it goes down to zero
-var float AddRU; //Core should distribute this among all players during next timer
+var float StoredRU; //Spare RU in core
 var float SuddenDeathScale;
-var int CountedPlayers;
 var PlayerPawn LocalClient;
+var TeamInfo MyTeam;
 
 replication
 {
 	reliable if ( Role==ROLE_Authority )
-		RuMultiplier, DeniedRU, bCoreDisabled, AddRU;
+		RuMultiplier, StoredRU, bCoreDisabled;
 }
 
 event PostBeginPlay()
@@ -42,6 +41,8 @@ simulated event PostNetBeginPlay()
 				LocalClient = P;
 				break;
 			}
+		if ( LocalClient == none )
+			Log("Replication messed up: Core replicated before local pawn");
 	}
 }
 
@@ -55,55 +56,81 @@ function Destruct( optional pawn instigatedBy)
 	Destroy();
 }
 
+simulated function TeamInfo GetTeamInfo( byte nTeam)
+{
+	local TeamInfo T;
+	ForEach AllActors (class'TeamInfo', T)
+		if ( T.TeamIndex == nTeam )
+			return T;
+}
+
+simulated function int GetTeamSize()
+{
+	local sgPRI PRI;
+	local int i;
+
+	//Get team size optimally
+	if ( MyTeam == none || (MyTeam.TeamIndex != Team) )
+		MyTeam = GetTeamInfo( Team);
+	if ( MyTeam != none )
+		return MyTeam.Size;
+	//Count players, non optimal
+	ForEach AllActors (class'sgPRI', PRI)
+	{
+		if ( PRI.Team == Team )
+			i++;
+	}
+	return i;
+}
+
 simulated function Timer()
 {
 	local sgPRI a;
 	local float SetRU;
-	local int i;
+	local int TeamSize, MaxedOut;
 
 	Super.Timer();
 	if ( RuMultiplier <= 0 )
 		RuMultiplier = 1;
-
 
 	UpdateScore();
 
 	if ( bCoreDisabled )
 		return;
 
-	if ( (ROLE == ROLE_Authority) && (DeniedRU > 0 && AddRU > 0) )
-	{
-		SetRU = fMin( AddRU, DeniedRU);
-		DeniedRU -= SetRU;
-		AddRU -= SetRU;
-	}
-
-	if ( (Level.NetMode == NM_Client) && class'sgClient'.default.bHighPerformance )
-		Goto PERFORMANCE_JUMP;
+	TeamSize = GetTeamSize();
+	
+	if ( bDisabledByEMP || (Level.NetMode == NM_Client) && class'sgClient'.default.bHighPerformance )
+		Goto NO_INCREASE;
 	//Do not simulate RU generation on enemy players
 	if ( LocalClient == none || LocalClient.PlayerReplicationInfo == none || LocalClient.PlayerReplicationInfo.Team == Team )
 	{
-		SetRU = fMax(0.05, (10-float(CountedPlayers)) * 0.05) + Grade * 0.85;
+		SetRU = fMax(0.05, (10-float(TeamSize)) * 0.05) + Grade * 0.85;
 		SetRU *= RuMultiplier * 0.05;
-		if ( !bDisabledByEMP )	
+		if ( (StoredRU < 0) && (SetRU*TeamSize < Abs(StoredRU) ) )
+			StoredRU += SetRU*TeamSize;
+		else
+		{
+			if ( StoredRU > SetRU*TeamSize*2 )
+			{
+				StoredRU -= SetRU*TeamSize*2;
+				SetRU *= 3;
+			}
 			ForEach AllActors(class'sgPRI', a)
-				if( a.Team == Team )
+			{	if( a.Team == Team )
 				{
-					i++;
-					if ( DeniedRU > 0 )
-						DeniedRU -= SetRU;
-					else if ( (AddRU > 0) && (a.RU < a.MaxRU) )
-					{
-						a.AddRU( SetRU * 2, true);
-						AddRU -= SetRU;
-					}
+					if ( a.RU >= a.MaxRU )
+						MaxedOut++;
 					else
 						a.AddRU( SetRU, true);
 				}
+			}
+			if ( MaxedOut > 0 )
+				StoredRU += SetRU * 0.5 * MaxedOut;
+		}
 	}
-	PERFORMANCE_JUMP:
+	NO_INCREASE:
 
-	CountedPlayers = i;
 	if (myFX != None)
 	{
 		myFX.RotationRate.Yaw = Energy*0.25;
@@ -264,6 +291,7 @@ function UpdateScore()
 defaultproperties
 {
      bNoRemove=True
+	 StoredRU=10
      RuMultiplier=1
      bOnlyOwnerRemove=True
      RuRewardScale=1

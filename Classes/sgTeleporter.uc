@@ -48,6 +48,7 @@ event Spawned()
 {
 	local WildCardsSuperContainer SC;
 	local sgTeleporter aTele;
+	local Teleporter Tele;
 	local byte aTeam;
 	local float Dist;
 
@@ -59,13 +60,19 @@ event Spawned()
 		aTeam = Pawn(Owner).PlayerReplicationInfo.Team;
 
 	ForEach RadiusActors (class'sgTeleporter', aTele, 70)
-		if ( (aTele != self) && (aTele.Team == aTeam) && IsTouching(aTele,16) )
+		if ( (aTele != self) && (aTele.Team == aTeam) && class'SiegeStatics'.static.ActorsTouching(self,aTele) )
 		{
 			Destroy();
 			return;
 		}
 	ForEach RadiusActors (class'WildCardsSuperContainer', SC, 100)
-		if ( IsTouching(SC) )
+		if ( class'SiegeStatics'.static.ActorsTouching(self,SC) )
+		{
+			Destroy();
+			return;
+		}
+	ForEach AllActors (class'Teleporter', Tele)
+		if ( (Tele.URL != "") && class'SiegeStatics'.static.ActorsTouching(self,Tele) )
 		{
 			Destroy();
 			return;
@@ -82,14 +89,6 @@ function SetOwnership()
 	bOnlyOwnerRemove = true;
 }
 
-function bool IsTouching( actor Other, optional float ExtraSize)
-{
-	if ( Other == none )
-		return false;
-	if ( abs(Other.Location.Z - Location.Z) > (CollisionHeight + Other.CollisionHeight + ExtraSize) )
-		return false;
-	return VSize( (Other.Location - Location) * vect(1,1,0)) < (CollisionRadius + Other.CollisionRadius + ExtraSize);
-}
 
 simulated event PostBuild()
 {
@@ -236,7 +235,7 @@ function bool Accept( actor Incoming, Actor Source )
 		Pawn(Incoming).MoveTarget = self;
 		PlayTeleportEffect( Incoming, false);
 		ForEach RadiusActors (class'sgTouchCorrector', sgT, 400)
-			if ( IsTouching( sgT) )
+			if ( class'SiegeStatics'.static.ActorsTouching(self,sgT) )
 				sgT.Touch( Incoming);
 		SetCollision(  true, false, false);
 	}

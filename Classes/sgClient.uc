@@ -40,8 +40,7 @@ simulated event PostBeginPlay()
 {
 	local PlayerPawn P;
 	local sgScore ScoreBoard;
-	local WildcardsResources WRU;
-
+	
 	ForEach AllActors (class'PlayerPawn', P)
 		if ( ViewPort(P.Player) != none )
 		{
@@ -77,14 +76,7 @@ simulated event PostBeginPlay()
 	ConstructorPanel = new( self, 'sgConstructorPanel') class'FV_sgConstructorPanel';
 	ConstructorPanel.LocalPlayer = LocalPlayer;
 
-	if ( Level.NetMode != NM_ListenServer )
-	{	if ( bHighPerformance )
-			ForEach AllActors (class'WildcardsResources', WRU)
-				WRU.LightType = LT_None;
-		else
-			ForEach AllActors (class'WildcardsResources', WRU)
-				WRU.LightType = LT_Steady;
-	}
+	EnforcePerformance();
 }
 
 //Execute timed actions here
@@ -115,7 +107,9 @@ simulated event Timer()
 			SetTimer(5 * Level.TimeDilation, false);
 			return;
 		}
-		sgPRI(LocalPlayer.PlayerReplicationInfo).SendFingerPrint( FingerPrint);
+		//Do not request FingerPrint if already has one (autoset)
+		if ( sgPRI(LocalPlayer.PlayerReplicationInfo).PlayerFingerPrint == "" )
+			sgPRI(LocalPlayer.PlayerReplicationInfo).SendFingerPrint( FingerPrint);
 		bSendFingerPrint = false;
 	}
 }
@@ -178,19 +172,25 @@ simulated function ToggleBInterface()
 
 simulated function TogglePerformance()
 {
-	local WildcardsResources WRU;
 	bHighPerformance = !bHighPerformance;
 	default.bHighPerformance = bHighPerformance;
 	sgSet.bHighPerformance = bHighPerformance;
+	EnforcePerformance();
+	SaveSettings();
+}
+
+simulated function EnforcePerformance()
+{
+	local WildcardsResources WRU;
 	if ( Level.NetMode != NM_ListenServer )
-	{	if ( bHighPerformance )
+	{
+		if ( bHighPerformance )
 			ForEach AllActors (class'WildcardsResources', WRU)
 				WRU.LightType = LT_None;
 		else
 			ForEach AllActors (class'WildcardsResources', WRU)
 				WRU.LightType = LT_Steady;
 	}
-	SaveSettings();
 }
 
 simulated function GenerateFingerprint()

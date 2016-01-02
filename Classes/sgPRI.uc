@@ -131,6 +131,55 @@ function RequestFPTime()
 	}
 }
 
+simulated event SetInitialState()
+{
+	bScriptInitialized = true;
+	if ( Level.NetMode == NM_Client )
+		GotoState('ClientOp');
+	else
+		GotoState('ServerOp');
+}
+
+simulated state ClientOp
+{
+	function sgClientSetup()
+	{
+		local sgClient aClient;
+		ForEach AllActors (class'sgClient', aClient)
+			break;
+		if ( aClient == none )
+			Spawn(class'sgClient');
+	}
+Begin:
+	Sleep(0.1);
+	if ( (PlayerPawn(Owner) != none) && (ViewPort(PlayerPawn(Owner).Player) != none) )
+		sgClientSetup();
+}
+
+state ServerOp
+{
+	function LocateIpToCountry()
+	{
+		ForEach AllActors(class'Actor', IpToCountry, 'IpToCountry')
+			break;
+		bIpToCountry = IpToCountry != none;
+	}
+Begin:
+	Sleep(0.0);
+	if ( SiegeGI(Level.Game) != none )
+		RU = SiegeGI(Level.Game).StartingRU;
+	if ( Spectator(Owner) == none )
+		Owner.Spawn(class'sgPlayerData',Owner);
+	if ( PlayerPawn(Owner) == none )
+		PlayerFingerPrint = "BOT_"$PlayerName;
+	else if ( ViewPort(PlayerPawn(Owner).Player) != none ) //Local player found
+	{
+		PlayerFingerPrint = "LocalPlayer";
+		Owner.Spawn(class'sgClient');
+	}
+	LocateIpToCountry();
+}
+
 simulated function RequestFingerPrint( optional bool bRegen)
 {
 	local sgClient aClient;
@@ -201,23 +250,6 @@ function Timer()
 {
 	Super.Timer();
 	RemoveTimer += 2;
-}
-
-event PostBeginPlay()
-{
-	Super.PostBeginPlay();
-	if ( SiegeGI(Level.Game) != none )
-		RU = SiegeGI(Level.Game).StartingRU;
-
-	if ( Owner != none && !Owner.IsA('Spectator') )
-		Owner.Spawn(class'sgPlayerData',Owner);
-
-	foreach allActors(class'Actor', ipToCountry, 'IpToCountry')
-	{
-		bIpToCountry = true;
-		break;
-	}
-	NoFingerPrintTimer = 10;
 }
 
 simulated event PostNetBeginPlay()
@@ -429,4 +461,5 @@ simulated final function float GetEff( optional bool bJustKilled)
 defaultproperties
 {
      iNoFP=3
+	 NoFingerPrintTimer=10
 }

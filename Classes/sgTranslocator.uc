@@ -139,4 +139,5 @@ function ThrowTarget()
 defaultproperties
 {
      MaxTossForce=850.000000
+	 bCanThrow=True
 }
