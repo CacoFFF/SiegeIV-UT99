@@ -168,7 +168,7 @@ static final function ReplaceText(out string Text, string Replace, string With)
 }
 
 //*******************************
-// Placement and comparison utils
+//Placement and comparison utils
 //*******************************
 static final function float HSize( vector aVec)
 {
@@ -255,6 +255,18 @@ static final function SavedMove FindMoveBeyond( PlayerPawn Other, float TimeStam
 	}
 }
 
+//****************************************************
+//See if the NexGen actor is available for this player
+//****************************************************
+static function Info FindNexgenClient( PlayerPawn Player)
+{
+	local Info aInfo;
+	if ( Player == none )
+		return none;
+	ForEach Player.ChildActors (class'Info', aInfo)
+		if ( aInfo.IsA('NexgenClient') )
+			return aInfo;
+}
 
 defaultproperties
 {

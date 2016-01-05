@@ -7,7 +7,7 @@
 class sgConstructor extends TournamentWeapon;
 
 
-#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0021.Constructor
+#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0022.Constructor
 
 //Pick up view mesh contributed by DeepakOV
 #exec mesh import mesh=ConstructorPick anivfile=Models\ConstructorPick_a.3d datafile=Models\ConstructorPick_d.3d x=0 y=0 z=0 mlod=0
@@ -75,9 +75,10 @@ class sgConstructor extends TournamentWeapon;
 #exec TEXTURE IMPORT FILE=Graphics\UseCon.pcx GROUP=Icons MIPS=OFF
 
 var FontInfo MyFonts;
-var Texture ColorPals[5];
+var Texture ColorPals[6];
 var float AmbientTimer;
 var bool bUseAmbient;
+var bool bCanRemoveWithImpunity; //Sometimes needed
 
 var(test) sgCategoryInfo CatActor;
 var(test) sgClient ClientActor;
@@ -85,7 +86,7 @@ var(test) class<sgBuilding> SelectedBuild;
 var(test) byte SelectedIndex; //Index in categoryInfo
 
 var(test) int Category, Selection; //0 = upgrade, 1 = repair, 2 = remove, 3 = orb
-var(test) float SpecialPause;
+var(test) float SpecialPause; //0 = nothing, >0 full lock, <0 soft lock, >50 build wheel
 var(test) float ExtraTimer;
 var(test) float BindAgain;
 
@@ -128,6 +129,7 @@ var float LastFired;
 // 5 bits = category / option window
 // 5 bits = element
 // 2 bits = page
+// 1 bit = using wheel (select category, hold, hit alt-fire)
 
 //Preset category bits:
 // 0 upgrade
@@ -143,7 +145,7 @@ replication
 	reliable if ( Role<ROLE_Authority )
 		ClientSetCat, ClientSetBuild, ClientSetMode, ClientBuildIt, GuiState, ClientOpenGui, ClientCloseGui, FreeBuild, ForceCorrect, GetConstructor, SummonB, AntiLeech, InstantSelect;
 	reliable if ( Role==ROLE_Authority )
-		CorrectStuff, bFreeBuild, bUseAmbient;
+		CorrectStuff, bFreeBuild, bUseAmbient, bCanRemoveWithImpunity;
 }
 
 exec simulated function StateControl()
@@ -194,7 +196,7 @@ exec function AntiLeech()
 		return; //No leeches
 
 	//HIGOR: INTEGRATE THIS INTO THE SGPRI AS WELL
-	if ( !BuildingOwned(sgBest) ) //Removing other player's stuff
+	if ( !bCanRemoveWithImpunity && !BuildingOwned(sgBest) ) //Removing other player's stuff
 	{
 		sgRP = sgRemoveProt(Pawn(Owner).FindInventoryType(class'sgRemoveProt'));
 
@@ -480,7 +482,7 @@ exec simulated function SetMode(int newCategory, int newSelection, optional bool
 
 	if ( !FindCatActor() )
 		return;
-
+	ExtraTimer = 0.3;
 	if ( !Silent && ((newCategory != Category) || (newSelection != Selection)) )		Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 
 	if ( (newCategory < 4) || (newSelection < 0) || (newCategory > 28) )
@@ -513,6 +515,7 @@ function ClientSetMode(int newCategory, int newSelection, optional bool Silent) 
 	if ( !FindCatActor() )
 		return;
 
+	ExtraTimer = 0.3;
 	if ( !Silent && ((newCategory != Category) || (newSelection != Selection)) )		Owner.PlayOwnedSound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 
 	if ( (newCategory < 4) || (newSelection < 0) || (newCategory > 28) )
@@ -561,11 +564,16 @@ simulated function PrimaryFunc( optional float Code)
 	local sgBuilding sgNew;
 	local sgPRI ownerPRI;
 	local sg_XC_Orb aOrb;
+	local float Delta;
 	local bool bResult;
 
 	
 	if ( Code == 333 )
+	{
+		Delta = 1.0; //One shot
 		Goto ONLY_BUILD;
+	}
+	Delta = 0.1; //Default frequency of continuous actions
 
 	if ( bCanOpenGui && (Pawn(Owner).bAltFire > 0) && (GuiState == 0) )
 	{
@@ -581,38 +589,12 @@ simulated function PrimaryFunc( optional float Code)
 		return;
 
 	if ( Category == 0 ) //Upgrade
-	{
-		if ( Level.NetMode != NM_Client )
-		{
-			if ( Code == 333 )
-			{
-				UpgradeFunction( 1);
-				return;
-			}
-			UpgradeFunction( 0.10);
-		}
-		return;
-	}
-	if ( Category == 1 ) //Repair
-	{
-		if ( Level.NetMode != NM_Client )
-		{
-			if ( Code == 333 )
-			{
-				RepairFunction( 1);
-				return;
-			}
-			RepairFunction( 0.10);
-		}
-		return;
-	}
-	if ( Category == 2 ) //Remove
-	{
-		if ( Level.NetMode != NM_Client )
-			RemoveFunction();
-		return;
-	}
-	if ( Category == 3 ) //XC_Orb handling
+		UpgradeFunction( Delta);
+	else if ( Category == 1 ) //Repair
+		RepairFunction( Delta);
+	else if ( Category == 2 ) //Remove
+		RemoveFunction();
+	else if ( Category == 3 ) //XC_Orb handling
 	{
 		if ( Level.NetMode != NM_Client )
 		{
@@ -639,66 +621,66 @@ simulated function PrimaryFunc( optional float Code)
 			}
 		}
 		SpecialPause = 1;
-		return;
 	}
-
-	if ( !FindCatActor() )
-		return;
-	
-	if ( (SelectedBuild == none) && (Category >= 4) )
+	else
 	{
-		SelectedIndex = CatActor.FirstCatBuild( Category - 4);
-		SelectedBuild = CatActor.GetBuild( SelectedIndex );
-		Selection = 0;
-		Owner.PlaySound(SelectSound, SLOT_None, Pawn(Owner).SoundDampening*5,,, 2.0);
-		SpecialPause = -999; //Do something interesting here later
-		if ( !ListenPlayer() )
-			ServerAcceptSound();
-		return;
-	}
-
-	if ( SelectedBuild != none )
-	{
-		//Do not simulate
-		if ( Level.NetMode == NM_Client )
+		if ( !FindCatActor() )
 			return;
-		if ( !CanAfford(SelectedBuild, SelectedIndex) || IsRestricted(SelectedBuild, SelectedIndex) )
+		
+		if ( (SelectedBuild == none) && (Category >= 4) )
 		{
-			ServerDenySound();
-			SpecialPause = 0.99;
+			SelectedIndex = CatActor.FirstCatBuild( Category - 4);
+			SelectedBuild = CatActor.GetBuild( SelectedIndex );
+			Selection = 0;
+			Owner.PlaySound(SelectSound, SLOT_None, Pawn(Owner).SoundDampening*5,,, 2.0);
+			SpecialPause = -999; //Do something interesting here later
+			if ( !ListenPlayer() )
+				ServerAcceptSound();
 			return;
 		}
 
-		sgNew = Spawn( SelectedBuild, Owner,, Owner.Location + vect(0,0,0.8) * fMax(0,Pawn(Owner).BaseEyeHeight) - vect(0,0,10) + vector(Pawn(Owner).ViewRotation) * SelectedBuild.Default.BuildDistance, Pawn(Owner).ViewRotation );
-		if ( (sgNew != None) && !sgNew.bDeleteMe )
+		if ( SelectedBuild != none )
 		{
-			//HIGOR: Game build count is broken anyways, will only fix this once that works
-			ServerBuildSound();
-			ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
-			sgNew.SetCustomProperties( CatActor.GetProps(SelectedIndex) );
-			sgNew.iCatTag = SelectedIndex;
-			if ( ownerPRI == none )
+			//Do not simulate
+			if ( Level.NetMode == NM_Client )
 				return;
-			if ( CatActor.HasCustomCost(SelectedIndex) )
+			if ( !CanAfford(SelectedBuild, SelectedIndex) || IsRestricted(SelectedBuild, SelectedIndex) )
 			{
-				sgNew.BuildCost = CatActor.CustomCost(SelectedIndex);
-				sgNew.RUinvested = sgNew.BuildCost;
-				if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
-					ownerPRI.RU -= CatActor.CustomCost(SelectedIndex);
-				ownerPRI.Score += CatActor.CustomCost(SelectedIndex) / 100;
+				ServerDenySound();
+				SpecialPause = 0.99;
+				return;
+			}
+
+			sgNew = Spawn( SelectedBuild, Owner,, Owner.Location + vect(0,0,0.8) * fMax(0,Pawn(Owner).BaseEyeHeight) - vect(0,0,10) + vector(Pawn(Owner).ViewRotation) * SelectedBuild.Default.BuildDistance, Pawn(Owner).ViewRotation );
+			if ( (sgNew != None) && !sgNew.bDeleteMe )
+			{
+				//HIGOR: Game build count is broken anyways, will only fix this once that works
+				ServerBuildSound();
+				ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+				sgNew.SetCustomProperties( CatActor.GetProps(SelectedIndex) );
+				sgNew.iCatTag = SelectedIndex;
+				if ( ownerPRI == none )
+					return;
+				if ( CatActor.HasCustomCost(SelectedIndex) )
+				{
+					sgNew.BuildCost = CatActor.CustomCost(SelectedIndex);
+					sgNew.RUinvested = sgNew.BuildCost;
+					if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+						ownerPRI.RU -= CatActor.CustomCost(SelectedIndex);
+					ownerPRI.Score += CatActor.CustomCost(SelectedIndex) / 100;
+				}
+				else
+				{
+					if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+						ownerPRI.RU -= SelectedBuild.default.BuildCost;
+					ownerPRI.Score += SelectedBuild.default.BuildCost / 100;
+				}
+				ownerPRI.sgInfoBuildingMaker++;
 			}
 			else
-			{
-				if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
-					ownerPRI.RU -= SelectedBuild.default.BuildCost;
-				ownerPRI.Score += SelectedBuild.default.BuildCost / 100;
-			}
-			ownerPRI.sgInfoBuildingMaker++;
+				ServerDenySound();
+			SpecialPause = 0.99;
 		}
-		else
-	        ServerDenySound();
-		SpecialPause = 0.99;
-		return;
 	}
 }
 
@@ -1050,9 +1032,14 @@ simulated function sgBuilding BestRemoveCandidate( byte Team)
 		}
 		if ( (sgB.Team != Pawn(Owner).PlayerReplicationInfo.Team) || sgB.bNoRemove )
 			continue;
+		fPri = 1;
 		if ( sgB.bOnlyOwnerRemove && !BuildingOwned(sgB) )
-			continue;
-		fPri = 1 - VSize( Normal(sgB.Location - start) - Normal(end-start) );
+		{
+			if ( !bCanRemoveWithImpunity )
+				continue;
+			fPri = 0.8;
+		}
+		fPri -= VSize( Normal(sgB.Location - start) - Normal(end-start) );
 		if ( fPri > Priority )
 		{
 			Priority = fPri;
@@ -1120,8 +1107,12 @@ function bool RepairFunction( float DeltaRep)
 		SpecialPause = 1;
 		return true;
 	}
+	SpecialPause = -0.01;
 	if ( DeltaRep == 1 )
+	{
 		ServerDenySound();
+		SpecialPause = -1;
+	}
 	return false;
 }
 
@@ -1142,6 +1133,8 @@ function bool UpgradeFunction( float DeltaRep)
 	
 	if ( sgBest != none )
 	{
+		if ( DeltaRep == 1 ) //Don't let a single bind multi-upgrade
+			SpecialPause = 0.2;
 		DeltaRep = 1;
 		SpecialPause = -1;
 		fPri = FMin( fMin(5,int(sgBest.Grade+1.001)) - sgBest.Grade, 1 * DeltaRep);
@@ -1185,7 +1178,7 @@ function bool UpgradeFunction( float DeltaRep)
 	}
 	if ( DeltaRep == 1 )
 		ServerDenySound();
-	SpecialPause = 0; //No repair... tick again immediately
+	SpecialPause = -0.01; //No repair... tick again immediately
 	return false;
 }
 
@@ -1199,6 +1192,7 @@ function bool RemoveFunction()
 	if ( (sgPRI(Pawn(Owner).PlayerReplicationInfo) != none && sgPRI(Pawn(Owner).PlayerReplicationInfo).RemoveTimer < 45) ) //Wait before we can remove again, wait before being able to remove at all
 		return false;
 
+	SpecialPause = -1;
 	sgBest = BestRemoveCandidate( Pawn(Owner).PlayerReplicationInfo.Team);
 	if ( sgBest == none )
 	{
@@ -1207,7 +1201,7 @@ function bool RemoveFunction()
 	}
 
 	//HIGOR: INTEGRATE THIS INTO THE SGPRI AS WELL
-	if ( !BuildingOwned(sgBest) ) //Removing other player's stuff
+	if ( !bCanRemoveWithImpunity && !BuildingOwned(sgBest) ) //Removing other player's stuff
 	{
 		sgRP = sgRemoveProt(Pawn(Owner).FindInventoryType(class'sgRemoveProt'));
 
@@ -1372,7 +1366,10 @@ simulated event RenderOverlays( canvas Canvas )
 		newRot.Roll = Default.Rotation.Roll * Hand;
 
 	SetRotation(newRot);
-	WetTexture'BGL_PSwap'.Palette = ColorPals[TeamSet].Palette;
+	if ( FindClientActor() && ClientActor.bNoConstructorScreen )
+		WetTexture'BGL_PSwap'.Palette = ColorPals[5].Palette;
+	else
+		WetTexture'BGL_PSwap'.Palette = ColorPals[TeamSet].Palette;
 	if ( LocalOwner() ) //I have to find out a way to make this render on other viewtargets
 		ScriptedTexture'BGL_Script'.NotifyActor = self;
 	Canvas.DrawActor(self, false);
@@ -1389,8 +1386,11 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	local int RUReq, i;
 	local sgPRI PRI;
 	
-	if ( !FindCatActor() )
+	if ( !FindCatActor() || ClientActor.bNoConstructorScreen )
+	{
+		Tex.DrawTile( 0, 0, 255, 255, 0, 0, 1, 1, Texture'GUI_Border4_F', false);
 		return;
+	}
 	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
 	//Left HAND only for now
@@ -1866,8 +1866,8 @@ simulated function DrawGui( canvas Canvas)
 
 				Canvas.SetPos( aX + YL + cY, aY + YL * 4.375 + 2);
 				Canvas.DrawColor = HoverColor(k==2);
-				if ( ClientActor.bOldConstructor )	Canvas.DrawText( GuiModel$"   +");
-				else								Canvas.DrawText( GuiModel$"   -");
+				if ( ClientActor.bNoConstructorScreen )	Canvas.DrawText( GuiModel$"   +");
+				else									Canvas.DrawText( GuiModel$"   -");
 
 				if ( k==3 )					DrawSlider( Canvas, aX, aY, YL, YL * 5.625, ClientActor.SirenVol,"Siren Volume");
 				else					DrawPlainSlider( Canvas, aX, aY, YL, YL * 5.625, ClientActor.SirenVol,"Siren Volume");
@@ -2220,7 +2220,7 @@ simulated function HandleTimers( float DeltaTime, Pawn P)
 	}
 	if ( SpecialPause > 0 )
 	{
-		if ( (SpecialPause -= DeltaTime) < 0 )
+		if ( (SpecialPause -= DeltaTime) <= 0 )
 		{
 			SpecialPause = 0;
 			if ( (P.Weapon == self) && (P.bFire > 0) )
@@ -2255,13 +2255,13 @@ simulated function Tick(float DeltaTime)
 
 	HandleTimers( DeltaTime, P);
 
-	if ( bCanOpenGui && Pawn(Owner).bAltFire == 0 )
+	if ( bCanOpenGui && P.bAltFire == 0 )
 		bCanOpenGui = False;
 
 	if ( Role == Role_Authority )
 	{
-		if ( sgPRI(Pawn(Owner).PlayerReplicationInfo) != None && AmmoType != None )
-			AmmoType.AmmoAmount = Min(1, sgPRI(Pawn(Owner).PlayerReplicationInfo).RU);
+		if ( sgPRI(P.PlayerReplicationInfo) != None && AmmoType != None )
+			AmmoType.AmmoAmount = Min(1, sgPRI(P.PlayerReplicationInfo).RU);
 	}
 
 	if ( AmbientTimer > 0 )
@@ -2279,7 +2279,7 @@ simulated function Tick(float DeltaTime)
 	else
 		AmbientSound = none;
 		
-	if ( Pawn(Owner).Weapon != self )
+	if ( P.Weapon != self )
 	{
 		bClientUp = false;
 		return;
@@ -2305,10 +2305,12 @@ simulated function Tick(float DeltaTime)
 		
 
 	bJustOpenedGui = False;
-	bHadFire = Pawn(Owner).bFire > 0;
-	LastView = Pawn(Owner).ViewRotation;
+	bHadFire = P.bFire > 0;
+	LastView = P.ViewRotation;
+	if ( PlayerPawn(P) != none && PlayerPawn(P).bAdmin )
+		bCanRemoveWithImpunity = true;
 
-	if ( Pawn(Owner).bFire + Pawn(Owner).bAltFire > 0 )
+	if ( P.bFire + P.bAltFire > 0 )
 		LastFired = Level.TimeSeconds;
 
 	aState = GetStateName();
@@ -2550,6 +2552,22 @@ function DropFrom(vector startLocation)
     Destroy();
 }
 
+function Inventory SpawnCopy( Pawn Other)
+{
+	local sgConstructor Copy;
+	local Info NX;
+	
+	Copy = sgConstructor(Super.SpawnCopy( Other));
+	if ( Copy != none )
+	{
+		//We gotta see what gives a player impunity...
+		NX = class'SiegeStatics'.static.FindNexgenClient( PlayerPawn(Owner) );
+		if ( NX != none && (InStr(NX.GetPropertyText("rights"),"G") >= 0) )
+			bCanRemoveWithImpunity = true;
+	}
+	return Copy;
+}
+
 function string GetPlayerNetworkAddres()
 {
    local string s;
@@ -2763,7 +2781,7 @@ defaultproperties
      GuiSettings="Settings"
      GuiSens="Sensitivity"
      GuiLights="Light effects"
-     GuiModel="Classic constructor"
+     GuiModel="Constructor screen"
      GuiLang="Language:"
      GuiSmall="Small GUI:"
      GuiFingerPrint="Keep fingerprint"
@@ -2775,6 +2793,7 @@ defaultproperties
      ColorPals(2)=Texture'BGL_G'
      ColorPals(3)=Texture'BGL_Y'
      ColorPals(4)=Texture'BGL_T'
+	 ColorPals(5)=Texture'BGL_N'
      OrangeColor=(R=254,G=127,B=0)
      PurpleColor=(R=255,G=0,B=255)
      WhiteColor=(R=255,G=255,B=255)

@@ -13,7 +13,7 @@ var FV_sgConstructorPanel ConstructorPanel;
 
 //LOCALE LOADING IS AUTOMATIC
 var() bool bUseSmallGui;
-var() bool bOldConstructor;
+var() bool bNoConstructorScreen;
 var() bool bBuildingLights;
 var() float GuiSensitivity; //0-1
 var() float SirenVol; //0-1
@@ -151,8 +151,8 @@ simulated function ToggleSize()
 
 simulated function ToggleConstructor()
 {
-	bOldConstructor = !bOldConstructor;
-	sgSet.bOldConstructor = bOldConstructor;
+	bNoConstructorScreen = !bNoConstructorScreen;
+	sgSet.bNoConstructorScreen = bNoConstructorScreen;
 	SaveSettings();
 }
 
@@ -224,7 +224,7 @@ simulated event Tick( float DeltaTime)
 simulated function LoadSettings()
 {
 	bUseSmallGui = sgSet.bUseSmallGui;
-	bOldConstructor = sgSet.bOldConstructor;
+	bNoConstructorScreen = sgSet.bNoConstructorScreen;
 	bBuildingLights = sgSet.bBuildingLights;
 	GuiSensitivity = sgSet.GuiSensitivity;
 	SirenVol = sgSet.SirenVol;
@@ -300,10 +300,10 @@ defaultproperties
 {
      SirenVol=1
      bAlwaysRelevant=False
-     GuiSensitivity=0.5
+     GuiSensitivity=0.4
      bNetTemporary=True
      RemoteRole=ROLE_SimulatedProxy
-     bOldConstructor=True
+     bNoConstructorScreen=True
      bUseLC=True
      bUseNewDeco=True
      bClientIGDropFix=True

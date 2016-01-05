@@ -114,7 +114,10 @@ function SendFingerPrint( string aFingerPrint)
 	ForEach AllActors ( class'sgBuilding', sgB)
 	{
 		if ( (sgB.Owner == none) && (sgB.sPlayerIP == PlayerFingerPrint) )
+		{
 			sgB.SetOwner( Owner);
+			sgB.SetOwnership();
+		}
 	}
 	if ( Spectator(Owner) == none )
 		SiegeGI(Level.Game).RURecovery.RecoverRU(Pawn(Owner));

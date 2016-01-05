@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0021);
+class SiegeGI extends TeamGamePlus config(SiegeIV_0022);
 
 var sgRURecovery    RURecovery;
 var config float    NumResources;
@@ -1220,7 +1220,7 @@ function ScoreKill(Pawn killer, Pawn other)
 				}
 				else if ( aKiller != None )
 				{
-					aKiller.AddRU( KillRUReward( aVictim, false) * RuMult);
+					SharedReward( aKiller, aKiller.Team, KillRUReward( aVictim, false) * RuMult, 0.5);
 					aKiller.sgInfoSpreeCount += 1;
 					aVictim.sgInfoSpreeCount = 0;
 				}

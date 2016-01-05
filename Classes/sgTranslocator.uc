@@ -9,6 +9,24 @@ simulated exec function GetTranslocator()
 	PlayerPawn(Owner).GetWeapon( class);
 }
 
+function inventory SpawnCopy( pawn Other )
+{
+	if ( TTarget != none )
+	{
+		if ( TTarget.Disruptor != none && (TTarget.Instigator != Other) ) //Avoid toss exploit eliminating disruption
+		{
+			TTarget.Destroy();
+			TTarget = none;
+		}
+		else
+		{	
+			TTarget.SetOwner( Other);
+			TTarget.Instigator = Other;
+		}
+	}
+	return Super.SpawnCopy(Other);
+}
+
 function AltFire( float Value )
 {
 	local sgBuilding B;
