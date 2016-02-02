@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0022);
+class SiegeGI extends TeamGamePlus config(SiegeIV_0023);
 
 var sgRURecovery    RURecovery;
 var config float    NumResources;

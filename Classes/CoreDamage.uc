@@ -1,7 +1,7 @@
 //=============================================================================
 // CoreDamage.
 //=============================================================================
-class CoreDamage expands Mutator config(SiegeIV_0022);
+class CoreDamage expands Mutator config(SiegeIV_0023);
 
 var config float DamageMultiplyer;
 var config float PlayerDamageMultiplyer;
