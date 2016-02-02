@@ -43,7 +43,7 @@ simulated function CompleteBuilding()
 	{
 		if ( Spectator(P) != none )
 		{
-			if ( Level.TimeSeconds - LastOwnerCheck > 300 )
+			if ( Level.TimeSeconds - LastOwnerCheck > (120 * Level.TimeDilation) )
 				Goto ALLOW_PICKUP;
 			return;
 		}
@@ -54,7 +54,7 @@ simulated function CompleteBuilding()
 				Destroy();
 		}
 	}
-	else if ( Level.TimeSeconds - LastOwnerCheck > 15 )
+	else if ( Level.TimeSeconds - LastOwnerCheck > (12 * Level.TimeDilation) )
 	{
 		ALLOW_PICKUP:
 		//Once every 2 timers
