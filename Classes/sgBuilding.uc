@@ -18,6 +18,7 @@ var int iRULeech;
 var int iCatTag; //Tag given to build if made from a category
 var float RUinvested;
 var sgPRI OwnerPRI;
+var sgBuildingVolume MyVolume;
 var array<int> BlockedReachSpecs;
 var int iBlockPoll;
 var NavigationPoint N;
@@ -283,6 +284,9 @@ simulated event Timer()
 		}
 		CompleteBuilding();
 	}
+
+	if ( MyVolume != none )
+		MyVolume.VolumeUpdate();
 }
 
 event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
@@ -485,6 +489,8 @@ function CollisionBump( actor Other); //Generic collision reports bump
 function CollisionLand( actor Other); //Generic collision reports landing
 function CollisionJump( pawn Other); //Generic collision reports pawn jumping off
 function CollisionDetach( actor Other); //Generic collision reports actor falling off
+function bool VolumeEnter( actor Other); //Generic volume reports actor entering, if return=False volume won't store this actor
+function VolumeExit( actor Other); //Generic volume reports actor leaving
 function Upgraded();
 function CompleteBuilding(); //Timer based, called after finishes building
 
