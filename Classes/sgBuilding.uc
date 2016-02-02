@@ -97,6 +97,11 @@ replication
 		DSofMFX, MFXFatness, NumOfMFX, MFXrotX, Model;
 }
 
+simulated event BeginPlay()
+{
+	class'SiegeStatics'.static.DetectXCGE( self);
+}
+
 event PostBeginPlay()
 {
 	if ( bDeleteMe )

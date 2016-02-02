@@ -7,6 +7,7 @@ class SiegeStatics expands Object;
 var bool bTrue;
 var bool bRelease;
 var bool bXCGE;
+var bool bXCGE_Octree;
 
 var int XCGE_Version;
 
@@ -17,8 +18,11 @@ var int XCGE_Version;
 
 static function bool DetectXCGE( Actor Other)
 {
+	if ( default.XCGE_Version == -1 )
+		return default.bXCGE;
 	default.bXCGE = InStr( Other.XLevel.GetPropertyText("Engine"), "XC_GameEngine") >= 0;
 	default.XCGE_Version = int(Other.Level.ConsoleCommand("get ini:Engine.Engine.GameEngine XC_Version"));
+	default.bXCGE_Octree = Other.Level.ConsoleCommand("get ini:Engine.Engine.GameEngine bCollisionHashHook") ~= string(default.bTrue);
 	return default.bXCGE;
 }
 
@@ -272,4 +276,5 @@ defaultproperties
 {
 	bRelease=True
 	bTrue=True
+	XCGE_Version=-1
 }
