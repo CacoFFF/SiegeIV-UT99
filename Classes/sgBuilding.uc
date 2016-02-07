@@ -172,17 +172,17 @@ simulated event PostNetBeginPlay()
 	Timer();
 }
 
-simulated event Tick(float deltaTime)
+simulated event Tick(float DeltaTime)
 {
-	if ( Level.NetMode == NM_Client )
+	//TickRate independant, keep sane timer values if tickrate gets messed up
+	if ( (BuildingTimer += DeltaTime) >= 0.1 )
 	{
-		if ( (BuildingTimer += deltaTime) >= 0.1 )
-		{
-			Timer();
-			BuildingTimer = 0;
-		}
+		BuildingTimer = fClamp( BuildingTimer - 0.1, 0.0, 0.1 + FRand() * 0.1);
+		Timer();
+		BuildingTimer = 0;
 	}
-	else
+
+	if ( Level.NetMode != NM_Client )
 	{
 		if ( !bBuildInitialized )
 		{
@@ -192,6 +192,7 @@ simulated event Tick(float deltaTime)
 		if ( iBlockPoll >= 0 )
 			PollBlock();
 	}
+
 }
 
 simulated function string GetIP(string sIP)
@@ -513,7 +514,7 @@ function PostBuild()
 		Energy = MaxEnergy;
 		FinishBuilding();
 	}
-	SetTimer(0.1, true);
+//	SetTimer(0.1, true);
 	Timer();
 	if ( !bNoNotify && SiegeGI(Level.Game) != none )
 		SiegeGI(Level.Game).BuildingCreated( self);
