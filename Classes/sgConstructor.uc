@@ -250,7 +250,7 @@ exec function SummonB( string Parms)
 				aBuild = class<sgBuilding> (aClass);
 			if ( aBuild != none )
 			{
-				sgNew = Spawn( aBuild, Owner,, Owner.Location + vect(0,0,0.8) * fMax(0,Pawn(Owner).BaseEyeHeight) - vect(0,0,10) + vector(Pawn(Owner).ViewRotation) * SelectedBuild.Default.BuildDistance, Pawn(Owner).ViewRotation );
+				sgNew = Spawn( aBuild, Owner,, Owner.Location + vect(0,0,0.8) * fMax(0,Pawn(Owner).BaseEyeHeight) - vect(0,0,10) + vector(Pawn(Owner).ViewRotation) * aBuild.Default.BuildDistance, Pawn(Owner).ViewRotation );
 				Parms = EraseTheWord(Parms);
 				Parms = ClearSpaces(Parms);
 				aWord = GetTheWord( Parms);
@@ -365,6 +365,10 @@ exec simulated function SelectBuild( string BuildToSelect)
 	local int i;
 	local class<sgBuilding> sgB;
 	local string pkg;
+
+	BuildToSelect = ClearSpaces( BuildToSelect);
+	while ( Right(BuildToSelect,1) == " " )
+		BuildToSelect = Left( BuildToSelect, Len(BuildToSelect)-1);
 
 	pkg = Left( string(class), InStr(string(class),".")+1);
 	sgB = class<sgBuilding>( DynamicLoadObject(pkg$BuildToSelect,class'class',true) );
