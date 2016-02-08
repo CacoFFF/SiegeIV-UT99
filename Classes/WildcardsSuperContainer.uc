@@ -26,7 +26,7 @@ defaultproperties
 {
      StorageAmount=1600
      HealRadius=240
-     HealAmount=6.0
+     HealAmount=5.9
      BuildingName="Super Container"
      BuildCost=1600
      UpgradeCost=60

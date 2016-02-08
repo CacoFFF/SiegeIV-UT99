@@ -174,7 +174,7 @@ static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int 
 defaultproperties
 {
      StorageAmount=50
-	 HealAmount=1.0
+	 HealAmount=0.95
      BuildingName="Container"
      BuildCost=125
      UpgradeCost=25
