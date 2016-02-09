@@ -533,6 +533,16 @@ static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int 
 		return -1;
 }
 
+// Higor: adds more customization ability
+function bool CanIncinerate( Pawn Incinerator)
+{
+	if ( Incinerator == none || Incinerator.bDeleteMe )
+		return false;
+	if ( (Incinerator.PlayerReplicationInfo != none) && (Incinerator.PlayerReplicationInfo.Team == Team) )
+		return false;
+	return true;
+}
+
 // I set the building on fire
 function Incinerate(pawn IncineratedBy, vector HitLocation, vector HitNormal)
 {

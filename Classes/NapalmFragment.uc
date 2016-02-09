@@ -24,8 +24,10 @@ var sound HitSounds[2];
 
 replication
 {
+	reliable if ( Role==ROLE_Authority && bNetInitial )
+		PassedTime, AddedZVel;
 	reliable if ( Role==ROLE_Authority )
-		PassedTime, AddedZVel, TouchCount;
+		TouchCount;
 }
 
 simulated event PostNetBeginPlay()
@@ -37,11 +39,19 @@ simulated event PostNetBeginPlay()
 
 simulated event Tick( float DeltaTime)
 {
-	if ( Role == ROLE_Authority )
+	local float AccumulatedTime;
+	
+	AccumulatedTime = DeltaTime;
+	if ( (Physics == PHYS_None) && Region.Zone.bWaterZone ) //Touching water
 	{
-		PassedTime += DeltaTime;
+		if ( Region.Zone.DamageType == 'Burned' )
+			AccumulatedTime *= 0.25;
+		else
+			AccumulatedTime *= 2.5;
 	}
-
+	
+	PassedTime += AccumulatedTime;
+	LifeSpan += DeltaTime - AccumulatedTime; //Let's handle lifespan ourselves
 
 	if ( Physics == PHYS_Falling )
 	{
@@ -65,15 +75,6 @@ simulated event Tick( float DeltaTime)
 					SpriteTimer += 0.07;
 				Spawn(class'BurnSprite',,,Location + Normal(Velocity) * 2);
 			}
-		}
-	}
-	else if ( Physics == PHYS_None ) //Water or ground
-	{
-		if ( Region.Zone.bWaterZone && Region.Zone.DamageType != 'Burned' )
-		{
-			PassedTime += DeltaTime * 2;
-			if ( (LifeSpan -= (DeltaTime*2)) <= 0 )
-				Destroy();
 		}
 	}
 

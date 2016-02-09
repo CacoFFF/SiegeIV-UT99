@@ -1,73 +1,97 @@
 //=============================================================================
 // FlameProjectile
 // by SK
+//
+// Higor changelog:
+// - Got rid of useless variables.
+// - Disconnected players cannot incinerate builds
+// - Spawns less sprites on low framerates
+// - Set bNetTemporary=True
+// - Can only incinerate one target
+// - TakeDamage applied on all Pawns
+// - Victim lookup rules changed
+// ** from: Radius=(64+Victim.CollisionRadius)
+// ** to: Touching OR (Radius=72+Victim.CollisionRadius AND visible)
+// - Base damage changed to 20 (from 40)
+// - Another 20 damage instance is dealt to the Actor that touches the projectile
+// ** Can now hit triggers, open doors, destroy decorations...
 //=============================================================================
 class FlameProjectile extends Projectile;
 
 #exec OBJ LOAD File=Extro.uax
 
-var float SmokeRate;
-var	redeemertrail trail;
-var() float health;
-var name MyDamageType;
-
-replication
-{
-	// Things the server should send to the client.
-	reliable if ( Role == ROLE_Authority )
-		health;
-}
-
 simulated function Timer()
 {
+	//Need to recycle this!!!
 	Spawn(class'FlameParticle');
-	SmokeRate = 152/Speed; 
-	SetTimer(SmokeRate, false);
+	if ( Level.bDropDetail )
+		SetTimer( 250.f/Speed, false);
+	else
+		SetTimer( 125.f/Speed, false); 
 }
 
-simulated function Destroyed()
-{
-	if ( Trail != None )
-		Trail.Destroy();
-	Super.Destroyed();
-}
 
 simulated function PostBeginPlay()
 {
-	SmokeRate = 0.1;
 	SetTimer(0.0001,false); 
 }
 
 auto state Flying
 {
-	function ProcessTouch (Actor Other, Vector HitLocation)
+	simulated function ProcessTouch (Actor Other, Vector HitLocation)
 	{	
-		if ( Other != instigator ) 
+		if ( Other != Instigator ) 
+		{
+			if ( Role == ROLE_Authority && Instigator != none && !Instigator.bDeleteMe )
+			{
+				Other.TakeDamage( 20, Instigator, Location, vect(0,0,0), 'Burned');
+				//Add incineration to players here later...
+			}
 			Explode(HitLocation,Normal(HitLocation-Other.Location));
+		}
 	}
 	
-	function Explode(vector HitLocation, vector HitNormal)
+	simulated function Explode(vector HitLocation, vector HitNormal)
 	{
 	
-		local sgBuilding building;
-		local PlayerPawn victim;
+		local sgBuilding sgB, sgBurn;
+		local float Dist, BestDist;
+		local Pawn P;
+		local bool bOverlapping;
+		local byte Team;
 	
-		if ( Role < ROLE_Authority )
-			return;
-			
-		Spawn(Class'Botpack.FlameExplosion');
+		Spawn(Class'Botpack.FlameExplosion').RemoteRole = ROLE_None;
 
-		foreach RadiusActors(class'sgBuilding', building, 64)
-		
-		if (building.Team != instigator.PlayerReplicationInfo.Team)
-		building.Incinerate(instigator,HitLocation,HitNormal);
-		
-		foreach RadiusActors(class'PlayerPawn', victim, 64)
-		
-		if (victim.PlayerReplicationInfo.Team != instigator.PlayerReplicationInfo.Team)
-		victim.TakeDamage(40, instigator, location, location, MyDamageType);
-		
-		RemoteRole = ROLE_SimulatedProxy;	 		 		
+		//Do nothing if instigator is gone
+		if ( Role == ROLE_Authority && Instigator != none && !Instigator.bDeleteMe )
+		{
+			BestDist = 999999.f;
+			Team = 255;
+			if ( Instigator.PlayerReplicationInfo != none )
+				Team = Instigator.PlayerReplicationInfo.Team;
+			ForEach RadiusActors( class'Pawn', P, 72)
+			{
+				//Visible or overlap
+				bOverlapping = class'SiegeStatics'.static.ActorsTouching( self, P);
+				if ( bOverlapping || FastTrace(P.Location) )
+				{
+					sgB = sgBuilding(P);
+					if ( (sgB != none) && !sgB.bIsOnFire && sgB.CanIncinerate( Instigator) )
+					{
+						Dist = VSize( Location - sgB.Location);
+						if ( Dist < BestDist )
+						{
+							BestDist = Dist;
+							sgBurn = sgB;
+						}
+					}
+					if ( P.Health > 0 && P.bCollideActors && P.bProjTarget ) //Hittable pawn
+						P.TakeDamage( 10, Instigator, Location, vect(0,0,0), 'Burned');
+				}
+			}
+			if ( sgBurn != none )
+				sgBurn.Incinerate( Instigator, HitLocation, HitNormal);
+		}
  		Destroy();
 	}
 
@@ -84,13 +108,11 @@ auto state Flying
 
 defaultproperties
 {
-     Health=4000.000000
      speed=2048.000000
      Damage=0
      MomentumTransfer=0
-     MyDamageType=Burned
 	 ExplosionDecal=Class'Botpack.BlastMark'
-     bNetTemporary=False
+     bNetTemporary=True
      RemoteRole=ROLE_SimulatedProxy
      AmbientSound=Sound'flamesound'
      Mesh=None
@@ -99,7 +121,8 @@ defaultproperties
      SoundRadius=128
      SoundVolume=255
 	 SoundPitch=48
-     CollisionRadius=22.000000
+     CollisionRadius=24.000000
      CollisionHeight=14.000000
      bProjTarget=True
+	 LifeSpan=2.2
 }
