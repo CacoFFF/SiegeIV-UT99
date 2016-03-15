@@ -448,7 +448,7 @@ defaultproperties
 {
      hitdamage=0
      AmmoName=Class'FlameAmmo'
-     PickupAmmoCount=100
+     PickupAmmoCount=150
      bInstantHit=False
      bRapidFire=False
      FireOffset=(X=16.000000,Y=-14.000000,Z=-8.000000)
