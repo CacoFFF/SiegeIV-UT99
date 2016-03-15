@@ -255,7 +255,7 @@ simulated function PickupOrb( Pawn Other )
 
 	// AutoSelect For the players convience!
 	if ( sgConstructor(OrbHolder.Weapon) != None );
-		sgConstructor(OrbHolder.Weapon).SetMode(3,0,true);
+		sgConstructor(OrbHolder.Weapon).SetMode(3,0);
 
 	// So the orb won't block the players sight.
 	// Were no longer the ownser so don't hide the orb from us!

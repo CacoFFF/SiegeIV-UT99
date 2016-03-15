@@ -6,19 +6,13 @@
 
 class sgTeleporter extends sgBuilding;
 
-var UTTeleEffect T;
-
 var() string URL1;
-var() string URL2;
 var bool bHasOtherTele;
 var bool bUseBotz;
 var NavigationPoint BotzNavig;
 var sgTeleporter OtherTele;
 var PlayerPawn LocalPlayer;
 var Pawn Accepted;
-//-----------------------------------------------------------------------------
-// Product the user must have installed in order to enter the teleporter.
-var() name ProductRequired;
 
 // Teleporter flags
 var() bool    bEnabled;         // Teleporter is turned on;
@@ -94,7 +88,6 @@ simulated event PostBuild()
 {
 	Super.PostBuild();
 	URL1=GetTeleporterName();
-	URL2=URL1;
 }
 
 simulated event Timer()
@@ -285,47 +278,42 @@ function Trigger( actor Other, pawn EventInstigator )
 simulated function Touch( actor Other )
 {
 	local sgTeleporter teleDest;
-	local Pawn p;
+	local Pawn P;
 	local vector TLoc;
 
-	if ( !bEnabled || !Other.bCanTeleport || bDisabledByEMP || (Pawn(Other) == none) || (Pawn(Other).PlayerReplicationInfo == none) || (Pawn(Other).PlayerReplicationInfo.Team != Team) || (Other == Accepted) )
+	P = Pawn(Other);
+	if ( !bEnabled || !Other.bCanTeleport || bDisabledByEMP || (P == none) || (P.PlayerReplicationInfo == none) || (P.PlayerReplicationInfo.Team != Team) || (Other == Accepted) )
 		return;
 
 	if ( Level.NetMode == NM_Client )
 	{
 		if ( !bHasOtherTele )
 			return;
-		if ( Pawn(Other).FindInventoryType(class'sgTeleNetwork') != none )	TLoc = TeleNetLoc;
-		else															TLoc = TargetLoc;
+		if ( P.FindInventoryType(class'sgTeleNetwork') != none )	TLoc = TeleNetLoc;
+		else														TLoc = TargetLoc;
 		
 		if ( TLoc == vect(0,0,0) )
 			return;
 		Other.bCanTeleport = false;
 		Other.SetLocation( TLoc);
-		if ( !FastTrace( Location + vector(Other.Rotation) * CollisionRadius * 2) )
+		if ( !FastTrace( Location + vector(P.ViewRotation) * CollisionRadius * 2) )
 		{
-			Pawn(Other).ViewRotation.Yaw += 32768;
-			Pawn(Other).ClientSetRotation( Pawn(Other).ViewRotation);
+			P.ViewRotation.Yaw += 32768;
+			P.ClientSetRotation( Pawn(Other).ViewRotation); //Should this be used?
 		}
 		Other.bCanTeleport = true;
 		return;
 	}
 
-	teleDest=FindOther(Pawn(Other));
+	teleDest=FindOther(P);
 
 	if( teleDest != None && teleDest.bEnabled)
 	{
-		//announceall(Team@" "@Pawn(Other).PlayerReplicationInfo.Team);
+		// Teleport the actor into the other teleporter.
+		PlayTeleportEffect( P, false);
 
-                // Teleport the actor into the other teleporter.
-		if ( Other.IsA('Pawn') )
-			PlayTeleportEffect( Pawn(Other), false);
-
-		teleDest.Accept( Other, self );
-		if((Event != '') && Other.IsA('Pawn') )
-		for ( p = Level.PawnList; p != None; p = p.nextPawn ) {
-			if (p.playerreplicationinfo.Team == Team)
-				p.Trigger( Other, Other.Instigator ); }
+		if ( teleDest.Accept( P, self ) && (sgPRI(P.PlayerReplicationInfo) != none) )
+			sgPRI(P.PlayerReplicationInfo).ProtectCount -= 1.0;
 	}
 
 }
