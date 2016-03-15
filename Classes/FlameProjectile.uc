@@ -47,7 +47,8 @@ auto state Flying
 				Other.TakeDamage( 20, Instigator, Location, vect(0,0,0), 'Burned');
 				//Add incineration to players here later...
 			}
-			Explode(HitLocation,Normal(HitLocation-Other.Location));
+			if ( !bDeleteMe ) //Touch may happen more than once
+				Explode(HitLocation,Normal(HitLocation-Other.Location));
 		}
 	}
 	

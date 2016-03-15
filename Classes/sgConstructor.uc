@@ -474,7 +474,7 @@ simulated function CycleForward()
 }
 
 //Old method, client version of the function
-exec simulated function SetMode(int newCategory, int newSelection, optional bool Silent)
+exec simulated function SetMode(int newCategory, int newSelection)
 {
 	local int i, j;
 
@@ -482,12 +482,13 @@ exec simulated function SetMode(int newCategory, int newSelection, optional bool
 		newSelection = -1;
 
 	if ( Level.NetMode == NM_Client )
-		ClientSetMode( newCategory, newSelection, Silent);
+		ClientSetMode( newCategory, newSelection, true);
 
 	if ( !FindCatActor() )
 		return;
 	ExtraTimer = 0.3;
-	if ( !Silent && ((newCategory != Category) || (newSelection != Selection)) )		Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
+	if ( (newCategory != Category) || (newSelection != Selection) )
+		Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 
 	if ( (newCategory < 4) || (newSelection < 0) || (newCategory > 28) )
 	{
@@ -512,7 +513,7 @@ exec simulated function SetMode(int newCategory, int newSelection, optional bool
 	}
 }
 
-function ClientSetMode(int newCategory, int newSelection, optional bool Silent) //Server version of the function
+function ClientSetMode(int newCategory, int newSelection, optional bool bBound) //Server version of the function
 {
 	local int i, j;
 
@@ -520,7 +521,8 @@ function ClientSetMode(int newCategory, int newSelection, optional bool Silent) 
 		return;
 
 	ExtraTimer = 0.3;
-	if ( !Silent && ((newCategory != Category) || (newSelection != Selection)) )		Owner.PlayOwnedSound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
+	if ( (newCategory != Category) || (newSelection != Selection) )
+		Owner.PlayOwnedSound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 
 	if ( (newCategory < 4) || (newSelection < 0) || (newCategory > 28) )
 	{
@@ -859,9 +861,11 @@ State Active
 			GuiState = 0;
 			return false; //Close gui
 		}
-		CycleForward();
-		ExtraTimer = 0.3;
-		return false;
+		if ( ExtraTimer <= 0 )
+		{
+			CycleForward();
+			ExtraTimer = 0.3;
+		}
 	}
 
 	simulated event EndState()
@@ -2215,7 +2219,10 @@ simulated function HandleTimers( float DeltaTime, Pawn P)
 	//AutoCycle
 	if ( ExtraTimer > 0 )
 	{
-		ExtraTimer -= DeltaTime;
+		if ( P.bAltFire == 0 )
+			ExtraTimer = 0;
+		else
+			ExtraTimer -= DeltaTime;
 		if ( (P.bAltFire > 0) && (P.bFire == 0) && ExtraTimer <= 0 )
 		{
 			CycleForward();
@@ -2233,12 +2240,12 @@ simulated function HandleTimers( float DeltaTime, Pawn P)
 	}
 	else if ( SpecialPause < 0 )
 	{
-		if ( (SpecialPause += DeltaTime) >= 0 )
-		{
+		if ( P.bFire == 0 )
 			SpecialPause = 0;
-			if ( (P.Weapon == self) && (P.bFire > 0) )
-				PrimaryFunc( 0.0);
-		}
+		else
+			SpecialPause = FMin(SpecialPause + DeltaTime, 0);
+		if ( (SpecialPause == 0) && (P.Weapon == self) && (P.bFire > 0) )
+			PrimaryFunc( 0.0);
 	}
 }
 
@@ -2612,15 +2619,18 @@ simulated function bool OnHand()
 //Play a server version of the sound, the client has already simulated his own sound so we use PlayOwnedSound inside a non-simulated function
 function ServerCycleSound()
 {
-	Owner.PlayOwnedSound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
+	if ( (Pawn(Owner).Weapon == self) && (Pawn(Owner).PendingWeapon == none) )
+		Owner.PlayOwnedSound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 }
 function ServerDenySound()
 {
-	Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+	if ( (Pawn(Owner).Weapon == self) && (Pawn(Owner).PendingWeapon == none) )
+		Owner.PlaySound(Misc1Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
 }
 function ServerAcceptSound()
 {
-	Owner.PlayOwnedSound(SelectSound, SLOT_None, Pawn(Owner).SoundDampening*5,,, 2.0);
+	if ( (Pawn(Owner).Weapon == self) && (Pawn(Owner).PendingWeapon == none) )
+		Owner.PlayOwnedSound(SelectSound, SLOT_None, Pawn(Owner).SoundDampening*5,,, 2.0);
 }
 function ServerBuildSound()
 {

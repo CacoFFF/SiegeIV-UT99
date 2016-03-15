@@ -329,4 +329,5 @@ defaultproperties
      ExpRadiusLevel=25
      SelfDamageDet=4000
      RULevelMult=4
+     BuildDistance=37
 }
