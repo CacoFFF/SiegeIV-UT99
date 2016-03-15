@@ -2563,20 +2563,15 @@ function DropFrom(vector startLocation)
     Destroy();
 }
 
-function Inventory SpawnCopy( Pawn Other)
+function GiveTo( pawn Other )
 {
-	local sgConstructor Copy;
 	local Info NX;
-	
-	Copy = sgConstructor(Super.SpawnCopy( Other));
-	if ( Copy != none )
-	{
-		//We gotta see what gives a player impunity...
-		NX = class'SiegeStatics'.static.FindNexgenClient( PlayerPawn(Owner) );
-		if ( NX != none && (InStr(NX.GetPropertyText("rights"),"G") >= 0) )
-			bCanRemoveWithImpunity = true;
-	}
-	return Copy;
+
+	Super.GiveTo( Other);
+	//We gotta see what gives a player impunity...
+	NX = class'SiegeStatics'.static.FindNexgenClient( PlayerPawn(Other) );
+	if ( NX != none && (InStr(NX.GetPropertyText("rights"),"G") >= 0) )
+		bCanRemoveWithImpunity = true;
 }
 
 function string GetPlayerNetworkAddres()
