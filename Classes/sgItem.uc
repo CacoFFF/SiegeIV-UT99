@@ -61,7 +61,7 @@ simulated function CompleteBuilding()
 		bOwnerlessCheck = !bOwnerlessCheck;
 		if ( bOwnerlessCheck )
 			return;
-		foreach RadiusActors(class'Pawn', P, 48)
+		foreach RadiusActors(class'Pawn', P, 44)
 			if ( P.bIsPlayer && P.Health > 0 && P.PlayerReplicationInfo != None && P.PlayerReplicationInfo.Team == Team && GiveItems(P) )
 	        {
 				Destroy();
@@ -185,7 +185,10 @@ function bool GiveItems( Pawn Other)
 {
 	local Inventory Discarded, I, inv;
 	local bool bReject;
-
+	
+	if ( (sgPRI(Other.PlayerReplicationInfo) != none) && (sgPRI(Other.PlayerReplicationInfo).ProtectCount > 0) ) 
+		return false;
+	
 	For ( I=Inventory ; I!=none ; I=I.Inventory )
 	{
 		inv = Other.FindInventoryType( I.class);

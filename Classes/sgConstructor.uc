@@ -941,13 +941,13 @@ simulated function Pawn BestUpgradeCandidate( byte Team)
 			if ( bNoBuilds || (sgB.Team != Team) || sgB.bNoUpgrade || (sgB.SCount > 0) || (sgB.Grade >= 5) )
 				continue;
 			Dist = VSize(Start-HitLocation);
-			if ( Dist > 90 )
+			if ( Dist > 92 )
 			{
 				bNoBuilds = true;
 				continue;
 			}
 			fPri = 1 - (sgB.Grade * 0.2);
-			fPri += 1 - (VSize( Start - HitLocation) / 90);
+			fPri += 1 - (VSize( Start - HitLocation) / 92);
 			if ( fPri > Priority )
 			{
 				Priority = fPri;
@@ -989,7 +989,7 @@ simulated function Pawn BestRepairCandidate( byte Team)
 			if ( bNoBuilds || (sgB.Team != Team) )
 				continue;
 			Dist = VSize(Start-HitLocation);
-			if ( Dist > 90 )
+			if ( Dist > 92 )
 			{
 				bNoBuilds = true;
 				continue;

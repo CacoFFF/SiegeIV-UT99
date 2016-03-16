@@ -170,17 +170,6 @@ simulated final function FixInventoryChain( optional bool bOnlyBreak)
 		}
 }
 
-simulated final function BreakInventoryChain()
-{
-	local Inventory Inv, Last;
-
-	//Setup
-	ForEach Owner.ChildActors( class'Inventory', Inv)
-		Inv.OddsOfAppearing = 0;
-
-	
-}
-
 simulated function CacheInventory()
 {
 	local Inventory Inv;
