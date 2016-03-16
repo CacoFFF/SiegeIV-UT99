@@ -169,6 +169,15 @@ simulated function Upgraded()
 	SightRadius = 1000 + 1750*Grade;
 }
 
+//Higor, use this function to alter the NetUpdateFrequency on net games
+function AlterNetRate()
+{
+	if ( Energy < MaxEnergy )
+		NetUpdateFrequency = 15;
+	else
+		NetUpdateFrequency = 10;
+}
+
 //Rate self on AI teams, using category variations
 static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int cSlot)
 {

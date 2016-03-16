@@ -2293,6 +2293,7 @@ simulated function Tick(float DeltaTime)
 	if ( P.Weapon != self )
 	{
 		bClientUp = false;
+		HitPawn = none;
 		return;
 	}
 

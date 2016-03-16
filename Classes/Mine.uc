@@ -304,6 +304,13 @@ simulated function FinishBuilding()
 		}
 }
 
+//Higor, use this function to alter the NetUpdateFrequency on net games
+function AlterNetRate()
+{
+	NetUpdateFrequency = 12; //Flat 12 hz, enemies must see them earlier, hp update freq doesn't mean much
+}
+
+
 defaultproperties
 {
      bOnlyOwnerRemove=True

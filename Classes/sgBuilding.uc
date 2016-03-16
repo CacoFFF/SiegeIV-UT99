@@ -612,9 +612,9 @@ function BackToNormal()
 function AlterNetRate()
 {
 	if ( Energy < MaxEnergy )
-		NetUpdateFrequency = 30;
+		NetUpdateFrequency = 15;
 	else
-		NetUpdateFrequency = 5;
+		NetUpdateFrequency = 6;
 }
 
 //Variations of message broadcasting
@@ -806,7 +806,7 @@ function DeInitBlock()
 
 defaultproperties
 {
-     NetUpdateFrequency=50
+     NetUpdateFrequency=15
      BurnPerSecond=100
      bCanTakeOrb=True
      UpgradeCost=50

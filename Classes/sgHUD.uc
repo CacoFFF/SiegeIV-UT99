@@ -80,7 +80,7 @@ var bool bTeamRU;
 var bool bEnforceHealth;
 
 //Item caching for faster Inventory chain searches
-var() byte HasCached[10];
+var() byte HasCached[11];
 var() UT_Invisibility CachedInvis; //0
 var() Dampener CachedDamp; //1
 var() UT_JumpBoots CachedBoots; //2
@@ -91,29 +91,130 @@ var() sgSuit CachedSuit; //6
 var() Suits CachedSuits; //7
 var() sgTeleNetwork CachedTelenet; //8
 var() sgVisor CachedVisor; //9
+var() sgConstructor CachedConstructor; //10
 var() int CachedArmor, CachedThigs, CachedShield, HiddenArmor;
 
-var() class<Inventory> CacheInvs[10];
-var() int CacheTypes[10];
+var() class<Inventory> CacheInvs[11];
+var() int CacheTypes[11];
 var() int iCacheInvs;
+
+
+//Weapon wasn't hooked in inventory chain
+simulated final function FixInventoryChain( optional bool bOnlyBreak)
+{
+	local Inventory Inv, Last, Lone;
+	
+	//Do not run this routine on authoritary session
+	if ( Level.NetMode != NM_Client )
+		return;
+	
+	//Setup
+	ForEach Owner.ChildActors( class'Inventory', Inv)
+		Inv.OddsOfAppearing = 0;
+	
+	//Logic:
+	// Chained to player		= 1
+	// Chained out of player	-= 1 (bad chaining decrements even more)
+	// Base of non-player chain	= 0
+	// Items spawned more recently are last in actor list, first in inventory chain
+	// Chain breaks when a new item is added, not when an existing item is removed (set Inventory before item spawn)
+
+	For ( Inv=Owner.Inventory ; Inv!=none ; Inv=Inv.Inventory )
+	{
+		//Break the chain if it's looping
+		if ( Inv.OddsOfAppearing == 1 )
+		{
+			Last.Inventory = none;
+			break;
+		}
+		//Immediately remove bDeleteMe items from chain
+		if ( Inv.bDeleteMe )
+			Last.Inventory = Inv.Inventory;
+		Inv.OddsOfAppearing = 1;
+		Last = Inv;
+	}
+	
+	if ( bOnlyBreak )
+		return;
+
+	//Setup chain weights, these are non-deleted actors
+	ForEach Owner.ChildActors( class'Inventory', Inv)
+		if ( (Inv.OddsOfAppearing <= 0) && (Inv.Inventory != none) )
+		{
+			if ( Inv.Inventory.OddsOfAppearing > 0 )
+				Lone = Inv;
+			else
+				Inv.Inventory.OddsOfAppearing -= 1;
+		}
+
+	//Fix lone inventory first, this is a priority (lone is always right, except when player says so)
+	if ( Lone != none )
+	{
+		For ( Inv=Owner.Inventory ; Inv!=none ; Inv=Inv.Inventory )
+			if ( Inv.Inventory == Lone.Inventory )
+			{
+				Inv.Inventory = Lone;
+				return; //Try again on next frame
+			}
+	}
+		
+	//Find latest base of non-player chain and attach
+	ForEach Owner.ChildActors( class'Inventory', Inv)
+		if ( Inv.OddsOfAppearing == 0 )
+		{
+			if ( Last == none )
+				Owner.Inventory = Inv;
+			else
+				Last.Inventory = Inv;
+			break;
+		}
+}
+
+simulated final function BreakInventoryChain()
+{
+	local Inventory Inv, Last;
+
+	//Setup
+	ForEach Owner.ChildActors( class'Inventory', Inv)
+		Inv.OddsOfAppearing = 0;
+
+	
+}
 
 simulated function CacheInventory()
 {
-	local inventory Inv;
+	local Inventory Inv;
 	local int LoopCount, i;
+	local bool bFoundWeaponInChain, bFoundAmmoInChain;
 	
 	CachedArmor = 0;
 	CachedThigs = 0;
 	CachedShield = 0;
 	HiddenArmor = 0;
-
+	bFoundWeaponInChain = Pawn(Owner).Weapon != none; //We have a weapon to find
+	bFoundAmmoInChain = !bFoundWeaponInChain || (Pawn(Owner).Weapon.AmmoType == none); //We have ammo to find
+	
 	For ( inv=Owner.Inventory ; inv!=none ; inv=inv.Inventory )
 	{
 		if ( ++LoopCount > 100 )
+		{
+			FixInventoryChain( true);
 			break;
-		if ( Weapon(Inv) != none || Ammo(Inv) != none ) //Faster loops
+		}
+		if ( Ammo(Inv) != none ) //Optimize
+		{
+			if ( !bFoundAmmoInChain && (Pawn(Owner).Weapon.AmmoType == Inv) )
+				bFoundAmmoInChain = true;
 			continue;
-		if ( inv.bIsAnArmor )
+		}
+		if ( Weapon(Inv) != none )
+		{
+			if ( Inv == Pawn(Owner).Weapon )
+				bFoundWeaponInChain = true;
+			if ( sgConstructor(Inv) == none )
+				continue;
+		}
+		if ( Inv.bIsAnArmor )
 		{
 			if ( UT_ShieldBelt(inv) != none )
 				CachedShield += inv.Charge;
@@ -135,6 +236,9 @@ simulated function CacheInventory()
 	if ( CachedSuit != none && CachedSuit.bIsAnArmor )
 		HiddenArmor += CachedSuit.Charge;
 	CachedArmor -= HiddenArmor;
+	
+	if ( !bFoundWeaponInChain || !bFoundAmmoInChain )
+		FixInventoryChain();
 }
 
 
@@ -151,6 +255,7 @@ simulated function CacheIntegrity()
 	if ( (HasCached[7] > 0) && (CachedSuits == none || CachedSuits.bDeleteMe) )	{	RemoveFromCache( Class'Suits');	CachedSuits=none;	}
 	if ( (HasCached[8] > 0) && (CachedTelenet == none || CachedTelenet.bDeleteMe) )	{	RemoveFromCache( Class'sgTeleNetwork');	CachedTelenet=none;	}
 	if ( (HasCached[9] > 0) && (CachedVisor == none || CachedVisor.bDeleteMe) )	{	RemoveFromCache( Class'sgVisor');	CachedVisor=none;	}
+	if ( (HasCached[10]> 0) && (CachedConstructor == none || CachedConstructor.bDeleteMe) )	{	RemoveFromCache( Class'sgConstructor');	CachedConstructor=none;	}
 }
 
 simulated function AddToCache( Inventory toAdd, int iCache)
@@ -160,21 +265,22 @@ simulated function AddToCache( Inventory toAdd, int iCache)
 	HasCached[ CacheTypes[iCacheInvs] ] = 1;
 	Switch ( CacheTypes[iCacheInvs] )
 	{
-		case 0:			CachedInvis = UT_Invisibility( toAdd);			break;
-		case 1:			CachedDamp = Dampener( toAdd);	PlayerOwner.SoundDampening=0.1;		break;
-		case 2:			CachedBoots = UT_JumpBoots( toAdd);			break;
-		case 3:			CachedAmp = UDamage( toAdd);			break;
-		case 4:			CachedSpeed = sgSpeed( toAdd);			break;
-		case 5:			CachedScuba = SCUBAGear( toAdd);			break;
-		case 6:			CachedSuit = sgSuit( toAdd);			break;
-		case 7:			CachedSuits = Suits( toAdd);			break;
-		case 8:			CachedTelenet = sgTeleNetwork( toAdd);			break;
-		case 9:		CachedVisor = sgVisor( toAdd);			break;
+		case 0:		CachedInvis			= UT_Invisibility( toAdd);			break;
+		case 1:		CachedDamp			= Dampener( toAdd);	PlayerOwner.SoundDampening=0.1;		break;
+		case 2:		CachedBoots			= UT_JumpBoots( toAdd);				break;
+		case 3:		CachedAmp			= UDamage( toAdd);					break;
+		case 4:		CachedSpeed			= sgSpeed( toAdd);					break;
+		case 5:		CachedScuba			= SCUBAGear( toAdd);				break;
+		case 6:		CachedSuit			= sgSuit( toAdd);					break;
+		case 7:		CachedSuits			= Suits( toAdd);					break;
+		case 8:		CachedTelenet		= sgTeleNetwork( toAdd);			break;
+		case 9:		CachedVisor			= sgVisor( toAdd);					break;
+		case 10:	CachedConstructor	= sgConstructor( toAdd);			break;
 		default: Log("BUG IN SGHUD'S AddToCache");	break;
 	}
 	iCacheInvs++;
 }
-simulated function RemoveFromCache( Class<Inventory> toRemove)
+simulated final function RemoveFromCache( Class<Inventory> toRemove)
 {
 	local int i;
 	For ( i=0 ; i<iCacheInvs ; i++ )
@@ -187,7 +293,7 @@ simulated function RemoveFromCache( Class<Inventory> toRemove)
 			return;
 		}
 }
-simulated function SwapCaches( int i, int j)
+simulated final function SwapCaches( int i, int j)
 {
 	local int iType;	local Class<Inventory> iInv;
 	iInv = CacheInvs[i];	iType = CacheTypes[i];
@@ -431,8 +537,6 @@ simulated function DrawSiegeStats(canvas C)
 		C.DrawText( PRI.sHistory[i]);
 	}
 }
-
-
 
 //========================================
 // Master HUD render function.
@@ -914,10 +1018,15 @@ simulated function bool TraceIdentify(canvas Canvas)
                         startTrace,
                         endTrace;
 
-	startTrace = Owner.Location;
-	startTrace.Z += PawnOwner.BaseEyeHeight;
-	endTrace = startTrace + vector(PawnOwner.ViewRotation) * 10000.0;
-	other = Trace(hitLocation, hitNormal, endTrace, startTrace, true);
+	if ( (CachedConstructor != none) && (CachedConstructor.HitPawn != none) )
+		other = CachedConstructor.HitPawn;
+	else
+	{	
+		startTrace = Owner.Location;
+		startTrace.Z += PawnOwner.BaseEyeHeight;
+		endTrace = startTrace + vector(PawnOwner.ViewRotation) * 10000.0;
+		other = Trace(hitLocation, hitNormal, endTrace, startTrace, true);
+	}
 
 	if ( Pawn(other) != None && !other.bHidden )
 	{
@@ -926,13 +1035,17 @@ simulated function bool TraceIdentify(canvas Canvas)
 		IdentifyFadeTime = 3.0;
 	}
 
-	if ( IdentifyFadeTime == 0 || IdentifyPawn == None ||
-      (IdentifyTarget != None && IdentifyTarget.bFeigningDeath) )
-		return false;
-		
-	if ( (sgPRI(IdentifyTarget) != none) && sgPRI(IdentifyTarget).bHideIdentify )
+	if ( IdentifyFadeTime == 0 || IdentifyPawn == None )
 		return false;
 
+	//Only deny if not same team
+	if ( (IdentifyTarget != none) && (Pawn(Owner).PlayerReplicationInfo.Team != IdentifyTarget.Team) )
+	{
+		if ( IdentifyTarget.bFeigningDeath )
+			return false;
+		if ( (sgPRI(IdentifyTarget) != none) && sgPRI(IdentifyTarget).bHideIdentify )
+			return false;
+	}
 	return true;
 }
 
@@ -1980,6 +2093,7 @@ defaultproperties
      CacheInvs(7)=Class'Suits'
      CacheInvs(8)=Class'sgTeleNetwork'
      CacheInvs(9)=Class'sgVisor'
+	 CacheInvs(10)=Class'sgConstructor'
      CacheTypes(0)=0
      CacheTypes(1)=1
      CacheTypes(2)=2
@@ -1990,6 +2104,7 @@ defaultproperties
      CacheTypes(7)=7
      CacheTypes(8)=8
      CacheTypes(9)=9
+	 CacheTypes(10)=10
      TeamIcons(0)=Texture'IconCoreRed'
      TeamIcons(1)=Texture'IconCoreBlue'
      TeamIcons(2)=Texture'IconCoreGreen'
