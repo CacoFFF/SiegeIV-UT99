@@ -87,6 +87,7 @@ simulated function Timer()
 {
 	local sgPRI a;
 	local float SetRU;
+	local float MaxRU;
 	local int TeamSize, MaxedOut;
 
 	Super.Timer();
@@ -97,14 +98,19 @@ simulated function Timer()
 
 	if ( bCoreDisabled )
 		return;
-
-	TeamSize = GetTeamSize();
 	
 	if ( bDisabledByEMP || (Level.NetMode == NM_Client) && class'sgClient'.default.bHighPerformance )
 		Goto NO_INCREASE;
 	//Do not simulate RU generation on enemy players
 	if ( LocalClient == none || LocalClient.PlayerReplicationInfo == none || LocalClient.PlayerReplicationInfo.Team == Team )
 	{
+		TeamSize = GetTeamSize();
+		if ( SiegeGI(Level.Game) != none )
+			MaxRU = SiegeGI(Level.Game).MaxRUs[Team];
+		else if ( (LocalClient != none) && (sgGameReplicationInfo(LocalClient.GameReplicationInfo) != none) )
+			MaxRU = sgGameReplicationInfo(LocalClient.GameReplicationInfo).MaxRUs[Team];
+		else
+			MaxRU = 9999;
 		SetRU = fMax(0.05, (10-float(TeamSize)) * 0.05) + Grade * 0.85;
 		SetRU *= RuMultiplier * 0.05;
 		if ( (StoredRU < 0) && (SetRU*TeamSize < Abs(StoredRU) ) )
@@ -119,7 +125,7 @@ simulated function Timer()
 			ForEach AllActors(class'sgPRI', a)
 			{	if( a.Team == Team )
 				{
-					if ( a.RU >= a.MaxRU )
+					if ( a.RU >= MaxRU )
 						MaxedOut++;
 					else
 						a.AddRU( SetRU, true);
@@ -156,14 +162,12 @@ simulated function FinishBuilding()
 
 simulated function MonsterDamage(int Damage, Pawn instigatedBy)
 {
-	Energy -= Damage;
-	
-    if ( Energy <= 0 )
-		{
-			Energy = 0;
-			AnnounceAll("Game Over! The monsters have killed the BaseCore!");
-				Destruct();
-		}
+    if ( (Energy-=Damage) <= 0 )
+	{
+		Energy = 0;
+		AnnounceAll("Game Over! The monsters have killed the BaseCore!");
+		Destruct();
+	}
 }
 
 simulated event TakeDamage(int Damage, Pawn instigatedBy, Vector hitLocation, 

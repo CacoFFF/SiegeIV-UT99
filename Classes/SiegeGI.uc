@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0023);
+class SiegeGI extends TeamGamePlus config(SiegeIV_0024);
 
 var sgRURecovery    RURecovery;
 var config float    NumResources;
@@ -2311,17 +2311,17 @@ function float KillRUReward( sgPRI Victim, bool bNegative)
 function SharedReward( sgPRI Awarded, byte Team, float Award, optional float Waste)
 {
 	Waste = fClamp( Waste, 0, 1);
-	if ( (Awarded != none) && (Awarded.RU < Awarded.MaxRU) && (Awarded.Team == Team) )
+	if ( (Team < 4) && (Awarded != none) && (Awarded.RU < MaxRUs[Team]) && (Awarded.Team == Team) )
 	{
-		if ( Awarded.RU <= (Awarded.MaxRU - Award) )
+		if ( Awarded.RU <= (MaxRUs[Team] - Award) )
 		{
 			Awarded.AddRU( Award);
 			Award = 0;
 		}
 		else
 		{
-			Award -= Awarded.MaxRU - Awarded.RU;
-			Awarded.AddRU( Awarded.MaxRU - Awarded.RU);
+			Award -= MaxRUs[Team] - Awarded.RU;
+			Awarded.AddRU( MaxRUs[Team] - Awarded.RU);
 		}
 	}
 	

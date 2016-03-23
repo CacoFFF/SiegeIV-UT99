@@ -24,9 +24,7 @@ var string CountryPrefix;
 var Actor IpToCountry;
 var bool bIpToCountry;		
 
-var float           RU,
-                    MaxRU;
-var sgBaseCore      Cores[4];
+var float           RU;
 var WildcardsOrbs Orb;
 var sg_XC_Orb XC_Orb;
 
@@ -49,21 +47,21 @@ var string sHistory[16];
 var byte sColors[16];
 var byte iHistory;
 
-var pawn PushedBy;
+var Pawn PushedBy;
 
 //Remove protection
 var int RemoveTimer;
 
 //Supplier anti-spam
-var bool bReachedSupplier;
 var float SupplierTimer;
+var bool bReachedSupplier;
 
 //Fingerprint
+var bool bRequestedFPTime;
 var bool bReceivedFingerPrint;
 var string PlayerFingerPrint;
 var float NoFingerPrintTimer;
 var int iNoFP;
-var bool bRequestedFPTime;
 
 //For use in AI modes
 var name Orders;
@@ -73,7 +71,7 @@ var sgAIqueuer AIQueuer;
 replication
 {
 	reliable if ( Role == ROLE_Authority )
-		RU, MaxRU, Cores, XC_Orb, Orb, sgInfoCoreKiller, sgInfoBuildingHurt, sgInfoCoreRepair, sgInfoUpgradeRepair, sgInfoKiller, sgInfoBuildingMaker,sgInfoWarheadMaker, sgInfoWarheadKiller, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
+		RU, XC_Orb, Orb, sgInfoCoreKiller, sgInfoBuildingHurt, sgInfoCoreRepair, sgInfoUpgradeRepair, sgInfoKiller, sgInfoBuildingMaker,sgInfoWarheadMaker, sgInfoWarheadKiller, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
 	reliable if ( Role == ROLE_Authority )
 		ReceiveMessage, RequestFingerPrint, ClientReceiveRU;
 	reliable if ( Role < ROLE_Authority )
@@ -272,8 +270,10 @@ simulated event PostNetBeginPlay()
 
 simulated function AddRU( float Amount, optional bool bPassiveRU)
 {
-	if ( RU <= MaxRU )
-		RU = fClamp(RU + Amount, 0, MaxRU);
+	local float TopRU;
+	TopRU = MaxRU();
+	if ( RU <= TopRU )
+		RU = fClamp(RU + Amount, 0, TopRU);
 	else
 	{
 		if ( Amount > 0 )
@@ -354,13 +354,7 @@ function Tick(float deltaTime)
 	else if ( bReadyToPlay && bGameStarted )
 		bReadyToPlay = false;
 
-	if ( SiegeGI(Level.Game) != None )
-	{
-		RU = FMax(FMin(RU, SiegeGI(Level.Game).MaxRUs[Team]), 0);
-		MaxRU = SiegeGI(Level.Game).MaxRUs[Team];
-		for (I=0;I<4;I++)
-			Cores[I] = SiegeGI(Level.Game).Cores[I];
-	}
+	RU = fMax( RU, 0.f);
 
 	if ( ProtectCount > 0 )
 	{
@@ -370,41 +364,31 @@ function Tick(float deltaTime)
 			ProtTimer();
 	}
 
-    if(bIpToCountry)
-  {
-     if(CountryPrefix == "")
-     {       
-        
-	   /*if(Owner.Owner.IsA('PlayerPawn'))
-	   {*/
-          CountryPrefix = "*2";  
-          P=PlayerPawn(Owner);
-	      if(NetConnection(P.Player) != None)
-	      {
-             temp=P.GetPlayerNetworkAddress();
-             temp=Left(temp, InStr(temp, ":"));
-             
-             temp=IpToCountry.GetItemName(temp);
-             
-             if(temp == "!Disabled") /* after this return, iptocountry won't resolve anything anyway */
-                bIpToCountry=False;
-             else if(Left(temp, 1) != "!") /* good response */
-             {
-                CountryPrefix=SelElem(temp, 5);
-                if(CountryPrefix=="") /* the country is probably unknown(maybe LAN), so as the prefix */
-                  bIpToCountry=False;
-             }
-	      }
-	      else
-	         bIpToCountry=False;
-	    /*}
-	    else
-	       bIpToCountry=False;*/
-      }
-      else
-         bIpToCountry=False;
-    
-  }
+	if ( bIpToCountry )
+	{
+		if(CountryPrefix == "")
+		{       
+			CountryPrefix = "*2";  
+			P=PlayerPawn(Owner);
+			if( (P != none) && (NetConnection(P.Player) != None) )
+			{
+				temp=P.GetPlayerNetworkAddress();
+				temp=IpToCountry.GetItemName(Left(temp, InStr(temp, ":")));
+				if(temp == "!Disabled") /* after this return, iptocountry won't resolve anything anyway */
+					bIpToCountry=False;
+				else if(Left(temp, 1) != "!") /* good response */
+				{
+					CountryPrefix=SelElem(temp, 5);
+					if(CountryPrefix=="") /* the country is probably unknown(maybe LAN), so as the prefix */
+						bIpToCountry=False;
+				}
+			}
+			else
+				bIpToCountry=False;
+		}
+		else
+			bIpToCountry=False;
+	}
 
 }
 
@@ -459,6 +443,14 @@ static final function string SelElem(string Str, int Elem)
 simulated final function float GetEff( optional bool bJustKilled)
 {
 	return float(sgInfoKiller) / Max(sgInfoKiller + Deaths - int(bJustKilled), 1) * 100;
+}
+
+simulated final function float MaxRU()
+{
+	if ( SiegeGI(Level.Game) != none )
+		return SiegeGI(Level.Game).MaxRUs[Team];
+	if ( PlayerPawn(Owner) != none && sgGameReplicationInfo(PlayerPawn(Owner).GameReplicationInfo) != none )
+		return sgGameReplicationInfo(PlayerPawn(Owner).GameReplicationInfo).MaxRUs[Team];
 }
 
 defaultproperties

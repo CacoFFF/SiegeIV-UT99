@@ -48,20 +48,11 @@ simulated function ReceiveMessage( string sMsg, byte aTeam, bool bAnnounce)
 
 function Tick(float deltaTime)
 {
-	local int I;
-
 	PlayerName = "RemoveGuardian";
 	bAdmin = True;
 	bIsSpectator = True;
 	PlayerID = 0;
 	Team = 255;
 	bWaitingPlayer = True;
-
-	if ( SiegeGI(Level.Game) != None )
-	{
-		RU = 0;
-		MaxRU = 0;
-		for (I=0;I<4;I++)
-			Cores[I] = SiegeGI(Level.Game).Cores[I];
-	}
+	RU = 0;
 }

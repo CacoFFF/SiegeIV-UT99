@@ -9,9 +9,11 @@ var float BaseEnergy;
 var float RepairTimer;
 
 var Pawn rPlayers[16];
+var float rTime[16];
 var int iP;
 
 var PlayerPawn LocalPush;
+var float LocalTime;
 var XC_AntigravityToucher Toucher;
 var float LastDelta;
 
@@ -19,7 +21,7 @@ var float LastDelta;
 replication
 {
 	reliable if ( Role==ROLE_Authority)
-		rPlayers, iP;
+		rPlayers, rTime, iP;
 }
 
 simulated event PreBeginPlay()
@@ -32,7 +34,7 @@ simulated event PreBeginPlay()
 	SetCollision( false);
 	if ( Level.NetMode != NM_Client )
 	{
-		SetLocation( Location - vect(0,0,5));
+		SetLocation( Location - vect(0,0,7));
 		ForEach RadiusActors (class'Teleporter', T, CollisionRadius * 1.1)
 			if ( T.bCollideActors )
 			{
@@ -121,11 +123,21 @@ simulated function Tick( float DeltaTime)
 	{
 		if ( (rPlayers[i] == none) || rPlayers[i].bDeleteMe || (rPlayers[i].Physics != PHYS_Falling) || !InPushZone(rPlayers[i]) )
 		{
-			if ( rPlayers[i].Role == ROLE_AutonomousProxy )
-				LocalPush = none;
-			rPlayers[i] = rPlayers[--iP];
-			rPlayers[iP] = none;
-			continue;
+			if ( rTime[i] > 0 )
+			{
+				rTime[i] -= DeltaTime;
+				if ( rPlayers[i].Role == ROLE_AutonomousProxy )
+					LocalTime = rTime[i];
+			}
+			else
+			{
+				if ( rPlayers[i].Role == ROLE_AutonomousProxy )
+					LocalPush = none;
+				rPlayers[i] = rPlayers[--iP];
+				rTime[i] = rTime[iP];
+				rPlayers[iP] = none;
+				continue;
+			}
 		}
 		rPlayers[i].Velocity.Z -= rPlayers[i].Region.Zone.ZoneGravity.Z * DeltaTime * 0.93;
 		i++;
@@ -141,7 +153,7 @@ simulated function Tick( float DeltaTime)
 
 simulated function PlayerUpdatePush()
 {
-	if ( InPushZone(LocalPush) )
+	if ( InPushZone(LocalPush) && (FRand() < LocalTime) )
 		LocalPush.Velocity.Z -= LocalPush.Region.Zone.ZoneGravity.Z * LastDelta * 0.93;
 }
 
@@ -154,13 +166,18 @@ simulated function RegisterNew( pawn Other)
 
 	For ( i=0 ; i<iP ; i++ )
 		if ( rPlayers[i] == Other )
+		{
+			rTime[i] = Grade * 0.3;
 			return;
+		}
 
+	rTime[iP] = Grade * 0.3;
 	rPlayers[iP++] = Other;
 	if ( (Level.NetMode == NM_Client) && (Other.Role == ROLE_AutonomousProxy) && (PlayerPawn(Other) != none) )
 	{
 		Toucher.CurPlat = self;
 		LocalPush = PlayerPawn(Other);
+		LocalTime = Grade * 0.3;
 	}
 }
 
@@ -218,7 +235,7 @@ defaultproperties
      SpriteYellowTeam=Texture'ProtectorSkinTeam3'
      MFXrotX=(Yaw=10000)
      CollisionRadius=65.000000
-     CollisionHeight=17.000000
+     CollisionHeight=16.000000
      BuildDistance=52
      GUI_Icon=Texture'GUI_AGPlatform'
 }

@@ -187,7 +187,7 @@ function bool TryUpgrade()
 		//Give all RU, no AI queuer specified!
 		if ( RU() <= 30 )
 			bResetObjective = true;
-		RUtarget = aPRI.MaxRU - aPRI.RU;
+		RUtarget = RUtoMax();
 		if ( RUtarget <= 0 )
 			bResetObjective = true;
 		else if ( !bNoAI )
@@ -376,10 +376,10 @@ function float TeamRU( optional float fBase)
 	return fBase + sgPRI.RU;
 }
 
-function float RU() {	return sgPRI.RU;	}
-function float MaxRU() {	return sgPRI.MaxRU;	}
-function bool MaxedRU() {	return sgPRI.RU >= sgPRI.MaxRU;	}
-function float RUtoMax() {	return sgPRI.MaxRU - sgPRI.RU;	}
+final function float RU() {	return sgPRI.RU;	}
+final function float MaxRU() {	return SiegeGI(Level.Game).MaxRUs[sgPRI.Team];	}
+final function bool MaxedRU() {	return sgPRI.RU >= SiegeGI(Level.Game).MaxRUs[sgPRI.Team];	}
+final function float RUtoMax() {	return SiegeGI(Level.Game).MaxRUs[sgPRI.Team] - sgPRI.RU;	}
 
 function bool CanRepair()
 {

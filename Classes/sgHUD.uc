@@ -103,15 +103,16 @@ var() int iCacheInvs;
 simulated final function FixInventoryChain( optional bool bOnlyBreak)
 {
 	local Inventory Inv, Last, Lone;
+	local int LoopCount;
+	local float fTag;
 	
 	//Do not run this routine on authoritary session
 	if ( Level.NetMode != NM_Client )
 		return;
 	
-	//Setup
-	ForEach Owner.ChildActors( class'Inventory', Inv)
-		Inv.OddsOfAppearing = 0;
-	
+	//Setup - owned
+	fTag = 1 + FRand() * 20;
+
 	//Logic:
 	// Chained to player		= 1
 	// Chained out of player	-= 1 (bad chaining decrements even more)
@@ -122,15 +123,16 @@ simulated final function FixInventoryChain( optional bool bOnlyBreak)
 	For ( Inv=Owner.Inventory ; Inv!=none ; Inv=Inv.Inventory )
 	{
 		//Break the chain if it's looping
-		if ( Inv.OddsOfAppearing == 1 )
+		if ( Inv.OddsOfAppearing == fTag )
 		{
-			Last.Inventory = none;
+			if ( Last != none )
+				Last.Inventory = none;
 			break;
 		}
 		//Immediately remove bDeleteMe items from chain
-		if ( Inv.bDeleteMe )
+		if ( Inv.bDeleteMe && (Last != none) )
 			Last.Inventory = Inv.Inventory;
-		Inv.OddsOfAppearing = 1;
+		Inv.OddsOfAppearing = fTag;
 		Last = Inv;
 	}
 	
@@ -139,12 +141,12 @@ simulated final function FixInventoryChain( optional bool bOnlyBreak)
 
 	//Setup chain weights, these are non-deleted actors
 	ForEach Owner.ChildActors( class'Inventory', Inv)
-		if ( (Inv.OddsOfAppearing <= 0) && (Inv.Inventory != none) )
+		if ( (Inv.OddsOfAppearing != fTag) && (Inv.Inventory != none) )
 		{
-			if ( Inv.Inventory.OddsOfAppearing > 0 )
+			if ( Inv.Inventory.OddsOfAppearing == fTag )
 				Lone = Inv;
 			else
-				Inv.Inventory.OddsOfAppearing -= 1;
+				Inv.Inventory.OddsOfAppearing = -fTag;
 		}
 
 	//Fix lone inventory first, this is a priority (lone is always right, except when player says so)
@@ -160,7 +162,7 @@ simulated final function FixInventoryChain( optional bool bOnlyBreak)
 		
 	//Find latest base of non-player chain and attach
 	ForEach Owner.ChildActors( class'Inventory', Inv)
-		if ( Inv.OddsOfAppearing == 0 )
+		if ( Abs(Inv.OddsOfAppearing) != fTag )
 		{
 			if ( Last == none )
 				Owner.Inventory = Inv;
@@ -1196,7 +1198,7 @@ simulated function DrawTextCentered(Canvas canvas, coerce string text)
 
 simulated function DrawGameSynopsis(canvas Canvas)
 {
-    local TournamentGameReplicationInfo  GRI;
+    local sgGameReplicationInfo  GRI;
     local float         XL,XL2,
                         YL,YL2,
                         WeapScale,
@@ -1219,7 +1221,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	
 	if (bSiegeStats) return;
 
-	GRI = TournamentGameReplicationInfo(PlayerOwner.GameReplicationInfo);
+	GRI = sgGameReplicationInfo(PlayerOwner.GameReplicationInfo);
 	if ( GRI != None )
 		for ( i = 0; i < 4; i++ )
 			DrawTeam(Canvas, GRI.Teams[i]);
@@ -1228,7 +1230,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		return;
 
 	PRI = sgPRI(PawnOwner.PlayerReplicationInfo);
-	sgB = PRI.Cores[PRI.Team];
+	sgB = GRI.Cores[PRI.Team];
 
 	Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
 	Canvas.DrawColor = WhiteColor;
@@ -1466,19 +1468,22 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.DrawText( int(PRI.RU), false);
 		Canvas.CurY = YOffset;
 //		Canvas.DrawText( int(PRI.RU)@"/"@ int(PRI.MaxRU), false);
-		if ( PRI.Cores[PRI.Team] != none )
-			j = PRI.Cores[PRI.Team].StoredRU;
-		if ( PRI.Cores[PRI.Team] != none && Abs(j) > 2 )
+		if ( sgB != none )
 		{
-			if ( j < 0 )
-				Canvas.DrawColor = NewColor( 250, 20, 20);
-			else
-				Canvas.DrawColor = NewColor( 20, 200, 250);
-			Canvas.DrawText( "[" $ int(Abs(j)) $ "]", false);
-			Canvas.CurY = YOffset;
-			Canvas.DrawColor = GreyColor;
+			j = sgB.StoredRU;
+			if ( Abs(j) > 2 )
+			{
+				if ( j < 0 )
+					Canvas.DrawColor = NewColor( 250, 20, 20);
+				else
+					Canvas.DrawColor = NewColor( 20, 200, 250);
+				Canvas.DrawText( "[" $ int(Abs(j)) $ "]", false);
+				Canvas.CurY = YOffset;
+				Canvas.DrawColor = GreyColor;
+			}
 		}
-		Canvas.DrawText( " /"@ int(PRI.MaxRU), false);
+		if ( GRI != none )
+			Canvas.DrawText( " /"@ int(GRI.MaxRUs[PRI.Team]), false);
 
 		if ( GainedRU != 0 )
 		{

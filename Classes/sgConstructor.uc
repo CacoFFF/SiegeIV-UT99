@@ -7,7 +7,7 @@
 class sgConstructor extends TournamentWeapon;
 
 
-#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0023.Constructor
+#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0024.Constructor
 
 //Pick up view mesh contributed by DeepakOV
 #exec mesh import mesh=ConstructorPick anivfile=Models\ConstructorPick_a.3d datafile=Models\ConstructorPick_d.3d x=0 y=0 z=0 mlod=0
@@ -295,7 +295,6 @@ exec function FreeBuild()
 	if ( SiegeGI(Level.Game) != None )
 		{
 			SiegeGI(Level.Game).MaxRUs[NFO.Team] = 10000000;
-			NFO.MaxRU = SiegeGI(Level.Game).MaxRUs[NFO.Team];
 			// Is a billion RU enough to test? really... is it?
 			NFO.RU = 10000000;
     	}
@@ -778,7 +777,7 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 			sgBuilding(Other).Upgraded();
 			Owner.PlaySound(Misc3Sound, SLOT_None, pawn(Owner).SoundDampening*2.5);
 		}
-		if ( (ownerPRI.AIqueuer.RoleCode < 2) && (ownerPRI.RU > 100) && ((ownerPRI.RU / ownerPRI.MaxRU) > (sgBuilding(Other).Grade / 10) ) ) //Upgrade multiple times!
+		if ( (ownerPRI.AIqueuer.RoleCode < 2) && (ownerPRI.RU > 100) && ((ownerPRI.RU / SiegeGI(Level.Game).MaxRUs[ownerPRI.Team]) > (sgBuilding(Other).Grade / 10) ) ) //Upgrade multiple times!
 			return false;
 		return true;
 	}
@@ -1174,12 +1173,15 @@ function bool UpgradeFunction( float DeltaRep)
 	{
 		UP_PLAYER:
 		Priority = sgPRI(HitActor.PlayerReplicationInfo).RU;
-		fPri=FMin(100, ownerPRI.RU);
-		sgPRI(HitActor.PlayerReplicationInfo).AddRU(fPri);
-		ownerPRI.sgInfoUpgradeRepair+= fPri;	
-		ownerPRI.AddRU(-1 * (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority));
-		ownerPRI.Score += (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
-		HitActor.PlayerReplicationInfo.Score -= (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
+		if ( Priority < SiegeGI(Level.Game).MaxRUs[ownerPRI.Team] )
+		{
+			fPri=FMin(100, ownerPRI.RU);
+			sgPRI(HitActor.PlayerReplicationInfo).AddRU(fPri);
+			ownerPRI.sgInfoUpgradeRepair+= fPri;	
+			ownerPRI.AddRU(-1 * (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority));
+			ownerPRI.Score += (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
+			HitActor.PlayerReplicationInfo.Score -= (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
+		}
 		HitActor.PlaySound(sound'sgMedia.sgPickRUs', SLOT_None,HitActor.SoundDampening*2.5);
 		SpecialPause = -1;
 		return true;
@@ -2223,7 +2225,7 @@ simulated function HandleTimers( float DeltaTime, Pawn P)
 			ExtraTimer = 0;
 		else
 			ExtraTimer -= DeltaTime;
-		if ( (P.bAltFire > 0) && (P.bFire == 0) && ExtraTimer <= 0 )
+		if ( (P.bAltFire > 0) && (P.bFire == 0) && (GuiState == 0) && ExtraTimer <= 0 )
 		{
 			CycleForward();
 			ExtraTimer += 0.3;
