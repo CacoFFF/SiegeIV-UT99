@@ -161,23 +161,23 @@ simulated function RegisterNew( pawn Other)
 {
 	local int i;
 
-	if ( !Other.bIsPlayer || !InPushZone( Other) || (Other.PlayerReplicationInfo == none) || (Other.PlayerReplicationInfo.Team != Team) || (Other.Velocity.Z <= 0) )
+	if ( !Other.bIsPlayer || !InPushZone( Other) || (Other.PlayerReplicationInfo == none) || (Other.PlayerReplicationInfo.Team != Team) /*|| (Other.Velocity.Z <= 0)*/ )
 		return;
 
 	For ( i=0 ; i<iP ; i++ )
 		if ( rPlayers[i] == Other )
 		{
-			rTime[i] = Grade * 0.3;
+			rTime[i] = Grade * 0.25;
 			return;
 		}
 
-	rTime[iP] = Grade * 0.3;
+	rTime[iP] = Grade * 0.25;
 	rPlayers[iP++] = Other;
 	if ( (Level.NetMode == NM_Client) && (Other.Role == ROLE_AutonomousProxy) && (PlayerPawn(Other) != none) )
 	{
 		Toucher.CurPlat = self;
 		LocalPush = PlayerPawn(Other);
-		LocalTime = Grade * 0.3;
+		LocalTime = Grade * 0.25;
 	}
 }
 

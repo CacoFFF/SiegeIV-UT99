@@ -11,13 +11,85 @@ var() sound         FireSound;
 var() class<Projectile> ProjectileType;
 var XC_ProtProjStorage Store;
 
-//XC_GameEngine interface
-native(3552) final iterator function CollidingActors( class<actor> BaseClass, out actor Actor, float Radius, optional vector Loc);
+var native Pawn BufferedEnemies[4];
+var byte ScanCycle;
 
 function CompleteBuilding()
 {
-	if ( ShouldFire() && !bDisabledByEMP)
-		Shoot(FindEnemy());
+//	if ( ShouldFire() && !bDisabledByEMP)
+//		Shoot(FindEnemy());
+	if ( !bDisabledByEMP )
+		BufferAndShoot();
+}
+
+function BufferAndShoot()
+{
+	local byte TargetTeam;
+	local Pawn P;
+	local ScriptedPawn S;
+	local float StartDist;
+	
+	ScanCycle = ((ScanCycle+1) % 4);
+	TargetTeam = ScanCycle;
+	if ( TargetTeam >= Team )
+		TargetTeam++;
+
+	if ( BufferedEnemies[ScanCycle] != none )
+		StartDist = VSize( BufferedEnemies[ScanCycle].Location - Location);
+	else
+		StartDist = SightRadius;
+	
+	BufferedEnemies[ScanCycle] = FindTeamTarget( StartDist, TargetTeam);
+
+	For ( TargetTeam=0 ; TargetTeam<4 ; TargetTeam++ )
+	{
+		if ( (BufferedEnemies[TargetTeam] == none) || BufferedEnemies[TargetTeam].bDeleteMe || (VSize(BufferedEnemies[TargetTeam].Location - Location) > SightRadius) )
+			continue;
+		if ( ShouldFire() )
+			Shoot( BufferedEnemies[TargetTeam] );
+	}
+}
+
+//OVERRIDE USING NATIVE PLUGIN
+final function Pawn FindTeamTarget( float Dist, byte aTeam)
+{
+	local Pawn P, Best;
+	local ScriptedPawn SP;
+	local float BestDist, CurDist;
+	
+	BestDist = Dist;
+	
+	if ( ScanCycle == 3 ) //Monsters
+	{
+		ForEach RadiusActors( class'ScriptedPawn', SP, Dist)
+			if ( SP.bCollideActors && (SP.Health > 10) && (SP.PlayerReplicationInfo == none || SP.PlayerReplicationInfo.Team != Team) )
+			{
+				CurDist = VSize( SP.Location - Location);
+				if ( CurDist < BestDist )
+				{
+					BestDist = CurDist;
+					Best = SP;
+				}
+			}
+	}
+	else //Players
+	{
+		if ( (SiegeGI(Level.Game) != none) && (SiegeGI(Level.Game).Cores[aTeam] == none) )
+			return none;
+		ForEach RadiusActors( class'Pawn', P, Dist)
+			if ( P.bCollideActors && ShouldAttackTeamPawn(P, aTeam) )
+			{
+				CurDist = VSize( P.Location - Location);
+				if ( CurDist < BestDist )
+				{
+					BestDist = CurDist;
+					Best = P;
+				}
+			}
+	}
+	if ( Best == none )
+		Best = BufferedEnemies[ScanCycle];
+	return Best;
 }
 
 function PostBuild()
@@ -67,42 +139,49 @@ function PostBuild()
 
 function Shoot(Pawn target)
 {
-	local vector    fireSpot,
-                    projStart;
-	local Projectile
-                    proj;
-    local rotator   shootDirection;
+	local vector FireSpot;
+    local rotator ShootDirection;
 
-	if ( target == None || VSize(target.Location - Location) > SightRadius )
-        return;
-
-    shootDirection = rotator(target.Location - Location);
+//	if ( target == None || VSize(target.Location - Location) > SightRadius )
+//       return;
+    ShootDirection = rotator(target.Location - Location);
 
 	PlaySound(FireSound, SLOT_None, 0.75);
-
 	if ( Grade > 2 )
 	{
-	    fireSpot = target.Location + FMin(1, 1.1 + 0.6 * FRand()) *
+	    FireSpot = target.Location + FMin(1, 1.1 + 0.6 * FRand()) *
           target.Velocity * VSize(target.Location - Location) /
           ProjectileType.default.Speed;
 
-		if ( !FastTrace(fireSpot, ProjStart) )
-			fireSpot = 0.5 * (fireSpot + target.Location);
+		if ( !FastTrace(FireSpot) )
+			FireSpot = 0.5 * (FireSpot + target.Location);
 
-		shootDirection = Rotator(fireSpot - Location);
+		ShootDirection = Rotator(FireSpot - Location);
 	}
-	shootDirection.Pitch += RandRange(-300,300) * FRand();
-	shootDirection.Yaw += RandRange(-300,300) * FRand();
-	Store.FireProj( Location, shootDirection);
+	ShootDirection.Pitch += RandRange(-300,300) * FRand();
+	ShootDirection.Yaw += RandRange(-300,300) * FRand();
+	Store.FireProj( Location, ShootDirection);
 
 //	Spawn(ProjectileType, Self,, Location, shootDirection);
 }
 
 function bool ShouldFire()
 {
-    return ( FRand() < 0.05 + Grade/20 );
+    return ( FRand() < 0.05 + Grade*0.05 );
 }
 
+function bool ShouldAttackTeamPawn( Pawn aPawn, byte aTeam)
+{
+	if ( sgBuilding(aPawn) != none )
+		return (sgBuilding(aPawn).Team == aTeam) && (sgBuilding(aPawn).Energy >= 0) && FastTrace(aPawn.Location);
+	return (aPawn.PlayerReplicationInfo != none) 
+		&&	(aPawn.PlayerReplicationInfo.Team == aTeam)
+		&& !aPawn.PlayerReplicationInfo.bIsSpectator
+		&& (aPawn.Health > 10)
+		&& !SuitProtects(aPawn)
+		&& FastTrace(aPawn.Location);
+}
+/*
 function bool ShouldAttack(Pawn enemy)
 {
     if ( ScriptedPawn(enemy) != None && (enemy.PlayerReplicationInfo == none || enemy.PlayerReplicationInfo.Team != Team) )
@@ -153,7 +232,7 @@ function Pawn FindEnemy()
 
     return Enemy;
 }
-
+*/
 function bool SuitProtects( pawn Other)
 {
 	local Inventory I;

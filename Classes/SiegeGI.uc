@@ -5,6 +5,8 @@
 //=============================================================================
 class SiegeGI extends TeamGamePlus config(SiegeIV_0024);
 
+var class<Object> GCBind; //SiegeNative plugin ref to prevent GC cleaning
+
 var sgRURecovery    RURecovery;
 var config float    NumResources;
 var config float    MaxCoreSnipeDistance;

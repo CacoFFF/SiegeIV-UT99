@@ -1527,7 +1527,7 @@ simulated function PostRender( canvas Canvas)
 	Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
 	Canvas.TextSize("TEST", XL, YL);
 
-	if ( bHideWeapon )		YOffset = Canvas.ClipY - YL*3;
+	if ( bHideWeapon )		YOffset = Canvas.ClipY - 24*Scale - YL*3;
 	else					YOffset = Canvas.ClipY - 96*Scale - YL*3; 
 
 	//If weapon is hidden, draw stats the old way
