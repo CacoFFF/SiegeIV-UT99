@@ -35,15 +35,15 @@ function BufferAndShoot()
 		TargetTeam++;
 
 	if ( BufferedEnemies[ScanCycle] != none )
-		StartDist = VSize( BufferedEnemies[ScanCycle].Location - Location);
+		StartDist = VSize( BufferedEnemies[ScanCycle].Location - Location) + 1;
 	else
 		StartDist = SightRadius;
-	
 	BufferedEnemies[ScanCycle] = FindTeamTarget( StartDist, TargetTeam);
 
 	For ( TargetTeam=0 ; TargetTeam<4 ; TargetTeam++ )
 	{
-		if ( (BufferedEnemies[TargetTeam] == none) || BufferedEnemies[TargetTeam].bDeleteMe || (VSize(BufferedEnemies[TargetTeam].Location - Location) > SightRadius) )
+		//Fast rejects, the main loop should take care of cleaning these up
+		if ( (BufferedEnemies[TargetTeam] == none) || BufferedEnemies[TargetTeam].bDeleteMe || !BufferedEnemies[TargetTeam].bCollideActors )
 			continue;
 		if ( ShouldFire() )
 			Shoot( BufferedEnemies[TargetTeam] );
@@ -87,8 +87,6 @@ final function Pawn FindTeamTarget( float Dist, byte aTeam)
 				}
 			}
 	}
-	if ( Best == none )
-		Best = BufferedEnemies[ScanCycle];
 	return Best;
 }
 

@@ -123,7 +123,7 @@ simulated function Tick( float DeltaTime)
 	{
 		if ( (rPlayers[i] == none) || rPlayers[i].bDeleteMe || (rPlayers[i].Physics != PHYS_Falling) || !InPushZone(rPlayers[i]) )
 		{
-			if ( rTime[i] > 0 )
+			if ( (rTime[i] > 0) && (rPlayers[i].Physics == PHYS_Falling) ) //Touching ground immediately cancels effect
 			{
 				rTime[i] -= DeltaTime;
 				if ( rPlayers[i].Role == ROLE_AutonomousProxy )

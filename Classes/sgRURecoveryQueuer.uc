@@ -99,7 +99,7 @@ state Active
 	{
 		nextQ = Master.Active;
 		Master.Active = self;
-		Log("DEBUG ENTERED ACTIVE");
+		iSeconds = 0;
 	}
 	event EndState()
 	{
@@ -117,7 +117,6 @@ state Active
 				}
 		}
 		nextQ = none;
-		Log("DEBUG LEFT ACTIVE");
 	}
 Begin:
 	UpdateData();
@@ -129,9 +128,18 @@ state InActive
 {
 	event BeginState()
 	{
+		local sgEquipmentSupplier sgE;
+
 		nextQ = Master.Inactive;
 		Master.Inactive = self;
-		Log("DEBUG ENTERED INACTIVE");
+		
+		if ( SiegeGI(Level.Game) != none && !SiegeGI(Level.Game).FreeBuild )
+		{
+			ForEach AllActors (class'sgEquipmentSupplier', sgE)
+				if ( sgE.Team == Team )
+					return;
+			GiveRUtoTeam( true);
+		}
 	}
 	event EndState()
 	{
@@ -149,9 +157,12 @@ state InActive
 				}
 		}
 		nextQ = none;
-		Log("DEBUG LEFT INACTIVE");
 	}
 Begin:
+	Sleep( 1 * Level.TimeDilation);
+	if ( iSeconds++ > 60)
+		GiveRUtoTeam();
+	Goto('Begin');
 }
 
 
@@ -162,6 +173,26 @@ function sgRURecoveryQueuer LocateFP( string sFP)
 	if ( nextQ != none )
 		return nextQ.LocateFP( sFP);
 	return none;
+}
+
+function GiveRUtoTeam( optional bool bForceAll)
+{
+	local float RUtoGive;
+	if ( Team > 3 )
+		return;
+	if ( bForceAll )
+		RUtoGive = RU;
+	else
+	{
+		RUtoGive = Level.TimeDilation * (iSeconds / 60);
+		if ( RUtoGive > RU )
+			return;
+	}
+	if ( (SiegeGI(Level.Game) != none) && (SiegeGI(Level.Game).Cores[Team] != none) )
+	{
+		SiegeGI(Level.Game).Cores[Team].StoredRU += RUtoGive;
+		RU -= RUtoGive;
+	}
 }
 
 defaultproperties

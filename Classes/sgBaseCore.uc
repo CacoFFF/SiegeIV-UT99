@@ -101,6 +101,15 @@ simulated function Timer()
 	
 	if ( bDisabledByEMP || (Level.NetMode == NM_Client) && class'sgClient'.default.bHighPerformance )
 		Goto NO_INCREASE;
+
+	//Auto-upgrade core if there's a big excedent
+	if ( (Grade < 1) && (StoredRU > Default.StoredRU) )
+	{
+		SetRU = fMin( (1.0-Grade) * UpgradeCost, StoredRU);
+		StoredRU -= SetRU;
+		Grade += SetRU / UpgradeCost;
+	}
+
 	//Do not simulate RU generation on enemy players
 	if ( LocalClient == none || LocalClient.PlayerReplicationInfo == none || LocalClient.PlayerReplicationInfo.Team == Team )
 	{

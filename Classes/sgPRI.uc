@@ -7,8 +7,6 @@
 //=============================================================================
 class sgPRI extends PlayerReplicationInfo;
 
-var int choice;
-
 var float	sgInfoCoreKiller, 
 		sgInfoCoreRepair, 
 		sgInfoBuildingHurt,
@@ -35,6 +33,7 @@ var float AccRUTimer; //Space out accumulation
 Var bool bReadyToPlay;
 var bool bGameStarted;
 var bool bHideIdentify;
+var bool bReplicateRU;		//Native c++ only
 
 //Spawn protection
 var float ProtectCount;
