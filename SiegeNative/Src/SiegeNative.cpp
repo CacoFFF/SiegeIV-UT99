@@ -89,10 +89,19 @@ UBOOL NEQ(FString A,FString B,UPackageMap* Map) {return A!=B;}
 		clname##_class->ClassConstructor = clname::InternalConstructor; \
 		clname##_class->ClassFlags |= CLASS_NativeReplication; \
 	}
-	
+
+//Macro: Make this class and it's derivate inherit this NativeReplication
+//Other classes loaded after this macro will inherit ClassConstructor
+#define PROPAGATE_CLASS_NATIVEREP(clname) \
+	{ clname##_class->ClassFlags |= CLASS_NativeReplication; \
+	for ( TObjectIterator<UClass> It; It; ++It ) \
+		if ( It->IsChildOf(clname##_class) ) \
+			It->ClassConstructor = clname::InternalConstructor; \
+	}
 
 #include "sgPRI.h"
 #include "sgCategoryInfo.h"
+#include "sgBuilding.h"
 
 //
 // First function called upon actor spawn.
@@ -137,6 +146,7 @@ void ASiegeNativeActor::InitExecution()
 			UPackage* SiegePackage = (UPackage*) SiegeClass->GetOuter();
 			Setup_sgPRI				( SiegePackage, GetLevel());
 			Setup_sgCategoryInfo	( SiegePackage, GetLevel());
+			Setup_sgBuilding		( SiegePackage, GetLevel());
 		}
 	}
 
