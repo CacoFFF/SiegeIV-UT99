@@ -54,26 +54,45 @@ UBOOL NEQ(FPlane& A,FPlane& B,UPackageMap* Map) {return
 ((INT*)&A)[2]!=((INT*)&B)[2] || ((INT*)&A)[3]!=((INT*)&B)[3];}
 UBOOL NEQ(FString A,FString B,UPackageMap* Map) {return A!=B;}
 
-//nc = c++ hack class
-//cc = UScript class
+//nc = Class name
 //v  = variable name (identical in both classes)
-#define DOREP(nc,cc,v) \
-	if( NEQ(v,((nc*)Recent)->v,Map) ) \
+#define DOREP(nc,v) \
+	if( nc::ST_##v && NEQ(v,((nc*)Recent)->v,Map) ) \
 	{ \
-		static UProperty* sp##v = FindObjectChecked<UProperty>(cc,TEXT(#v)); \
-		*Ptr++ = sp##v->RepIndex; \
+		*Ptr++ = nc::ST_##v->RepIndex; \
 	}
-#define DOREPARRAY(nc,cc,v) \
-	static UProperty* sp##v = FindObjectChecked<UProperty>(cc,TEXT(#v)); \
-	for( INT i=0; i<ARRAY_COUNT(v); i++ ) \
-		if( NEQ(v[i],((nc*)Recent)->v[i],Map) ) \
-			*Ptr++ = sp##v->RepIndex+i;
+#define DOREPARRAY(nc,v) \
+	if (nc::ST_##v) \
+	{	for( INT i=0; i<ARRAY_COUNT(v); i++ ) \
+			if( NEQ(v[i],((nc*)Recent)->v[i],Map) ) \
+				*Ptr++ = nc::ST_##v->RepIndex+i; }
 
 /*-----------------------------------------------------------------------------
 	Entry point methods.
 -----------------------------------------------------------------------------*/
 
+#define LOAD_STATIC_PROPERTY(prop,onclass) ST_##prop = FindObject<UProperty>(onclass,TEXT(#prop))
+
+//Macro: find a class in a package, store in static variable: [classname]_class
+#define FIND_PRELOADED_CLASS(clname,onpackage) \
+	{for ( TObjectIterator<UClass> It; It; ++It ) \
+		if ( (It->GetOuter() == onpackage) && !appStricmp(It->GetName(),TEXT(#clname)) )	\
+		{	\
+			clname##_class = *It;	\
+			break;	\
+	}	}
+
+//Macro: Make class able to use NativeReplication features
+#define SETUP_CLASS_NATIVEREP(clname) \
+	if ( clname##_class->ClassConstructor != clname::InternalConstructor ) \
+	{ \
+		clname##_class->ClassConstructor = clname::InternalConstructor; \
+		clname##_class->ClassFlags |= CLASS_NativeReplication; \
+	}
+	
+
 #include "sgPRI.h"
+#include "sgCategoryInfo.h"
 
 //
 // First function called upon actor spawn.
@@ -83,6 +102,12 @@ void ASiegeNativeActor::InitExecution()
 	guard(ASiegeNativeActor::InitExecution);
 
 	AActor::InitExecution(); //Validate that actor has been properly spawned in a level
+	
+	if ( Level->bBegunPlay )
+	{
+		debugf( NAME_SiegeNative, TEXT("[ERROR] This actor will only apply the hook if spawned via ServerActors!!!"));
+		return;
+	}
 	
 	if ( Level->Game && ((Level->NetMode == NM_DedicatedServer) || (Level->NetMode == NM_ListenServer)) )
 	{
@@ -96,8 +121,22 @@ void ASiegeNativeActor::InitExecution()
 		if ( SiegeClass )
 		{
 			debugf( NAME_SiegeNative, TEXT("Siege gametype found: %s, prefetching and validating assets..."), Level->Game->GetClass()->GetFullName() );
+
+			//Let main SiegeIV hold a reference to our class to prevent elimination via garbage collector
+			{for( TFieldIterator<UObjectProperty> It(SiegeClass); It && It->GetOwnerClass()==SiegeClass; ++It )
+				if ( appStricmp( It->GetName(), TEXT("GCBind")) == 0 )
+				{
+					//Register in both gameinfo and defaults (SiegeGI.GCBind = class'SiegeNativeActor';)
+					*((UObject**) (((DWORD)Level->Game) + It->Offset)) = GetClass();
+					*((UObject**) (((DWORD)Level->Game->GetClass()->GetDefaultObject()) + It->Offset)) = GetClass();
+					break;
+				}
+			}
+
+			//Setup individual classes
 			UPackage* SiegePackage = (UPackage*) SiegeClass->GetOuter();
-			Setup_sgPRI( SiegePackage);
+			Setup_sgPRI				( SiegePackage, GetLevel());
+			Setup_sgCategoryInfo	( SiegePackage, GetLevel());
 		}
 	}
 

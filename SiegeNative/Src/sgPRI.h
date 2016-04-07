@@ -53,30 +53,70 @@ public:
 	
 	static void InternalConstructor( void* X )
 	{	new( (EInternal*)X )sgPRI();	}
+	
+	static UProperty* ST_sgInfoCoreKiller;
+	static UProperty* ST_sgInfoCoreRepair;
+	static UProperty* ST_sgInfoBuildingHurt;
+	static UProperty* ST_sgInfoUpgradeRepair;
+	static UProperty* ST_sgInfoKiller;
+	static UProperty* ST_sgInfoBuildingMaker;
+	static UProperty* ST_sgInfoWarheadMaker;
+	static UProperty* ST_sgInfoWarheadKiller;
+	static UProperty* ST_sgInfoSpreeCount;
+	static UProperty* ST_CountryPrefix;
+	static UProperty* ST_bReadyToPlay;
+	static UProperty* ST_XC_Orb;
+	static UProperty* ST_Orders;
+	static UProperty* ST_RU;
+	static UProperty* ST_bHideIdentify;
+	static void ReloadStatics( UClass* LoadFrom)
+	{
+		LOAD_STATIC_PROPERTY(sgInfoCoreKiller, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoCoreRepair, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoBuildingHurt, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoUpgradeRepair, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoKiller, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoBuildingMaker, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoWarheadMaker, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoWarheadKiller, LoadFrom);
+		LOAD_STATIC_PROPERTY(sgInfoSpreeCount, LoadFrom);
+		LOAD_STATIC_PROPERTY(CountryPrefix, LoadFrom);
+		LOAD_STATIC_PROPERTY(bReadyToPlay, LoadFrom);
+		LOAD_STATIC_PROPERTY(XC_Orb, LoadFrom);
+		LOAD_STATIC_PROPERTY(Orders, LoadFrom);
+		LOAD_STATIC_PROPERTY(RU, LoadFrom);
+		LOAD_STATIC_PROPERTY(bHideIdentify, LoadFrom);
+	}
 };
+
+UProperty* sgPRI::ST_sgInfoCoreKiller = NULL;
+UProperty* sgPRI::ST_sgInfoCoreRepair = NULL;
+UProperty* sgPRI::ST_sgInfoBuildingHurt = NULL;
+UProperty* sgPRI::ST_sgInfoUpgradeRepair = NULL;
+UProperty* sgPRI::ST_sgInfoKiller = NULL;
+UProperty* sgPRI::ST_sgInfoBuildingMaker = NULL;
+UProperty* sgPRI::ST_sgInfoWarheadMaker = NULL;
+UProperty* sgPRI::ST_sgInfoWarheadKiller = NULL;
+UProperty* sgPRI::ST_sgInfoSpreeCount = NULL;
+UProperty* sgPRI::ST_CountryPrefix = NULL;
+UProperty* sgPRI::ST_bReadyToPlay = NULL;
+UProperty* sgPRI::ST_XC_Orb = NULL;
+UProperty* sgPRI::ST_Orders = NULL;
+UProperty* sgPRI::ST_RU = NULL;
+UProperty* sgPRI::ST_bHideIdentify = NULL;
+
 
 static UClass* sgPRI_class = NULL;
 
 //sgPRI is preloaded by SiegeGI, finding it is enough
-static void Setup_sgPRI( UPackage* SiegePackage)
+static void Setup_sgPRI( UPackage* SiegePackage, ULevel* MyLevel)
 {
 	sgPRI_class = NULL;
 	
-	{for ( TObjectIterator<UClass> It; It; ++It )
-		if ( (It->GetOuter() == SiegePackage) && !appStricmp(It->GetName(),TEXT("sgPRI")) )
-		{
-			sgPRI_class = *It;
-			break;
-	}	}
+	FIND_PRELOADED_CLASS(sgPRI,SiegePackage);
 	check( sgPRI_class != NULL);
-
-	//Perform verification (?)
-	if ( false )
-		return;
-
-	//Modify the sgPRI class to allow native replication
-	sgPRI_class->ClassConstructor = sgPRI::InternalConstructor;
-	sgPRI_class->ClassFlags |= CLASS_NativeReplication;
+	SETUP_CLASS_NATIVEREP(sgPRI);
+	sgPRI::ReloadStatics( sgPRI_class);
 }
 
 INT* sgPRI::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps )
@@ -88,24 +128,22 @@ INT* sgPRI::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT*
 	{
 		if( Role==ROLE_Authority )
 		{
-			DOREP(sgPRI,sgPRI_class,bReadyToPlay);
+			DOREP(sgPRI,bReadyToPlay);
 			if ( bNetOwner || NumReps % 8 == 0 ) //Stats, don't perform heavy polling (every 2 secs?)
 			{
-				DOREP(sgPRI,sgPRI_class,sgInfoCoreKiller);
-				DOREP(sgPRI,sgPRI_class,sgInfoBuildingHurt);
-				DOREP(sgPRI,sgPRI_class,sgInfoCoreRepair);
-				DOREP(sgPRI,sgPRI_class,sgInfoUpgradeRepair);
-				DOREP(sgPRI,sgPRI_class,sgInfoKiller);
-				DOREP(sgPRI,sgPRI_class,sgInfoBuildingMaker);
-				DOREP(sgPRI,sgPRI_class,sgInfoWarheadMaker);
-				DOREP(sgPRI,sgPRI_class,sgInfoWarheadKiller);
+				DOREP(sgPRI,sgInfoCoreKiller);
+				DOREP(sgPRI,sgInfoBuildingHurt);
+				DOREP(sgPRI,sgInfoCoreRepair);
+				DOREP(sgPRI,sgInfoUpgradeRepair);
+				DOREP(sgPRI,sgInfoKiller);
+				DOREP(sgPRI,sgInfoBuildingMaker);
+				DOREP(sgPRI,sgInfoWarheadMaker);
+				DOREP(sgPRI,sgInfoWarheadKiller);
+				if ( IpToCountry )
+					DOREP(sgPRI,CountryPrefix);
 			}
 			if ( bNetOwner )
-				DOREP(sgPRI,sgPRI_class,XC_Orb);
-
-			//Don't bother evaluating country prefix if IpToCountry mutator hasn't been located
-			if ( IpToCountry )
-				DOREP(sgPRI,sgPRI_class,CountryPrefix);
+				DOREP(sgPRI,XC_Orb);
 
 			UNetConnection* Conn = ((UPackageMapLevel*)Map)->Connection;
 			if ( Conn->Actor && Conn->Actor->PlayerReplicationInfo )
@@ -114,12 +152,12 @@ INT* sgPRI::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT*
 				{
 					if ( bNetOwner || NumReps % 4 == 0 ) //No need to spam RU updates if core is simulating
 					{
-						DOREP(sgPRI,sgPRI_class,Orders);
-						DOREP(sgPRI,sgPRI_class,RU);
+						DOREP(sgPRI,Orders);
+						DOREP(sgPRI,RU);
 					}
 				}
 				else
-					DOREP(sgPRI,sgPRI_class,bHideIdentify);
+					DOREP(sgPRI,bHideIdentify);
 			}
 		}
 	}
