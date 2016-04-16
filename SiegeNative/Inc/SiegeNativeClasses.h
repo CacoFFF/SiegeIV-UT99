@@ -16,7 +16,11 @@
 #define AUTOGENERATE_FUNCTION(cls,idx,name)
 #endif
 
+
+//Names we want to keep around
 AUTOGENERATE_NAME(SiegeNative)
+AUTOGENERATE_NAME(ShouldAttackTeamPawn) //sgProtector call
+AUTOGENERATE_NAME(ScriptedPawn) //For general targeting purposes
 
 #ifndef NAMES_ONLY
 

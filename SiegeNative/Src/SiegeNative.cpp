@@ -71,6 +71,9 @@ UBOOL NEQ(FString A,FString B,UPackageMap* Map) {return A!=B;}
 	Entry point methods.
 -----------------------------------------------------------------------------*/
 
+static UClass* SiegeClass = NULL;
+static INT SGI_Cores_Offset = 0;
+
 #define LOAD_STATIC_PROPERTY(prop,onclass) ST_##prop = FindObject<UProperty>(onclass,TEXT(#prop))
 
 //Macro: find a class in a package, store in static variable: [classname]_class
@@ -98,10 +101,72 @@ UBOOL NEQ(FString A,FString B,UPackageMap* Map) {return A!=B;}
 		if ( It->IsChildOf(clname##_class) ) \
 			It->ClassConstructor = clname::InternalConstructor; \
 	}
+	
+	
+// For iterating through a linked list of fields (don't search on superfield).
+template <class T> class TStrictFieldIterator
+{
+public:
+	TStrictFieldIterator( UStruct* InStruct )
+	: Field( InStruct ? InStruct->Children : NULL )
+	{
+		IterateToNext();
+	}
+	void operator++()
+	{
+		Field = Field->Next;
+		IterateToNext();
+	}
+	operator UBOOL()	{	return Field != NULL;	}
+	T* operator*()		{	return (T*)Field;	}
+	T* operator->()		{	return (T*)Field;	}
+protected:
+	void IterateToNext()
+	{
+		while( Field )
+		{
+			if( Field->IsA(T::StaticClass()) )
+				return;
+			Field = Field->Next;
+		}
+	}
+	UField* Field;
+};
+
+//Macro: Make this script function become a native function
+#define HOOK_SCRIPT_FUNCTION(clname,funcname) \
+	{ for ( TStrictFieldIterator<UFunction> It(clname##_class) ; It ; ++It ) \
+		if ( !appStricmp(It->GetName(),TEXT(#funcname)) ) \
+		{	It->Func = (Native)&clname::exec##funcname; \
+			It->FunctionFlags |= FUNC_Native; \
+			break; \
+	}	}
+
+static UBOOL ClassIsA( UClass* InClass, FName InName)
+{
+	for( ; InClass; InClass=InClass->GetSuperClass() )
+		if( InClass->GetFName() == InName )
+			return 1;
+	return 0;
+}
+
+UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
+{
+	guard(FindStrictScriptVariable);
+	FName NAME_PropName = FName( PropName, FNAME_Find);
+	check( NAME_PropName != NAME_None );
+	for( TStrictFieldIterator<UProperty> Prop( InStruct ); Prop; ++Prop )
+		if( Prop->GetFName() == NAME_PropName )
+			return *Prop;
+	appThrowf( (TEXT("Property not found in %s!!"), InStruct->GetName() ) );
+	return NULL;
+	unguardf( (PropName) );
+}
 
 #include "sgPRI.h"
 #include "sgCategoryInfo.h"
 #include "sgBuilding.h"
+#include "sgProtector.h"
 
 //
 // First function called upon actor spawn.
@@ -123,8 +188,7 @@ void ASiegeNativeActor::InitExecution()
 		RegisterNames();
 
 		debugf( NAME_SiegeNative, TEXT("Level validated, searching for Siege gametype...") );
-		UClass* SiegeClass = Level->Game->GetClass();
-		for( ; SiegeClass; SiegeClass=SiegeClass->GetSuperClass() ) //Level.Game.IsA('SiegeGI')
+		for( SiegeClass=Level->Game->GetClass() ; SiegeClass; SiegeClass=SiegeClass->GetSuperClass() ) //Level.Game.IsA('SiegeGI')
 			if( appStricmp(SiegeClass->GetName(), TEXT("SiegeGI")) == 0 )
 				break;
 		if ( SiegeClass )
@@ -141,12 +205,16 @@ void ASiegeNativeActor::InitExecution()
 					break;
 				}
 			}
+			
+			SGI_Cores_Offset = FindStrictScriptVariable( SiegeClass, TEXT("Cores"))->Offset;
+
 
 			//Setup individual classes
 			UPackage* SiegePackage = (UPackage*) SiegeClass->GetOuter();
 			Setup_sgPRI				( SiegePackage, GetLevel());
 			Setup_sgCategoryInfo	( SiegePackage, GetLevel());
 			Setup_sgBuilding		( SiegePackage, GetLevel());
+			Setup_sgProtector		( SiegePackage, GetLevel());
 		}
 	}
 
