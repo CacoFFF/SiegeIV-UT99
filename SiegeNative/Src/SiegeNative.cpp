@@ -40,6 +40,9 @@ IMPLEMENT_CLASS(ASiegeNativeActor);
 	Replication.
 -----------------------------------------------------------------------------*/
 
+//Compatibility
+static DWORD ActorChannelsOffset = 0;
+
 UBOOL NEQ(BYTE A,BYTE B,UPackageMap* Map) {return A!=B;}
 UBOOL NEQ(INT A,INT B,UPackageMap* Map) {return A!=B;}
 UBOOL NEQ(BITFIELD A,BITFIELD B,UPackageMap* Map) {return A!=B;}
@@ -169,6 +172,7 @@ UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
 #include "sgProtector.h"
 #include "sgBaseBuildRule.h"
 #include "sgBuildRuleCount.h"
+#include "sgPlayerData.h"
 
 //
 // First function called upon actor spawn.
@@ -208,6 +212,8 @@ void ASiegeNativeActor::InitExecution()
 				}
 			}
 			
+			//Get some important offsets
+			ActorChannelsOffset = UNetConnection::StaticClass()->GetPropertiesSize() - 16068; //Ends up being 20 in v440/v451
 			SGI_Cores_Offset = FindStrictScriptVariable( SiegeClass, TEXT("Cores"))->Offset;
 
 
@@ -219,6 +225,7 @@ void ASiegeNativeActor::InitExecution()
 			Setup_sgProtector		( SiegePackage, GetLevel());
 			Setup_sgBaseBuildRule	( SiegePackage, GetLevel());
 			Setup_sgBuildRuleCount	( SiegePackage, GetLevel());
+			Setup_sgPlayerData		( SiegePackage, GetLevel());
 		}
 	}
 
