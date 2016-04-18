@@ -57,10 +57,10 @@ UBOOL NEQ(FString A,FString B,UPackageMap* Map) {return A!=B;}
 //nc = Class name
 //v  = variable name (identical in both classes)
 #define DOREP(nc,v) \
-	if( nc::ST_##v && NEQ(v,((nc*)Recent)->v,Map) ) \
+	{if( nc::ST_##v && NEQ(v,((nc*)Recent)->v,Map) ) \
 	{ \
 		*Ptr++ = nc::ST_##v->RepIndex; \
-	}
+	}}
 #define DOREPARRAY(nc,v) \
 	if (nc::ST_##v) \
 	{	for( INT i=0; i<ARRAY_COUNT(v); i++ ) \
@@ -167,6 +167,8 @@ UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
 #include "sgCategoryInfo.h"
 #include "sgBuilding.h"
 #include "sgProtector.h"
+#include "sgBaseBuildRule.h"
+#include "sgBuildRuleCount.h"
 
 //
 // First function called upon actor spawn.
@@ -215,6 +217,8 @@ void ASiegeNativeActor::InitExecution()
 			Setup_sgCategoryInfo	( SiegePackage, GetLevel());
 			Setup_sgBuilding		( SiegePackage, GetLevel());
 			Setup_sgProtector		( SiegePackage, GetLevel());
+			Setup_sgBaseBuildRule	( SiegePackage, GetLevel());
+			Setup_sgBuildRuleCount	( SiegePackage, GetLevel());
 		}
 	}
 
