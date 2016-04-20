@@ -75,6 +75,13 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 	virtual FLOAT UpdateFrequency(AActor *Viewer, FVector &ViewDir, FVector &ViewPos);
 
+	void eventPostBuild()
+	{
+		INT Params[4] = {0,0,0,0}; //16 byte space just in case PostBuild is modified in a later release
+		ProcessEvent( FindFunctionChecked( SIEGENATIVE_PostBuild), Params);
+	}
+
+	DECLARE_FUNCTION(execTick);
 	NO_DEFAULT_CONSTRUCTOR(sgBuilding);
 	
 	static void InternalConstructor( void* X )
@@ -158,11 +165,50 @@ static void Setup_sgBuilding( UPackage* SiegePackage, ULevel* MyLevel)
 	sgBuilding_class = NULL;
 	
 	FIND_PRELOADED_CLASS(sgBuilding,SiegePackage);
-	debugf( TEXT("SGBUILDING: %i vs %i"), sizeof(class APawn), sgBuilding_class->GetSuperClass()->PropertiesSize);
-	debugf( TEXT("SGBUILDING: %i vs %i"), sizeof(class sgBuilding), sgBuilding_class->PropertiesSize);
 	check( sgBuilding_class != NULL);
 	PROPAGATE_CLASS_NATIVEREP(sgBuilding);
+	HOOK_SCRIPT_FUNCTION(sgBuilding,Tick);
 	sgBuilding::ReloadStatics( sgBuilding_class);
+}
+
+void sgBuilding::execTick( FFrame& Stack, RESULT_DECL)
+{
+	guard(sgBuilding::execTick);
+
+	//Classify our node's execution stack
+	UFunction* F = Cast<UFunction>(Stack.Node);
+	FLOAT DeltaTime = 0.f;
+
+	//Called via ProcessEvent >>> Native to Script
+	if ( F && F->Func == (Native)&sgBuilding::execTick )
+		DeltaTime = *((FLOAT*)Stack.Locals);
+	//Called via ProcessInternal >>> Script to Native
+	else
+	{
+		Stack.Step( Stack.Object, &DeltaTime );
+		P_FINISH;
+	}
+
+	//Execute code in Tick
+	if ( Level->NetMode != NM_Client )
+	{
+		if ( !bBuildInitialized )
+		{
+			bBuildInitialized = true;
+			eventPostBuild();
+		}
+//		if ( iBlockPoll >= 0 )
+//			PollBlock();
+	}
+	
+	//TickRate independant, keep sane timer values if tickrate gets messed up
+	if ( (BuildingTimer += DeltaTime) >= 0.1f )
+	{
+		BuildingTimer = Clamp( BuildingTimer - 0.1f, 0.0f, 0.1f + appFrand() * 0.1f);
+		eventTimer();
+	}
+	
+	unguard;
 }
 
 INT* sgBuilding::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps )
