@@ -19,8 +19,12 @@
 
 //Names we want to keep around
 AUTOGENERATE_NAME(SiegeNative)
-AUTOGENERATE_NAME(ShouldAttackTeamPawn) //sgProtector call
-AUTOGENERATE_NAME(ScriptedPawn) //For general targeting purposes
+AUTOGENERATE_NAME(ShouldAttackTeamPawn)
+AUTOGENERATE_NAME(ScriptedPawn)
+AUTOGENERATE_NAME(PostBuild)
+AUTOGENERATE_NAME(Translocate);
+AUTOGENERATE_NAME(Trans);
+AUTOGENERATE_NAME(NormalFire);
 
 #ifndef NAMES_ONLY
 

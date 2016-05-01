@@ -87,6 +87,11 @@ static INT SGI_Cores_Offset = 0;
 			clname##_class = *It;	\
 			break;	\
 	}	}
+	
+//Macro: load a class in a package, store in static variable: [classname]_class
+#define PRELOAD_CLASS(clname,onpackage) \
+	clname##_class = UObject::StaticLoadClass( UObject::StaticClass(), onpackage, TEXT(#clname), NULL, LOAD_NoWarn | LOAD_Quiet, NULL)
+//	static UClass* StaticLoadClass( UClass* BaseClass, UObject* InOuter, const TCHAR* Name, const TCHAR* Filename, DWORD LoadFlags, UPackageMap* Sandbox );
 
 //Macro: Make class able to use NativeReplication features
 #define SETUP_CLASS_NATIVEREP(clname) \
@@ -166,6 +171,7 @@ UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
 	unguardf( (PropName) );
 }
 
+#include "UtilClasses.h"
 #include "sgPRI.h"
 #include "sgCategoryInfo.h"
 #include "sgBuilding.h"
@@ -173,6 +179,7 @@ UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
 #include "sgBaseBuildRule.h"
 #include "sgBuildRuleCount.h"
 #include "sgPlayerData.h"
+#include "sgTranslocator.h"
 
 //
 // First function called upon actor spawn.
@@ -226,6 +233,7 @@ void ASiegeNativeActor::InitExecution()
 			Setup_sgBaseBuildRule	( SiegePackage, GetLevel());
 			Setup_sgBuildRuleCount	( SiegePackage, GetLevel());
 			Setup_sgPlayerData		( SiegePackage, GetLevel());
+			Setup_sgTranslocator	( SiegePackage, GetLevel());
 		}
 	}
 
