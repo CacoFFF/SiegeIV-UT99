@@ -110,14 +110,6 @@ simulated event TakeDamage( int dam, Pawn instBy, Vector hitLoc, Vector mom, nam
 	}
 }
 
-function AlterNetRate()
-{
-	if ( Energy < MaxEnergy )
-		NetUpdateFrequency = 10;
-	else
-		NetUpdateFrequency = 8;
-}
-
 
 defaultproperties
 {

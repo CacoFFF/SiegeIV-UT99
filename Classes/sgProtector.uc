@@ -249,10 +249,10 @@ simulated function Upgraded()
 //Higor, use this function to alter the NetUpdateFrequency on net games
 function AlterNetRate()
 {
-	if ( Energy < MaxEnergy )
-		NetUpdateFrequency = 15;
+	if ( Class'SiegeMutator'.default.bDropNetRate  )
+		NetUpdateFrequency = 8;
 	else
-		NetUpdateFrequency = 10;
+		NetUpdateFrequency = 12;
 }
 
 //Rate self on AI teams, using category variations

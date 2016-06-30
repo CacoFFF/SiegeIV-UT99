@@ -230,20 +230,15 @@ simulated event Timer()
 
 	if ( !DoneBuilding )
 	{
-//		if (sPlayerIP == "" && (Owner != none) && (Pawn(Owner).PlayerReplicationInfo != none) )
-//			SetOwnership();
-
-		if ( /*(Role == ROLE_Authority) &&*/ (SCount > 0) )
+		if ( SCount > 0 )
 		{
-//	        Energy += (MaxEnergy * 4/5) / (BuildTime*10);
-			Energy += MaxEnergy * BuildTime * 0.08; //Precalculated for speed
+			Energy += MaxEnergy * 0.08 / BuildTime; //Precalculated for speed
 	        SCount -= 1;
 		}
 
 	    if ( SCount > 0 )
 	    {
-		    DrawScale = SpriteScale * (0.8 * (1 - SCount / (BuildTime*10)) +
-              0.2);
+		    DrawScale = SpriteScale * (0.8 * (1 - SCount / (BuildTime*10)) + 0.2);
 
             if ( Level.NetMode != NM_DedicatedServer && DSofMFX > 0.4)
 		        for ( i = 0; i < rand(1)+1; i++ )
@@ -339,6 +334,8 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 		actualDamage *= TeamGamePlus(Level.Game).FriendlyFireScale;
 
 	Energy -= actualDamage;
+	if ( (actualDamage > 25) && (DamageType != 'Burned') )
+		NetUpdateFrequency = 50;
 	if ( Energy <= 0 )
 		Destruct( instigatedBy); 
 }
@@ -612,10 +609,10 @@ function BackToNormal()
 //Higor, use this function to alter the NetUpdateFrequency on net games
 function AlterNetRate()
 {
-	if ( Energy < MaxEnergy )
-		NetUpdateFrequency = 15;
+	if ( Class'SiegeMutator'.default.bDropNetRate  )
+		NetUpdateFrequency = 4;
 	else
-		NetUpdateFrequency = 6;
+		NetUpdateFrequency = 8;
 }
 
 //Variations of message broadcasting

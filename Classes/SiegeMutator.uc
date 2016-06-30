@@ -6,12 +6,59 @@ class SiegeMutator expands Mutator;
 
 var SiegeGI SiegeGI;
 var string Pkg;
+var bool bDropNetRate; //Important, lowers net rate to preserve framerate
 
+var float AccumulatedFPS; //This is very aggresive!
+var byte RegisteredFPS;
+var byte TickCounter;
+var byte __b1;
+var byte __b2;
+
+
+event Tick( float DeltaTime)
+{
+	local float Tr;
+	
+	if ( Level.NetMode == NM_DedicatedServer )
+	{
+		if ( __b2 > 0 ) //Cooldown timer (to avoid dropping/undropping at constant, equal rates)
+			__b2--;
+		else
+		{
+			AccumulatedFPS += DeltaTime / Level.TimeDilation;
+			if ( ((++__b1) % 8 == 0) ) //We run the check every 8 ticks
+			{
+				Tr = float( ConsoleCommand("GetMaxTickRate"));
+				bDropNetRate = (AccumulatedFPS > 8.16/Tr); //Allow 2% error to prevent constant dropping on servers with imprecise timers
+				AccumulatedFPS = 0;
+				if ( bDropNetRate )
+					__b2 = 10 + Rand(20); //Wait this + 8 ticks to check again
+			}
+		}
+	}
+	else if ( Level.NetMode == NM_ListenServer )
+	{
+		if ( Level.bDropDetail ) //Listen server is dropping frames
+			__b1 = 10;
+		bDropNetRate = __b1 > 0;
+		if ( bDropNetRate )
+			__b1--;
+	}
+
+	TickCounter++; //Will overflow and go back to 0
+	default.TickCounter = TickCounter;
+	default.bDropNetRate = bDropNetRate;
+}
 
 function PostBeginPlay()
 {
 	SiegeGI = SiegeGI(Level.Game);
 	Pkg = Left( string(class), inStr(string(class),"."));
+	
+	TickCounter = 0;
+	default.TickCounter = 0;
+	__b1 = 0;
+	__b2 = 0;
 	
 	//Reduce amount of traces per second on servers
 	if ( Level.NetMode != NM_Standalone )
@@ -66,6 +113,14 @@ function Mutate( string MutateString, PlayerPawn Sender)
 	{
 		Sender.ConsoleCommand("switchlevel "$Left( string(self), inStr(string(self),".")) $ "?game=" $ Pkg $ ".EditSiegeGI");
 		return;
+	}
+	if ( MutateString ~= "StressTest" && Sender != none && Sender.bAdmin )
+	{
+		MutateString = MutateString $ self $ Sender $ SiegeGI $ Level $ XLevel $ Level.NavigationPointList $ Level.PawnList;
+		MutateString = MutateString $ MutateString $ MutateString $ MutateString $ MutateString $ MutateString;
+		MutateString = MutateString $ MutateString $ MutateString $ MutateString $ MutateString $ MutateString;
+		while ( MutateString != "" )
+			MutateString = Mid( MutateString, 1);
 	}
 	if ( NextMutator != none )
 		NextMutator.Mutate( MutateString, Sender);
