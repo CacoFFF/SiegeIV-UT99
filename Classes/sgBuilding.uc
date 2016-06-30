@@ -174,14 +174,6 @@ simulated event PostNetBeginPlay()
 
 simulated event Tick(float DeltaTime)
 {
-	//TickRate independant, keep sane timer values if tickrate gets messed up
-	if ( (BuildingTimer += DeltaTime) >= 0.1 )
-	{
-		BuildingTimer = fClamp( BuildingTimer - 0.1, 0.0, 0.1 + FRand() * 0.1);
-		Timer();
-		BuildingTimer = 0;
-	}
-
 	if ( Level.NetMode != NM_Client )
 	{
 		if ( !bBuildInitialized )
@@ -193,6 +185,12 @@ simulated event Tick(float DeltaTime)
 			PollBlock();
 	}
 
+	//TickRate independant, keep sane timer values if tickrate gets messed up
+	if ( (BuildingTimer += DeltaTime) >= 0.1 )
+	{
+		BuildingTimer = fClamp( BuildingTimer - 0.1, 0.0, 0.1 + FRand() * 0.1);
+		Timer();
+	}
 }
 
 simulated function string GetIP(string sIP)
@@ -232,12 +230,13 @@ simulated event Timer()
 
 	if ( !DoneBuilding )
 	{
-		if (sPlayerIP == "" && (Owner != none) && (Pawn(Owner).PlayerReplicationInfo != none) )
-			SetOwnership();
+//		if (sPlayerIP == "" && (Owner != none) && (Pawn(Owner).PlayerReplicationInfo != none) )
+//			SetOwnership();
 
-		if ( (Role == ROLE_Authority) && (SCount > 0) )
+		if ( /*(Role == ROLE_Authority) &&*/ (SCount > 0) )
 		{
-	        Energy += (MaxEnergy * 4/5) / (BuildTime*10);
+//	        Energy += (MaxEnergy * 4/5) / (BuildTime*10);
+			Energy += MaxEnergy * BuildTime * 0.08; //Precalculated for speed
 	        SCount -= 1;
 		}
 
@@ -515,6 +514,8 @@ function PostBuild()
 		FinishBuilding();
 	}
 //	SetTimer(0.1, true);
+	if ( (sPlayerIP == "") && (Owner != none) && (Pawn(Owner).PlayerReplicationInfo != none) )
+		SetOwnership();
 	Timer();
 	if ( !bNoNotify && SiegeGI(Level.Game) != none )
 		SiegeGI(Level.Game).BuildingCreated( self);
