@@ -459,7 +459,7 @@ defaultproperties
      FireOffset=(X=16.000000,Y=-14.000000,Z=-8.000000)
 	 MultiSkins(1)=Texture'AsmdPulseRifleSkin'
 	 MultiSkins(2)=Texture'AsmdPulseRifleSkin'
-     ProjectileClass=Class'Botpack.PlasmaSphere'
+     ProjectileClass=None
      AltProjectileClass=Class'Botpack.ShockProj'
      MyDamageType=jolted
      AltDamageType=jolted

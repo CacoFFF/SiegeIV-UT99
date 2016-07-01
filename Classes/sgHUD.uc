@@ -35,8 +35,8 @@ var float GainedRU;
 var float GainedRUExp;
 var() config int NumBuildings;
 var() string sgRanks[8];
-var() string sgRankDesc[8];
-var() int sgOldBuilt[41];
+//var() string sgRankDesc[8];
+//var() int sgOldBuilt[41];
 var() texture TeamIcons[5];
 var bool UseSpecialColor;
 var int AmpCharge;
@@ -469,7 +469,7 @@ simulated function DrawSiegeStats(canvas C)
 	for (i=0;i<8;i++)
 	{
 		X=C.ClipX/4;
-		Y1 = YL + ((BigFontHeight+TinyFontHeight+2)*i);
+		Y1 = YL + ((BigFontHeight+TinyFontHeight+1)*i);
 		C.Font = MyFonts.GetBigFont( C.ClipX );
 		C.DrawColor = WhiteColor;
 		C.SetPos(X, Y1);
@@ -500,8 +500,8 @@ simulated function DrawSiegeStats(canvas C)
 			C.SetPos(((C.ClipX/4)*3)-Width, Y1 + BigFontHeight-2);
 			C.DrawText(sInfo[i]);
 		}
-		C.SetPos(X, Y1 + BigFontHeight-3);
-		C.DrawText(sgRankDesc[i]);
+//		C.SetPos(X, Y1 + BigFontHeight-3);
+//		C.DrawText(sgRankDesc[i]);
 	}
 	C.Font = MyFonts.GetBigFont( C.ClipX );
 	if ( PRI.Team < 5 ) //Higor: extra case for a fifth team
@@ -520,9 +520,10 @@ simulated function DrawSiegeStats(canvas C)
 	MaxPerColumn = Clamp( Height / (SmallFontHeight + 2), 0, PRI.iHistory);
 	Width = C.ClipX * 0.1;
 	C.Font = MyFonts.GetSmallFont( C.ClipX );
+	Y1 += int(BigFontHeight * 0.35);
 	For ( i=MaxPerColumn-1 ; i>=0 ; i-- )
 	{
-		C.SetPos( Width, Y1 + BigFontHeight + (SmallFontHeight + 2) * (MaxPerColumn-i));
+		C.SetPos( Width, Y1 + (SmallFontHeight + 2) * (MaxPerColumn-i));
 		if ( PRI.sColors[i] < 5 )
 			C.DrawColor = TeamColor[PRI.sColors[i]];
 		C.DrawText( PRI.sHistory[i]);
@@ -1091,7 +1092,8 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 {
 	local sgPlayerData sgData;
 	local string s, timeleft;
-	local float l,buildTime;
+	local float YPos, buildTime;
+	local Font BigFont;
 
 	local PlayerReplicationInfo BuilderPRI;
 	local sgBuilding Building;
@@ -1106,7 +1108,10 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 	{
 		// We Are Looking at a building
 		if ( IdentifyPawn.bDeleteMe )
+		{
+			IdentifyPawn = None;
 			return false;
+		}
 			
 		Building = sgBuilding(IdentifyPawn); //Higor, don't do a subclass lookup like 20 times.
 		BuilderPRI = Building.OwnerPRI; //Higor: Now players don't need bAlwaysRelevant
@@ -1117,14 +1122,16 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 		if (right(s,1)==".")
 			s = left(s,len(s)-1);
 		s = s  @ "%";
+		BigFont = MyFonts.GetBigFont(Canvas.ClipX);
+		Canvas.Font = BigFont;
+		YPos = Canvas.ClipY - 216*Scale;
+		DrawTwoColorID( Canvas, Building.BuildingName $ ": ", s, YPos);
 
-		Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
-		DrawTwoColorID(Canvas,Building.BuildingName $ ": ", s,Canvas.ClipY - 216 * Scale);
-
-		Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
 
 		if( !Building.bNoUpgrade )
 		{
+			YPos += 36*Scale;
+			Canvas.Font = BigFont;
 			if ( sgEditBuilding(IdentifyPawn) != none )
 			{
 				s = string(int(Building.Grade));
@@ -1145,28 +1152,36 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 					NextLVCost *= ( Building.UpgradeCost * (int(Building.Grade)+1));
 					s = s$"  [Next Level:"@Left( string(NextLVCost) ,InStr( string(NextLVCost), "."))$" RU]";
 				}
-				DrawTwoColorID(Canvas,"Level:",s,Canvas.ClipY - 176 * Scale);
+				DrawTwoColorID(Canvas,"Level:",s, YPos);
 			}
 		}
 
 		if ( BuilderPRI != None ) //Higor: only happens if looking at building, place it inside building status code block
 		{
-			Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
-			DrawTwoColorID(Canvas,"Built by:",
-			BuilderPRI.PlayerName,
-			Canvas.ClipY - 136 * Scale);
+			YPos += 36*Scale;
+			Canvas.Font = BigFont;
+			DrawTwoColorID(Canvas,"Built by:", BuilderPRI.PlayerName, YPos);
 		}
-
-		if(!Building.DoneBuilding) //Higor: same here, placing it in this block ensures Building exists and preventes yet another log warning
+		
+		if( !Building.DoneBuilding) //Higor: same here, placing it in this block ensures Building exists and preventes yet another log warning
 		{
-			buildTime = Building.BuildTime / Building.GS;
-	  		timeleft = string(buildTime - (buildTime * (Building.TotalSCount - Building.SCount) / Building.TotalSCount));
-	  		timeleft = left(timeleft, InStr(timeleft, ".")+nHUDDecPlaces+1);
-	  
-	  		if(float(timeleft) > 0)
+			buildTime = Building.SCount * 0.1 / Level.TimeDilation;
+			if( buildTime > 0)
 	  		{
-				Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
-				DrawTwoColorID(Canvas,"Time left:", timeleft @ "sec"  ,Canvas.ClipY - 96 * Scale);    
+				YPos += 36*Scale;
+				timeleft = string(buildTime);
+				timeleft = Left( timeleft, Len(timeleft) + nHUDDecPlaces - 6);
+				Canvas.Font = BigFont;
+				DrawTwoColorID(Canvas,"Time left:", timeleft @ "sec" , YPos);    
+			}
+		}
+		else if ( (Building.iRULeech > 0) && (PlayerOwner.PlayerReplicationInfo != none) )
+		{
+			if ( (Spectator(Owner) != none) || (PlayerOwner.PlayerReplicationInfo.Team == Building.Team) )
+			{
+				YPos += 36*Scale;
+				Canvas.Font = BigFont;
+				DrawTwoColorID(Canvas,"RU Leeched:", string(Building.iRULeech), YPos);
 			}
 		}
 	}
@@ -2054,6 +2069,15 @@ simulated function Color NewColor( byte r, byte g, byte b )
 	return CreatedColor;
 }
 
+/*     sgRankDesc(0)="The player who caused most BaseCore damage"
+     sgRankDesc(1)="The player who repaired the BaseCore the most"
+     sgRankDesc(2)="The player who caused the most building damage"
+     sgRankDesc(3)="The player who killed more than any other"
+     sgRankDesc(4)="The player who built the greatest number of buildings"
+     sgRankDesc(5)="The player who built the greatest number of warheads"
+     sgRankDesc(6)="The player who killed the greatest number of warheads"
+     sgRankDesc(7)="The player who repaired and upgraded the most"*/
+	 
 defaultproperties
 {
 	 HudItemSlotSpace=36
@@ -2062,21 +2086,14 @@ defaultproperties
      TheWhiteStuff=(R=255,G=255,B=255)
      nHUDDecPlaces=1
      sgRanks(0)="Top BaseCore attacker"
-     sgRanks(1)="Top BaseCore defender"
+     sgRanks(1)="Top BaseCore repairer"
      sgRanks(2)="Top attacker"
      sgRanks(3)="Top player killer"
      sgRanks(4)="Top builder"
      sgRanks(5)="Top Warhead maker"
      sgRanks(6)="Top Warhead defender"
-     sgRanks(7)="Top team player"
-     sgRankDesc(0)="The player who caused most BaseCore damage"
-     sgRankDesc(1)="The player who repaired the BaseCore the most"
-     sgRankDesc(2)="The player who caused the most building damage"
-     sgRankDesc(3)="The player who killed more than any other"
-     sgRankDesc(4)="The player who built the greatest number of buildings"
-     sgRankDesc(5)="The player who built the greatest number of warheads"
-     sgRankDesc(6)="The player who killed the greatest number of warheads"
-     sgRankDesc(7)="The player who repaired and upgraded the most"
+     sgRanks(7)="Top repairer/upgrader"
+
      CacheInvs(0)=Class'UT_Invisibility'
      CacheInvs(1)=Class'Dampener'
      CacheInvs(2)=Class'UT_JumpBoots'

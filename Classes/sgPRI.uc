@@ -42,8 +42,8 @@ var int WhosAmmoCount;
 
 var string VisibleMessage; //Always sHistory[0], for external mods
 var int VisibleMessageNum;
-var string sHistory[16];
-var byte sColors[16];
+var string sHistory[20];
+var byte sColors[20];
 var byte iHistory;
 
 var Pawn PushedBy;
@@ -231,17 +231,45 @@ simulated function ReceiveMessage( string sMsg, byte aTeam, bool bAnnounce)
 	}
 	else
 	{
-		For ( i=ArrayCount(sHistory)-1 ; i>0 ; i-- )
+		//Attempt merge Messages 0 and 1 into 1 (built)
+		if ( iHistory > 1 && Len(sHistory[1]) < 75 )
+		{
+			j = InStr(sHistory[0]," ");
+			if ( Left(sHistory[0],j) == Left(sHistory[1],j) ) //Pass 1a, same builder
+			{
+				if ( (Mid(sHistory[0],j,9) == " built a ") && (Mid(sHistory[1],j,9) == " built a ") ) //Pass 2a, build notification
+				{
+					j += 9;
+					sHistory[1] = sHistory[1] $ "," @ Mid(sHistory[0],j);
+					Goto SKIP_PUSH;
+				}
+			}
+			i = InStr(sHistory[1]," ");
+			if ( (Mid(sHistory[0],j,9) == " built a ") && (Mid(sHistory[1],i,9) == " built a ") ) //Pass 1b, build notifies from diff players
+			{
+				if ( Mid(sHistory[0],j) == Mid(sHistory[1],i) ) //Pass 2b, both built exactly the same stuff
+				{
+					sHistory[1] = Left(sHistory[1],i) $ "," @ Left(sHistory[0],j) $ Mid(sHistory[1],i) @ "each";
+					Goto SKIP_PUSH;
+				}
+			}
+		}
+		
+		if ( iHistory == ArrayCount(sHistory) )
+			iHistory--;
+		For ( i=iHistory ; i>0 ; i-- )
 		{
 			sHistory[i] = sHistory[i-1]; //Push up
 			sColors[i] = sColors[i-1];
 		}
+		iHistory++;
+	SKIP_PUSH:
 		sHistory[0] = sMsg;
 		sColors[0] = aTeam;
 		VisibleMessage = sMsg;
 		VisibleMessageNum++;
-		iHistory = Min(16,iHistory+1);
 	}	
+END_RECVM:
 	if ( bAnnounce )
 		LocalPlayer.ClientMessage("-== "$sMsg$" ==-");
 }

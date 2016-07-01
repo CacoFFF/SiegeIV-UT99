@@ -23,7 +23,7 @@ var array<int> BlockedReachSpecs;
 var int iBlockPoll;
 var NavigationPoint N;
 
-var float               SCount, TotalScount, GS;
+var float               SCount, TotalScount;
 var sgMeshFX            myFX;
 var int                 Team;
 var bool                DoneBuilding;
@@ -88,11 +88,11 @@ var enum EAnnounceType{
 replication
 {
 	reliable if ( Role == ROLE_Authority )
-		BuildTime, MaxEnergy, Energy, SCount, TotalScount, GS, Grade, Team, OwnerPRI, iRULeech, bSmokeStatus, bNoRemove, bOnlyOwnerRemove;
+		MaxEnergy, Energy, SCount, Grade, Team, OwnerPRI, iRULeech, bSmokeStatus, bNoRemove, bOnlyOwnerRemove;
 	reliable if ( bReplicateEMP && Role == ROLE_Authority )
 		bDisabledByEMP;
 	reliable if ( bNetInitial && (Role == ROLE_Authority) )
-		UpgradeCost, bNoUpgrade;
+		UpgradeCost, bNoUpgrade, BuildTime, TotalSCount;
 	reliable if ( bNetInitial && bReplicateMFX && (Role == ROLE_Authority) )
 		DSofMFX, MFXFatness, NumOfMFX, MFXrotX, Model;
 }
@@ -112,8 +112,6 @@ event PostBeginPlay()
 		RUinvested = default.BuildCost;
 
 	Texture = none;
-	TotalSCount = BuildTime*10;
-	GS = level.game.gameSpeed;
 
 	if ( Pawn(Owner) != None ) //Old code, left for safety
 		Team = Pawn(Owner).PlayerReplicationInfo.Team;
@@ -504,6 +502,7 @@ function PostBuild()
 	{
 		Energy = MaxEnergy/5;
 		SCount = BuildTime*10;
+		TotalSCount = SCount;
 	}
 	else
 	{

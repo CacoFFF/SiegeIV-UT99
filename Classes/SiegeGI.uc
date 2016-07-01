@@ -1313,7 +1313,7 @@ function int ReduceDamage(int damage, name damageType, Pawn injured,  Pawn insti
 		if ( sgBaseCore(injured) != None )
 		{
 			if ( bPlayerInstigated &&
-				(SniperRifle(instigatedBy.Weapon) != None ||
+				(DamageType == 'Decapitated' || SniperRifle(instigatedBy.Weapon) != None ||
 				Ripper(instigatedBy.Weapon) != None) &&
 				VSize(injured.Location - instigatedBy.Location) >
 				MaxCoreSnipeDistance )
@@ -2048,7 +2048,9 @@ function BuildingRemoved( sgBuilding sgRem, pawn Remover, optional bool bWasLeec
 		if ( aPRI.bIsSpectator || (aPRI.Team == Remover.PlayerReplicationInfo.Team) )
 		{
 			if ( sgRem.Owner != none )
+			{
 				aPRI.ReceiveMessage( Pawn(sgRem.Owner).PlayerReplicationInfo.PlayerName $"'s"$LeechString@sgRem.BuildingName @ "has been removed by" @ Remover.PlayerReplicationInfo.PlayerName, Remover.PlayerReplicationInfo.Team, sgRem.Owner != Remover);
+			}
 			else
 				aPRI.ReceiveMessage( "A"$LeechString@sgRem.BuildingName @ "has been removed by" @ Remover.PlayerReplicationInfo.PlayerName, Remover.PlayerReplicationInfo.Team, true);
 		}
