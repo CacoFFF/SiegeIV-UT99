@@ -6,10 +6,6 @@ class sgCategoryInfo expands ReplicationInfo;
 
 var byte Team;
 
-var PlayerPawn PList[32]; //Relevancy Playerpawn list
-var int iSize, pPosition;
-var float SwitchTimer;
-
 var class<sgBuilding> NetBuild[128];
 var byte NetCategory[128];
 var sgBaseBuildRule NetRules[128];
@@ -106,13 +102,10 @@ function string ParseProp(byte idx, string Prop)
 		return Result;
 	}
 }
-
+/*
 event Tick( float DeltaTime)
 {
-	if ( (SwitchTimer -= (DeltaTime / Level.TimeDilation)) <= 0 )
-		RotateReplication();
-
-/*	if ( CurPriItem < 128 )
+	if ( CurPriItem < 128 )
 		ScanPriority(CurPriItem++);
 	else if ( PriorityTimer >= 0 )
 	{
@@ -122,48 +115,9 @@ event Tick( float DeltaTime)
 			PriorityTimer = 5+FRand()*5;
 			CurPriItem = 0;
 		}
-	}*/
-}
-
-//Process custom replication hack here
-//Replicate this actor to the owner team's player pawns
-function RotateReplication()
-{
-	local sgBaseBuildRule aR;
-
-	SwitchTimer = 1 / NetUpdateFrequency;
-	if ( (pPosition < iSize) && (PList[pPosition] != none || PList[iSize - (pPosition+1)] != none) )
-	{
-		iSize--;
-		SetOwner(PList[pPosition]);
-		Instigator = PList[iSize-pPosition];
-			
-		For ( aR=RuleList ; aR!=none ;aR=aR.nextRule )
-		{
-			aR.SetOwner(PList[pPosition]);
-			aR.Instigator = PList[iSize-pPosition];
-		}
-		iSize++;
 	}
-	pPosition++;
-	if ( pPosition > 10 && pPosition >= iSize )
-		RefillList();
 }
-
-function RefillList()
-{
-	local PlayerPawn P;
-	local int i, k;
-
-	ForEach AllActors (class'PlayerPawn', P)
-		if ( (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
-			PList[i++] = P;
-	k = i;
-	while ( i<iSize )
-		PList[i++] = none;
-	iSize = k;
-	pPosition = 0;
-}
+*/
 
 event Timer()
 {
@@ -431,10 +385,10 @@ function ScanPriority();
 
 defaultproperties
 {
-	bAlwaysRelevant=False
+	bAlwaysRelevant=True
     Team=255
 	RemoteRole=ROLE_SimulatedProxy
-	NetUpdateFrequency=10
+	NetUpdateFrequency=0.5
 	PriorityTimer=-0.5
 	CurPriItem=128
 }

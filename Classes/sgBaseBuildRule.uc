@@ -15,7 +15,7 @@ var int AppliedOn[4];			//Bitwise array for the Master category info
 
 replication
 {
-	reliable if ( Role==ROLE_Authority )
+	reliable if ( bNetInitial && Role==ROLE_Authority )
 		RuleName, Team, AppliedOn;
 }
 
@@ -89,17 +89,16 @@ simulated function MasterSet()
 				Master.SetRule(32*k + i, self);
 }
 
-//I should try the experimental replication system...
-
 
 defaultproperties
 {
-	bAlwaysRelevant=False
+	bAlwaysRelevant=True
 	RemoteRole=ROLE_SimulatedProxy
 	TagList(0)=RedRule
 	TagList(1)=BlueRule
 	TagList(2)=GreenRule
 	TagList(3)=YellowRule
 	Team=255
-	NetUpdateFrequency=10
+	NetUpdateFrequency=2
+	NetPriority=1.6
 }

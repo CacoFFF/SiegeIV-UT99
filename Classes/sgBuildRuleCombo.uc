@@ -62,3 +62,11 @@ simulated function AddChild( sgBaseBuildRule Other)
 	childRules[iChild++] = Other;
 }
 
+defaultproperties
+{
+	bNetTemporary=True
+	NetPriority=2
+	NetUpdateFrequency=0.5
+}
+
+

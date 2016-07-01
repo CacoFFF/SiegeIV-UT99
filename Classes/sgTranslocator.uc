@@ -31,6 +31,7 @@ function AltFire( float Value )
 {
 	local sgBuilding B;
 	local sgHomingBeacon sgHB;
+	local EPhysics OldPhys;
 
 	local byte OwnerTeam;
 
@@ -53,6 +54,7 @@ function AltFire( float Value )
 		return;
 */
 		OwnerTeam = Pawn(Owner).PlayerReplicationInfo.Team;
+		OldPhys = TTarget.Physics;
 		TTarget.SetPhysics( PHYS_None);
 		TTarget.bCollideWorld = false;
 		TTarget.SetCollisionSize( Owner.CollisionRadius, Owner.CollisionHeight);
@@ -64,6 +66,7 @@ function AltFire( float Value )
 				TTarget = none;
 				return;
 			}
+		TTarget.SetPhysics(OldPhys);
 		Translocate();
 		return;
 	}

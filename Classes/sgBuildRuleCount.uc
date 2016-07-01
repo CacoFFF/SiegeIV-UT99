@@ -34,7 +34,7 @@ simulated function string GetRuleString( optional bool bNegative)
 	if ( bOverTime && bNegative && bOverTimeReached )
 		return "Not available in overtime";
 	if ( bOverTime && !bOverTimeReached )
-		return "Wait: overtime";
+		return "Wait: Overtime";
 	if ( bPersistantTimer ) //Cooldown mode
 	{
 		if ( MyTimer > 0 )
@@ -156,4 +156,6 @@ state Timing
 defaultproperties
 {
     TargetCount=1
+	NetPriority=1.2
+	NetUpdateFrequency=4
 }
