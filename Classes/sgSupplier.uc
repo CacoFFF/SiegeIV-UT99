@@ -135,15 +135,13 @@ function Supply(Pawn target)
     numWeapons = min(GetWeaponCount(), default.iWeaponClasses);
 	for ( inv=target.Inventory ; inv!=none ; inv=inv.Inventory )
 	{
-		if ( (theArmor == none) && (sgArmor(Inv) != none) )
+		if ( (Weapon(Inv) == none) || (Weapon(Inv).AmmoType == none) )
 		{
-			theArmor = sgArmor(Inv);
+			if ( sgArmor(Inv) != none )
+				theArmor = sgArmor(Inv);
 			continue;
 		}
-
-		if ( (Weapon(Inv) == none) || (Weapon(Inv).AmmoType == none) )
-			continue;
-
+	
 		for ( i=0 ; i<numWeapons ; i++ )
 		{
 			if ( (!bUseSubclasses && Inv.class == default.WeaponClasses[i]) || (bUseSubclasses && ClassIsChildOf(Inv.class, default.WeaponClasses[i]) ) )
@@ -177,22 +175,10 @@ function Supply(Pawn target)
 		inv = inv.Inventory;
 	}
 
-	theArmor = Spawn( class'sgArmor');
-	if ( theArmor == none )
-		Goto PLAY_SOUND;
-	theArmor.GiveTo( Target);
+	theArmor = SpawnArmor( Target);
+	Goto PLAY_SOUND;
 
 	UPGRADE_ARMOR:
-	if ( theArmor.Charge < 150 )
-	{
-		theArmor.NetUpdateFrequency = 20;
-		theArmor.NetPriority = 2;
-	}
-	else
-	{
-		theArmor.NetUpdateFrequency = 8;
-		theArmor.NetPriority = 1.4;
-	}
 	if ( FRand() < 0.1 + (Grade/15) && theArmor.Charge < 25 + Grade*25 )
 		++theArmor.Charge;
 

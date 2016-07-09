@@ -54,12 +54,8 @@ function Supply(Pawn target)
 	
 	inv = target.FindInventoryType(class'sgArmor');
 	if ( inv == None )
-	{
-		inv = Spawn(class'sgArmor', target);
-		if ( inv != None )
-			inv.GiveTo(target);
-	}
-	if ( inv != None && inv.Charge < 50 + Grade*20 )
+		SpawnArmor(Target);
+	else if ( inv.Charge < 50 + Grade*20 )
 	{
 		inv.Charge = FMin(inv.Charge + 1, 50 + grade * 20 );
 		if ( FRand() < (Grade/7.5) )

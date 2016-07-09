@@ -90,10 +90,31 @@ function Pawn FindTarget()
 	return QueuerList.POwner;
 }
 
-function Supply(Pawn target)
+function sgArmor SpawnArmor( Pawn Other)
 {
-	if ( bProtected && sgPRI(target.PlayerReplicationInfo) != none )
-		sgPRI( target.PlayerReplicationInfo).bReachedSupplier = True;
+	local sgArmor theArmor;
+	local sgPRI PRI;
+
+	theArmor = Spawn( class'sgArmor');
+	if ( theArmor == none )
+		return None;
+	theArmor.GiveTo( Other);
+	theArmor.Charge = 1;
+	PRI = sgPRI(Other.PlayerReplicationInfo);
+	if ( PRI != none ) //If you go back to heal, you get lamer points
+		PRI.sgInfoSpreeCount = Max( 5, PRI.sgInfoSpreeCount+2);
+	return theArmor;
+}
+
+function Supply(Pawn Other)
+{
+	if ( sgPRI(Other.PlayerReplicationInfo) != none )
+	{
+		if ( bProtected )
+			sgPRI( Other.PlayerReplicationInfo).bReachedSupplier = True;
+		if ( sgPRI( Other.PlayerReplicationInfo).ProtectCount > 0 )
+			sgPRI( Other.PlayerReplicationInfo).ProtTimer( 0.1);
+	}
 }
 
 simulated event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, 

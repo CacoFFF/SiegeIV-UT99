@@ -268,7 +268,7 @@ simulated function FinishBuilding()
 		MyTrigger.SetCollisionSize( DetRadius, DetRadius);
 		MyTrigger.SetLocation( Location - vect(0,0,1) );
 		if ( OwnerPRI != none )
-			OwnerPRI.sgInfoSpreeCount += 2;
+			OwnerPRI.sgInfoSpreeCount += 3;
 	}
 
 	if ( Level.NetMode == NM_DedicatedServer )

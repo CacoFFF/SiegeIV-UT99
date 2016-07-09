@@ -147,9 +147,8 @@ static function ClearWeaponClasses()
 	default.ClassesLoaded = false;
 }
 
-function Supply(Pawn target)
+function Supply(Pawn Other)
 {
-
     local int numWeapons, i, j;
     local Inventory inv;
 	local sgArmor theArmor;
@@ -157,19 +156,21 @@ function Supply(Pawn target)
     if ( !default.ClassesLoaded )
         LoadWeaponClasses();
         
-	Super.Supply(target);
+	Super.Supply(Other);
 
 	numWeapons = min(GetWeaponCount(), default.iWeaponClasses);
-	for ( inv=target.Inventory ; inv!=none ; inv=inv.Inventory )
+	for ( inv=Other.Inventory ; inv!=none ; inv=inv.Inventory )
 	{
-		if ( (theArmor == none) && (sgArmor(Inv) != none) )
+		if ( (Weapon(Inv) == none) || (Weapon(Inv).AmmoType == none) )
 		{
-			theArmor = sgArmor(Inv);
+			if ( sgArmor(Inv) != none )
+			{
+				theArmor = sgArmor(Inv);
+				if ( FRand() < 0.2 + (Grade/7.5) && theArmor.Charge < 25 + Grade*25 )
+					++theArmor.Charge;
+			}
 			continue;
 		}
-
-		if ( (Weapon(Inv) == none) || (Weapon(Inv).AmmoType == none) )
-			continue;
 
 		for ( i=0 ; i<numWeapons ; i++ )
 		{
@@ -191,41 +192,27 @@ function Supply(Pawn target)
 	}
 
 	WEAPONS_READY:
-	if ( theArmor != none )
-		Goto UPGRADE_ARMOR;
-	
-	while ( inv != none )
-	{
-		if ( sgArmor(Inv) != none )
-		{
-			theArmor = sgArmor(Inv);
-			Goto UPGRADE_ARMOR;
-		}
-		inv = inv.Inventory;
-	}
 
-	theArmor = Spawn( class'sgArmor');
+	//Armor inventory not found? Maybe rearranged to last in chain?
 	if ( theArmor == none )
-		Goto PLAY_SOUND;
-	theArmor.GiveTo( Target);
-
-	UPGRADE_ARMOR:
-	if ( theArmor.Charge < 150 )
 	{
-		theArmor.NetUpdateFrequency = 20;
-		theArmor.NetPriority = 2;
+		while ( inv != none )
+		{
+			if ( sgArmor(Inv) != none )
+			{
+				theArmor = sgArmor(Inv);
+				if ( FRand() < 0.2 + (Grade/7.5) && theArmor.Charge < 25 + Grade*25 )
+					++theArmor.Charge;
+				Goto PLAY_SOUND;
+			}
+			inv = inv.Inventory;
+		}
+		SpawnArmor( Other);
 	}
-	else
-	{
-		theArmor.NetUpdateFrequency = 8;
-		theArmor.NetPriority = 1.4;
-	}
-	if ( FRand() < 0.2 + (Grade/7.5) && theArmor.Charge < 25 + Grade*25 )
-		++theArmor.Charge;
 
 	PLAY_SOUND:
 	if ( FRand() < 0.35 )
-		target.PlaySound(sound'sgMedia.sgStockUp', SLOT_Misc, target.SoundDampening*2.5);
+		Other.PlaySound(sound'sgMedia.sgStockUp', SLOT_Misc, Other.SoundDampening*2.5);
 }
 
 function Pawn FindTarget()

@@ -10,21 +10,15 @@ function Supply(Pawn target)
 
     inv = target.FindInventoryType(class'sgArmor');
     if ( inv == None )
-    {
-        inv = Spawn(class'sgArmor', target);
-        if ( inv != None )
-            inv.GiveTo(target);
-    }
-    if ( inv != None && FRand() < 0.1 + (Grade/15) && inv.Charge < 25 +
-      Grade*25 )
+		SpawnArmor(target);
+    else if ( FRand() < 0.1 + (Grade/15) && inv.Charge < 25 + Grade*25 )
         inv.Charge = FMin(inv.Charge + 1, 25 + grade * 25 );
 	
 	if ( FRand() < 0.3 + (Grade/40) && Target.Health < 60 + (grade*15) )
         Target.Health++;
 	
 	if ( FRand() < 0.2 )
-        Target.PlaySound(sound'sgMedia.sgStockUp', SLOT_Misc,
-          Target.SoundDampening*2.5);
+        Target.PlaySound(sound'sgMedia.sgStockUp', SLOT_Misc, Target.SoundDampening*2.5);
 }
 
 defaultproperties

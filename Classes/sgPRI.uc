@@ -38,7 +38,6 @@ var bool bReplicateRU;		//Native c++ only
 //Spawn protection
 var float ProtectCount;
 var Weapon WhosGun;
-var int WhosAmmoCount;
 
 var string VisibleMessage; //Always sHistory[0], for external mods
 var int VisibleMessageNum;
@@ -384,12 +383,7 @@ function Tick(float deltaTime)
 	RU = fMax( RU, 0.f);
 
 	if ( ProtectCount > 0 )
-	{
-		if ( (ProtectCount -= DeltaTime) <= 0 )
-			ClearProt();
-		else
-			ProtTimer();
-	}
+		ProtTimer( DeltaTime);
 
 	if ( bIpToCountry )
 	{
@@ -419,41 +413,28 @@ function Tick(float deltaTime)
 
 }
 
-function ProtTimer()
+function ProtTimer( float DeltaTime)
 {
 	local Pawn P;
 
 	P = Pawn(Owner);
-	if ( sgConstructor(P.Weapon) != none )
-		return;
 	if ( WhosGun == None )
-	{
 		WhosGun = P.Weapon;
-		if ( (WhosGun != none) && (WhosGun.AmmoType != none) )
-			WhosAmmoCount = P.Weapon.AmmoType.AmmoAmount;
-		return;
-	}
-	if ( P.Weapon != WhosGun ) //Weapon changed
-		ClearProt();
-	else if ( WhosGun.AmmoType != none ) 
+	else if ( P.Weapon != WhosGun ) //Weapon changed
 	{
-		if ( P.Weapon.AmmoType.AmmoAmount < WhosAmmoCount ) //Ammo was fired
-			ClearProt();
-		else if ( P.Weapon.AmmoType.AmmoAmount > WhosAmmoCount ) //Ammo was gained
-		{
-			WhosAmmoCount = P.Weapon.AmmoType.AmmoAmount;
-			if ( P.bFire + P.bAltFire > 0 ) //Disallow firing from suppliers
-				ClearProt();
-		}
+		ProtectCount -= 2;
+		WhosGun = P.Weapon;
 	}
-}
 
-function ClearProt()
-{
-	WhosGun = none;
-	WhosAmmoCount = 0;
-	ProtectCount = 0;
-	Pawn(Owner).ClientMessage("Siege spawn protection off");
+	ProtectCount -= DeltaTime;
+	if ( P.bFire + P.bAltFire > 0 ) //Disallow firing from suppliers
+		ProtectCount -= DeltaTime;
+		
+	if ( ProtectCount <= 0 )
+	{
+		WhosGun = none;
+		Pawn(Owner).ClientMessage("Siege spawn protection off");
+	}
 }
 
 static final function string SelElem(string Str, int Elem)
@@ -467,9 +448,17 @@ static final function string SelElem(string Str, int Elem)
     return Str;
 }
 
-simulated final function float GetEff( optional bool bJustKilled)
+simulated final function float GetEff()
 {
-	return float(sgInfoKiller) / Max(sgInfoKiller + Deaths - int(bJustKilled), 1) * 100;
+	return float(sgInfoKiller) / fMax(sgInfoKiller + Deaths, 1) * 100;
+}
+
+//Used for RU rewards
+simulated final function float GetEff2()
+{
+	local float f;
+	f = Max(sgInfoKiller + Deaths - 1, 1); //Max deviation
+	return Clamp( 100 * sgInfoKiller / f, 50-2*f, 50+2*f);
 }
 
 simulated final function float MaxRU()

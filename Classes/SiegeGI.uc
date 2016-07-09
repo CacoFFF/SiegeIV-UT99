@@ -23,7 +23,6 @@ var() config bool bUseDenied;
 var() config bool bUseNukeDeco;
 var() config bool bShareFingerPrints;
 var() config bool bDisableIDropFix;
-var() config bool bEffBasedRUKill;
 var() config bool bBotCanCheat;
 var() config bool bCore5AddsEnforcer;
 var() config bool bPlayersRelevant;
@@ -1097,7 +1096,7 @@ function bool PickupQuery( Pawn Other, Inventory item )
 	 && Other != none 
 	 && sgPRI(Other.PlayerReplicationInfo) != none )
 	{
-		sgPRI(Other.PlayerReplicationInfo).sgInfoSpreeCount += 4;
+		sgPRI(Other.PlayerReplicationInfo).sgInfoSpreeCount += 10;
 	}
 	return Result;
 }
@@ -1179,11 +1178,12 @@ function Killed( pawn Killer, pawn Other, name damageType )
 
 function ScoreKill(Pawn killer, Pawn other)
 {
-	local string sWarhead;
-    local int FlameAmmo, NukeAmmo;
+    local int NukeAmmo;
 	local float RuMult;
 	local bool bTeamKill;
 	local sgPRI aVictim, aKiller;
+	local sgNukeLauncher Nuke;
+	local vector TStart;
 
 	if ( bRoundMode )		RuMult = RoundRuScale;
 	else					RuMult = 1;
@@ -1213,7 +1213,7 @@ function ScoreKill(Pawn killer, Pawn other)
 				aKiller.Score += 1;
 				if ( (aKiller != none) && (aVictim != none) && aVictim.bReachedSupplier && (aVictim.SupplierTimer > 0) )
 				{
-					aKiller.sgInfoSpreeCount += 3;
+					aKiller.sgInfoSpreeCount += 5;
 					aKiller.AddRU( KillRUReward(none, true) * RuMult);
 					Cores[aKiller.Team].StoredRU -= aVictim.SupplierTimer + Teams[aKiller.Team].Size * 5 * Cores[aKiller.Team].Grade;
 					PenalizeTeamForKill( Other, aKiller.Team);
@@ -1225,6 +1225,14 @@ function ScoreKill(Pawn killer, Pawn other)
 					SharedReward( aKiller, aKiller.Team, KillRUReward( aVictim, false) * RuMult, 0.5);
 					aKiller.sgInfoSpreeCount += 1;
 					aVictim.sgInfoSpreeCount = 0;
+					//Camper
+					if ( SniperRifle(Killer.Weapon) != None && (VSize(Killer.Velocity) < Killer.GroundSpeed * 0.3) )
+					{
+						TStart = Killer.Location;
+						TStart.Z += Killer.BaseEyeHeight - Killer.CollisionHeight * 0.5;
+						if ( !FastTrace( Other.Location, TStart) && !FastTrace( Other.Location-vect(0,0,20), TStart) && !FastTrace( Other.Location+vect(0,0,20), TStart) )
+							aKiller.sgInfoSpreeCount += 1;
+					}
 				}
 			}
 			else
@@ -1242,32 +1250,30 @@ function ScoreKill(Pawn killer, Pawn other)
             aVictim.AddRU(-10 * RuMult);
 	}
 	
-    
-	if( sgNukeLauncher(other.FindInventoryType(class'sgNukeLauncher')) != None )
+    Nuke = sgNukeLauncher(other.FindInventoryType(class'sgNukeLauncher'));
+	if( (aVictim != none) && (Nuke != None) )
 	{
-		NukeAmmo = sgNukeLauncher(Other.FindInventoryType(class'sgNukeLauncher')).AmmoType.AmmoAmount;
+		NukeAmmo = Nuke.AmmoType.AmmoAmount;
 		if (NukeAmmo == 1)
 		{
-			sWarhead = ""$other.PlayerReplicationInfo.PlayerName@"was carrying a WARHEAD!!!";
 			if (killer != None && (aKiller != None) && killer != other)
 			{
 				aKiller.AddRU(500 * abs(int(bTeamKill)-1) );
 				aKiller.sgInfoWarheadKiller += abs(int(bTeamKill)-1);
 				killer.PlayerReplicationInfo.Score += 5 * abs(int(bTeamKill)-1);
 			}
-			AnnounceAll(sWarhead);
+			AnnounceAll( aVictim.PlayerName@"was carrying a WARHEAD!!!" );
 		}
          
 		if (NukeAmmo > 1)
 		{
-			sWarhead = ""$other.PlayerReplicationInfo.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!";
 			if (killer != None && (aKiller != None) && killer != other)
 			{
 				aKiller.AddRU(1000 * abs(int(bTeamKill)-1) );
 				aKiller.sgInfoWarheadKiller += 2 * abs(int(bTeamKill)-1);
 				killer.PlayerReplicationInfo.Score += 10 * abs(int(bTeamKill)-1);
 			}
-			AnnounceAll(sWarhead);
+			AnnounceAll( aVictim.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
 		}
 	}
 
@@ -2298,18 +2304,18 @@ function PenalizeTeamForKill( Pawn Killed, byte aTeam)
 
 function float KillRUReward( sgPRI Victim, bool bNegative)
 {
-	local float Factor;
+	local float Factor, Eff2;
 	
 	if ( bNegative )
 		Factor = -1;
 	else
 		Factor = 1;
 
-	if ( !bEffBasedRUKill || Victim == none )
+	if ( Victim == none )
 		return 50 * Factor;
-	if ( Victim.GetEff( true) > 85 && Victim.sgInfoKiller > 4)
-		Factor *= (Victim.GetEff(true) - 78) / 7;
-	return (35 + Victim.GetEff( true) * 0.25 + float(Victim.sgInfoSpreeCount)**1.4) * Factor;
+	Eff2 = Victim.GetEff2();
+	Factor *= fMax(1,(Eff2 - 60) / 20.f); //Eff 80 starts multiplying
+	return (42 + float(Victim.sgInfoSpreeCount)**1.3) * Factor;
 }
 
 function SharedReward( sgPRI Awarded, byte Team, float Award, optional float Waste)
@@ -2348,7 +2354,6 @@ defaultproperties
      RoundRuScale=2
      bUseNukeDeco=False
      bCore5AddsEnforcer=True
-     bEffBasedRUKill=True
      BaseMotion=70
      TranslocBaseForce=800
      TranslocLevelForce=120

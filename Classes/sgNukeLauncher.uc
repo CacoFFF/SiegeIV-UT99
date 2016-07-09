@@ -131,15 +131,22 @@ function float SuggestAttackStyle()
 
 simulated function PlayFiring()
 {
-	local pawn p;
-
-	for ( p = Level.PawnList; p != None; p = p.nextPawn )
-		if ( p.IsA('TournamentPlayer' ) && p.PlayerReplicationInfo.Team !=
-          Pawn(Owner).PlayerReplicationInfo.Team)
-			TournamentPlayer(P).ReceiveLocalizedMessage(Class'sgNukeLaunchMsg');
-
+	local TournamentPlayer TP;
+	local PlayerReplicationInfo PRI;
+	
 	PlayAnim( 'Fire', 0.3 );		
 	PlayOwnedSound(FireSound, SLOT_None,4.0*Pawn(Owner).SoundDampening);
+
+	if ( Pawn(Owner) == none )
+		return;
+
+	PRI = Pawn(Owner).PlayerReplicationInfo;
+	if ( sgPRI(PRI) != none )
+		sgPRI(PRI).sgInfoSpreeCount = Max( 5, sgPRI(PRI).sgInfoSpreeCount-2);
+		
+	ForEach AllActors (class'TournamentPlayer', TP)
+		if ( (TP.PlayerReplicationInfo != none) && (TP.PlayerReplicationInfo.Team != PRI.Team) )
+			TP.ReceiveLocalizedMessage(Class'sgNukeLaunchMsg');
 }
 
 function setHand(float Hand)

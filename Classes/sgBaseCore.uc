@@ -88,6 +88,7 @@ simulated function Timer()
 	local sgPRI a;
 	local float SetRU;
 	local float MaxRU;
+	local bool bRemoveFromStore;
 	local int TeamSize, MaxedOut;
 
 	Super.Timer();
@@ -127,21 +128,28 @@ simulated function Timer()
 		else
 		{
 			if ( StoredRU > SetRU*TeamSize*2 )
-			{
+				bRemoveFromStore = true;
+				
+/*			{
 				StoredRU -= SetRU*TeamSize*2;
 				SetRU *= 3;
-			}
+			}*/
 			ForEach AllActors(class'sgPRI', a)
-			{	if( a.Team == Team )
+			{
+				if( a.Team == Team )
 				{
 					if ( a.RU >= MaxRU )
 						MaxedOut++;
 					else
-						a.AddRU( SetRU, true);
+						a.AddRU( SetRU * (1+2*int(bRemoveFromStore)), true);
 				}
 			}
+
 			if ( MaxedOut > 0 )
-				StoredRU += SetRU * 0.5 * MaxedOut;
+				StoredRU += SetRU * 0.5 * MaxedOut; //Those maxed out give half their RU to core
+			if ( bRemoveFromStore )
+				StoredRU -= SetRU*2*(TeamSize-MaxedOut); //Those not maxed out have substracted additional RU from store
+
 		}
 	}
 	NO_INCREASE:
