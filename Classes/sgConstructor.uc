@@ -204,10 +204,10 @@ exec function AntiLeech()
 		{
 			sgRP.AddRemove();
 			if ( sgRP.RemoveWarning() ) 
-				AnnounceAll("Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" has been warned for Team Removing.");
+				class'SiegeStatics'.static.AnnounceAll( self, "Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" has been warned for Team Removing.");
 			if ( sgRP.ExcessRemove() ) 
 			{
-				AnnounceAll("Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" was kicked for being a Team Remover.");
+				class'SiegeStatics'.static.AnnounceAll( self, "Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" was kicked for being a Team Remover.");
 				Owner.Destroy();
 			}
 		}
@@ -1221,12 +1221,12 @@ function bool RemoveFunction()
 			if ( sgRP.RemoveWarning() ) 
 			{
 				sMessage="Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" has been warned for Team Removing.";
-				AnnounceAll(sMessage);
+				class'SiegeStatics'.static.AnnounceAll( self, sMessage);
 			}
 			if ( sgRP.ExcessRemove() ) 
 			{
 				sMessage="Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" was kicked for being a Team Remover.";
-				AnnounceAll(sMessage);
+				class'SiegeStatics'.static.AnnounceAll( self, sMessage);
 				Owner.Destroy();
 			}
 		}
@@ -2687,17 +2687,6 @@ static function color Col( byte R, byte G, byte B)
 	aC.G = G;
 	aC.B = B;
 	return aC;
-}
-
-function AnnounceAll(string sMessage)
-{
-    local PlayerPawn P;
-
-	ForEach AllActors (class'PlayerPawn', P)
-	{
-		if ( (P.bIsPlayer || P.IsA('MessagingSpectator')) && P.PlayerReplicationInfo != none )
-			P.ClientMessage( sMessage);
-	}
 }
 
 function Finish()

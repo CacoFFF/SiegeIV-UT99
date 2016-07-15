@@ -439,15 +439,6 @@ simulated function DisplayMessage(string MessageText, color MessageColor)
 	}
 }
 
-function AnnounceToPawn(Pawn AnnounceTo, string sMessage)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( p==AnnounceTo && p.PlayerReplicationInfo != None  )
-		    AnnounceTo.ClientMessage(sMessage);
-}
-
 simulated function Color MakeColor(byte R, byte G, byte B, optional byte A)
 {
 	local Color C;

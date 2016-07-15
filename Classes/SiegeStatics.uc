@@ -272,6 +272,26 @@ static function Info FindNexgenClient( PlayerPawn Player)
 			return aInfo;
 }
 
+
+//**********************************************
+//Announce to all player and pseudo-player pawns
+//**********************************************
+static function AnnounceAll( Actor Broadcaster, string Msg)
+{
+	local PlayerReplicationInfo PRI;
+	local Pawn P;
+	
+	if ( Broadcaster == none )
+		return;
+	ForEach Broadcaster.AllActors (class'PlayerReplicationInfo', PRI)
+	{
+		P = Pawn(PRI.Owner);
+		if ( P != none && (P.bIsPlayer || P.IsA('MessagingSpectator')) )
+			P.ClientMessage( Msg);
+	}
+}
+
+
 defaultproperties
 {
 	bRelease=True

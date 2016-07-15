@@ -1055,7 +1055,7 @@ function PostLogin(playerpawn NewPlayer)
 	{
 		if (bPreventSpectate && !CheckSpecIPPolicy(NewPlayer.GetPlayerNetworkAddress()) )
 		{
-			AnnounceAll(NewPlayer.PlayerReplicationInfo.PlayerName@"has been denied Spectator access.");
+			class'SiegeStatics'.static.AnnounceAll( self, NewPlayer.PlayerReplicationInfo.PlayerName@"has been denied Spectator access.");
 			NewPlayer.Destroy();
 			return;
 		}
@@ -1226,7 +1226,7 @@ function ScoreKill(Pawn killer, Pawn other)
 					aKiller.sgInfoSpreeCount += 1;
 					aVictim.sgInfoSpreeCount = 0;
 					//Camper
-					if ( SniperRifle(Killer.Weapon) != None && (VSize(Killer.Velocity) < Killer.GroundSpeed * 0.3) )
+					if ( SniperRifle(Killer.Weapon) != None && (Killer.Physics == PHYS_Walking) && (VSize(Killer.Velocity) < Killer.GroundSpeed * 0.3) )
 					{
 						TStart = Killer.Location;
 						TStart.Z += Killer.BaseEyeHeight - Killer.CollisionHeight * 0.5;
@@ -1262,7 +1262,7 @@ function ScoreKill(Pawn killer, Pawn other)
 				aKiller.sgInfoWarheadKiller += abs(int(bTeamKill)-1);
 				killer.PlayerReplicationInfo.Score += 5 * abs(int(bTeamKill)-1);
 			}
-			AnnounceAll( aVictim.PlayerName@"was carrying a WARHEAD!!!" );
+			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying a WARHEAD!!!" );
 		}
          
 		if (NukeAmmo > 1)
@@ -1273,7 +1273,7 @@ function ScoreKill(Pawn killer, Pawn other)
 				aKiller.sgInfoWarheadKiller += 2 * abs(int(bTeamKill)-1);
 				killer.PlayerReplicationInfo.Score += 10 * abs(int(bTeamKill)-1);
 			}
-			AnnounceAll( aVictim.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
+			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
 		}
 	}
 
@@ -1301,8 +1301,7 @@ function int ReduceDamage(int damage, name damageType, Pawn injured,  Pawn insti
 				if ( sgPRI(injured.PlayerReplicationInfo).ProtectCount > 0 )
 				{
 					//instigatedBy.TakeDamage(damage, instigatedBy, instigatedBy.Location, vect(0,0,0), 'exploded');
-					sMessage="Player "@injured.PlayerReplicationInfo.PlayerName@" is spawn protected.";
-					AnnounceToPawn(instigatedBy,sMessage);
+					instigatedBy.ClientMessage( "Player "@injured.PlayerReplicationInfo.PlayerName@" is spawn protected.");
 					return 0;
 				}
 			}
@@ -1727,25 +1726,6 @@ function bool ChangeTeam(Pawn other, int newTeam)
 	return false;
 }
 
-function AnnounceAll(string sMessage)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None  )
-		    p.ClientMessage(sMessage);
-}
-
-function AnnounceToPawn(Pawn AnnounceTo, string sMessage)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( p==AnnounceTo && p.PlayerReplicationInfo != None  )
-		    AnnounceTo.ClientMessage(sMessage);
-}
-
 function CoreDestroyed(sgBaseCore core)
 {
     local int       remainingTeams,
@@ -1796,13 +1776,13 @@ function DefeatTeam( byte aTeam)
 	RURecovery.ClearTeamRU( aTeam);
 }
 
-function DebugShout(String DebugMessage)
+final function DebugShout(String DebugMessage)
 {
-	if ( debug == true )
-		{
-			log(DebugMessage);
-			AnnounceAll(DebugMessage);
-		}
+	if ( debug )
+	{
+		log(DebugMessage);
+		class'SiegeStatics'.static.AnnounceAll( self, DebugMessage);
+	}
 }
 
 function CheckRandomSpawner()

@@ -182,7 +182,7 @@ simulated function MonsterDamage(int Damage, Pawn instigatedBy)
     if ( (Energy-=Damage) <= 0 )
 	{
 		Energy = 0;
-		AnnounceAll("Game Over! The monsters have killed the BaseCore!");
+		class'SiegeStatics'.static.AnnounceAll( self, "Game Over! The monsters have killed the BaseCore!");
 		Destruct();
 	}
 }
@@ -274,7 +274,7 @@ function HandleDestruction( pawn instigatedBy)
 		Energy = 0;
 		SetCollision(false);
 		bProjTarget = False;
-		AnnounceAll("BaseCore destroyed by "$ instigatedBy.PlayerReplicationInfo.PlayerName $"!!");
+		class'SiegeStatics'.static.AnnounceAll( self, "BaseCore destroyed by "$ instigatedBy.PlayerReplicationInfo.PlayerName $"!!");
 		For ( i=0 ; i<4 ; i++ )
 		{
 			if ( (aGame.Cores[i] != none) && !aGame.Cores[i].bCoreDisabled )
@@ -290,18 +290,8 @@ function HandleDestruction( pawn instigatedBy)
 		return;
 	}
 	Energy = 0;
-	AnnounceAll("Game Over! "@instigatedBy.PlayerReplicationInfo.PlayerName@"killed the BaseCore!");
+	class'SiegeStatics'.static.AnnounceAll( self, "Game Over! "@instigatedBy.PlayerReplicationInfo.PlayerName@"killed the BaseCore!");
 	Destruct( instigatedBy);
-}
-
-function AnnounceAll(string sMessage)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None  )
-		    p.ClientMessage(sMessage);
 }
 
 function UpdateScore()

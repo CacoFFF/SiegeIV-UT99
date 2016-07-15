@@ -212,17 +212,6 @@ function Damage()
 }
 
 
-
-function AnnounceAll(string sMessage)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None  )
-		    p.ClientMessage(sMessage);
-}
-
 simulated function CompleteBuilding()
 {
 	local Pawn p;
@@ -341,4 +330,5 @@ defaultproperties
      SelfDamageDet=4000
      RULevelMult=4
      BuildDistance=37
+	 RuRewardScale=1.1
 }

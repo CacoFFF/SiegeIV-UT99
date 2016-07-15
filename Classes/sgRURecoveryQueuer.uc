@@ -81,7 +81,8 @@ function RestoreData()
 	ePRI.Score = Score;
 	ePRI.Deaths = Deaths;
 //Announce recovery
-	Master.AnnounceAll("Siege RU-Recovery:"@int(RU)@"RU recovered for"@ePRI.PlayerName);
+	if ( ePRI.RU > 5 )
+		class'SiegeStatics'.static.AnnounceAll( Master, "Siege RU-Recovery:"@int(RU)@"RU recovered for"@ePRI.PlayerName);
 
 }
 

@@ -34,16 +34,6 @@ function ClearTeamRU( byte Team)
 			curQ.RU = 0;
 }
 
-function AnnounceAll(string sMessage)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None  )
-		    p.ClientMessage(sMessage);
-}
-
 defaultproperties
 {
     bGameRelevant=True
