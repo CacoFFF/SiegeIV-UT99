@@ -18,12 +18,16 @@ var bool bNotifyHover;
 function Created();
 function PostRender( Canvas C);
 
+//Ideal Code is:
+// - 0x00: Indifferent to button
+// - 0x01: Fire
+// - 0x02: AltFire
 
 function Tick( float DeltaTime);
-function PointerHit( float X, float Y);
-function PointerDrag( float X, float Y, float eX, float eY);
-function PointerHold( float DeltaTime); //Can be called together with PointerDrag! (before PointerDrag)
-function PointerRelease( float X, float Y);
+function PointerHit( float X, float Y, optional byte Code);
+function PointerDrag( float X, float Y, float eX, float eY, optional byte Code);
+function PointerHold( float DeltaTime, optional byte Code); //Can be called together with PointerDrag! (before PointerDrag)
+function PointerRelease( float X, float Y, optional byte Code);
 function PointerHover( float X, float Y);
 
 //Mainframe got resized, either window or a small space within

@@ -59,7 +59,7 @@ function PostRender( Canvas C)
 	else
 		C.DrawColor = GrayColor;
 
-	C.Style = 3; //Modu
+	C.Style = 3; //Trans
 	C.SetPos( -iBorder, -iBorder);
 	C.DrawIcon( Borders[iBorder], 1);
 	C.SetPos( -iBorder, BorderSize - iBorder); //Left line

@@ -10,6 +10,7 @@ var PlayerPawn LocalPlayer;
 var weapon LocalWeapon;
 
 var FV_sgConstructorPanel ConstructorPanel;
+var FV_ConstructorWheel ConstructorWheel;
 
 //LOCALE LOADING IS AUTOMATIC
 var() bool bUseSmallGui;
@@ -75,6 +76,9 @@ simulated event PostBeginPlay()
 
 	ConstructorPanel = new( self, 'sgConstructorPanel') class'FV_sgConstructorPanel';
 	ConstructorPanel.LocalPlayer = LocalPlayer;
+
+	ConstructorWheel = new( self, 'sgConstructorWheel') class'FV_ConstructorWheel';
+	ConstructorWheel.LocalPlayer = LocalPlayer;
 
 	EnforcePerformance();
 }
@@ -213,11 +217,17 @@ simulated event Tick( float DeltaTime)
 	if ( LocalWeapon != LocalPlayer.Weapon )
 	{
 		if ( sgConstructor(LocalWeapon) != none )
+		{
 			ConstructorPanel.ConstructorDown();
+			ConstructorWheel.ConstructorDown();
+		}
 		LocalWeapon = LocalPlayer.Weapon;
 	}
 	if ( sgConstructor(LocalWeapon) != none )
+	{
 		ConstructorPanel.Tick( DeltaTime);
+		ConstructorWheel.Tick( DeltaTime / Level.TimeDilation); //Real time render
+	}
 }
 
 //Load strings from custom INI
