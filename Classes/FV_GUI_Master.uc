@@ -32,3 +32,9 @@ function PointerHover( float X, float Y);
 
 //Mainframe got resized, either window or a small space within
 function FrameResized( float oX, float oY, float XL, float YL);
+
+final function InheritFrom( FV_GUI_Panel InParent)
+{
+	Parent = InParent; //This should match outer GUI if possible
+	LocalPlayer = Parent.LocalPlayer;
+}

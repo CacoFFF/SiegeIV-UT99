@@ -10,7 +10,8 @@ var class<sgBuilding> NetBuild[128];
 var byte NetCategory[128];
 var sgBaseBuildRule NetRules[128];
 var int NetCost[128]; //0 = default
-var string NetCategories[17], Netlocalized[17]; //Optional localized vars
+var string NetCategories[17], CatLocalized[17]; //Optional localized vars
+var Texture NetCatIcons[17]; //Optional icons for categories
 var int iCat;
 var string NetProperties[128];
 var byte iBuilds;
@@ -29,7 +30,7 @@ var SiegeCategoryRules CatObject;
 replication
 {
 	reliable if ( Role == ROLE_Authority )
-		NetBuild, NetCategory, NetCost, NetCategories, iBuilds, Team, iCat;
+		NetBuild, NetCategory, NetCost, NetCategories, NetCatIcons, iBuilds, Team, iCat;
 }
 
 simulated event PostNetBeginPlay()
@@ -325,8 +326,8 @@ simulated final function int FirstCatBuild( int Category)
 
 simulated final function string CatName( int i)
 {
-	if ( NetLocalized[i] != "" )
-		return NetLocalized[i];
+	if ( CatLocalized[i] != "" )
+		return CatLocalized[i];
 	return NetCategories[i];
 }
 

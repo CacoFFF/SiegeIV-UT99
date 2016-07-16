@@ -112,7 +112,7 @@ var rotator LastView;
 var bool bHadFire;
 var class<sgBuilding> guiTemp[28];
 var byte guiTempIdx[28];
-var bool bJustOpenedGUI;
+//var bool bJustOpenedGUI;
 var bool bCanOpenGui;
 
 
@@ -580,12 +580,12 @@ simulated function PrimaryFunc( optional float Code)
 	}
 	Delta = 0.1; //Default frequency of continuous actions
 
-	if ( bCanOpenGui && (Pawn(Owner).bAltFire > 0) && (GuiState == 0) )
+	if ( bCanOpenGui && (Pawn(Owner).bAltFire > 0) && (GuiState == 0) ) //Fake wheel opener, stops server action reliably
 	{
-		OpenGui();
+//		OpenGui();
 		return;
 	}
-
+	
 	if ( GuiState > 0 )
 		return;
 
@@ -1516,11 +1516,12 @@ simulated function PostRender( canvas Canvas)
 	if ( !FindCatActor() )
 		return;
 	
-	if ( GuiState > 0 )
+/*	if ( GuiState > 0 )
 	{
 		DrawGui( Canvas);
 		return;
-	}
+	}*/
+	DrawWheel( Canvas);
 //	DrawGUIv2( Canvas); TEMPORARILY DISABLED
 
 	Scale = Canvas.ClipX / 1280.0;
@@ -1587,6 +1588,21 @@ simulated function PostRender( canvas Canvas)
 	//Draw GUI
 }
 
+simulated function DrawWheel( Canvas C)
+{
+	local float Scale;
+	
+	if ( ClientActor == none )
+		return;
+
+	if ( !ClientActor.ConstructorWheel.bSetup )
+		ClientActor.ConstructorWheel.sgSetup( self);
+
+	ClientActor.ConstructorWheel.Scale = fMax( 0.5, int(fMin( C.ClipX, C.ClipY) / 768)); // quarter of screen is desired
+	ClientActor.ConstructorWheel.HUDColor = HUDColor();
+	ClientActor.ConstructorWheel.MasterRender( C);
+}
+
 simulated function DrawGUIv2( Canvas C)
 {
 	local float CalcX, CalcY, cOX, cOY;
@@ -1624,7 +1640,7 @@ simulated function OpenGui()
 	//Main trigger
 	GuiState = 1;
 	ClientOpenGui();
-	bJustOpenedGUI = true;
+//	bJustOpenedGUI = true;
 }
 
 function ClientOpenGui()
@@ -2313,12 +2329,12 @@ simulated function Tick(float DeltaTime)
 			HitPawn = BestRemoveCandidate( Pawn(Owner).PlayerReplicationInfo.Team );
 		else
 			HitPawn = none;
-		if ( (GuiState > 0) && !bJustOpenedGUI )
-			GuiControls(DeltaTime);
+//		if ( (GuiState > 0) && !bJustOpenedGUI )
+//			GuiControls(DeltaTime);
 	}
 		
 
-	bJustOpenedGui = False;
+//	bJustOpenedGui = False;
 	bHadFire = P.bFire > 0;
 	LastView = P.ViewRotation;
 	if ( PlayerPawn(P) != none && PlayerPawn(P).bAdmin )

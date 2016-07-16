@@ -20,7 +20,7 @@ function PostRender( Canvas C)
 {
 	local int i;
 	LOOP:
-	if ( ColorScale < 1 )
+	if ( ColorScale < 1 && (Style[i] != 4) )
 		C.DrawColor = ScaleColor(Colors[i]);
 	else
 		C.DrawColor = Colors[i];

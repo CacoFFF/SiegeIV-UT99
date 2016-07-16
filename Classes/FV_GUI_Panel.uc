@@ -81,15 +81,13 @@ function FrameResized( float oX, float oY, float cX, float cY)
 
 function RegisterElement( FV_GUI_Panel NewElement)
 {
-	NewElement.Parent = self;
-	NewElement.LocalPlayer = LocalPlayer;
+	NewElement.InheritFrom( self);
 	SubElements[iElements++] = NewElement;
 }
 
 function RegisterButton( FV_GUI_Button NewButton)
 {
-	NewButton.Parent = self;
-	NewButton.LocalPlayer = LocalPlayer;
+	NewButton.InheritFrom( self);
 	Buttons[iButtons++] = NewButton;
 }
 
