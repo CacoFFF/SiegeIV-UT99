@@ -13,6 +13,7 @@ var int bogus1, bogus2, bogus3, bogus4, bogus5;
 //#exec OBJ LOAD FILE="Graphics\JetpackTex.utx" PACKAGE=SiegeIV_0026.Jetpack
 
 #exec OBJ LOAD FILE="Graphics\XC_Orb.utx" PACKAGE=SiegeIV_0026
+#exec OBJ LOAD FILE="Graphics\BuildingGraphics.utx" PACKAGE=SiegeIV_0026.BuildingGraphics
 #exec TEXTURE IMPORT NAME=Shade FILE=Graphics\Shade.PCX GROUP=ScoreBoard
 #exec TEXTURE IMPORT NAME=Shade2 FILE=Graphics\Shade2.PCX GROUP=ScoreBoard
 #exec OBJ LOAD FILE="SiegeUtil_A.u" PACKAGE=SiegeIV_0026

@@ -89,8 +89,11 @@ function Tick( float DeltaTime)
 		else
 		{
 			moveX = fMax(4,iButtons);
-			moveY = (float(rotator( MPos).Yaw + 81920) * moveX / 65536 + 4.999) % moveX;
-			SelectedButton = int(moveY); //Let's hope it works
+			moveY = float( (rotator(MPos).Yaw - 16384) & 65535) / 65536;
+//			if ( FRand() < 0.01 )
+//				Log( moveY @ string(moveY*moveX + 0.5) );
+//			moveY = (moveY*moveX + 0.5) % moveX;
+			SelectedButton = int(moveY*moveX + 0.5) % moveX; //Let's hope it works
 		}
 		
 	}
@@ -157,7 +160,21 @@ function PointerHit( float X, float Y, optional byte Code)
 		bSelectingCategory = false;
 		if ( (Code & 1) != 0 ) //Select the build!
 		{
-			bSelectingElement = false;
+			if ( (SelectedButton >= 0) && (SelectedButton < iButtons) && (Buttons[SelectedButton] != none) )
+			{
+				LocalPlayer.ConsoleCommand( Buttons[Selectedbutton].GUI_Code );
+				Log( Buttons[Selectedbutton].GUI_Code );
+				if ( FV_ConstructorWheelButton(Buttons[0]).bIsCategory ) //Action pseudo category
+				{
+					if ( SelectedButton == 0 )
+						SetupActions();
+					//else SetupCategory(... )
+				}
+				else
+					bSelectingElement = false;
+			}
+			else
+				bSelectingElement = false;
 		}
 		else if ( (Code & 2) != 0 ) //Cancel selection!
 		{
@@ -224,7 +241,14 @@ function PostRender( Canvas C)
 		
 		if ( Buttons[0] != none )
 		{
-			DefaultRenderButtons(C);
+			if ( SelectedButton >= 0 && SelectedButton < iButtons && Buttons[SelectedButton] != none )
+			{
+				FV_ConstructorWheelButton(Buttons[SelectedButton]).bIsSelected = true;
+				DefaultRenderButtons(C);
+				FV_ConstructorWheelButton(Buttons[SelectedButton]).bIsSelected = false;
+			}
+			else
+				DefaultRenderButtons(C);
 			if ( SelectedButton >= 0 && SelectedButton < iButtons )
 			{
 				C.DrawColor = SwapColors( HUDColor );
@@ -269,6 +293,7 @@ function SetupCategories( sgCategoryInfo CatActor)
 			FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = false;
 			Buttons[i].FastReset();
 		}
+		FV_ConstructorWheelButton(Buttons[i]).bIsCategory = True;
 	}
 	iButtons = NumCats;
 	
@@ -280,10 +305,46 @@ function SetupCategories( sgCategoryInfo CatActor)
 	for ( i=1 ; i<NumCats ; i++ )
 	{
 		Buttons[i].Setup( 64, 64, i, NumCats, CatActor.NetCategories[i-1], "", "simsetcat "$string(i+3));
-		Buttons[i].RegisterTex( Texture'ForceFieldFlash015', 3 /*trans*/, WhiteColor); //Use a custom texture
+		Buttons[i].RegisterTex( Texture'GUI_UpgradeModu', 4 /*modu*/, WhiteColor);
+		Buttons[i].RegisterTex( Texture'GUI_UpgradeFront', 3 /*trans*/, WhiteColor); //Use a custom texture
 	}
 }
 
+function SetupActions()
+{
+	local int i, NumCats;
+	
+	NumCats = 3; //Five actions... implement GUI AND DRAG!!!!
+
+	//See that all buttons are there and cleaned up...
+	for ( i=0 ; i<NumCats ; i++ )
+	{
+		if ( Buttons[i] == none )
+		{
+			Buttons[i] = new(self) class'FV_ConstructorWheelButton';
+			Buttons[i].InheritFrom( self);
+		}
+		else
+		{
+			FV_ConstructorWheelButton(Buttons[i]).bIsCategory = False;
+			Buttons[i].FastReset();
+		}
+		FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = False;
+		Buttons[i].Setup( 64, 64, i, NumCats, sgConstructor(LocalPlayer.Weapon).Functions[i],"", "setmode "$string(i) );
+	}
+	iButtons = NumCats;
+
+	//Setup actions
+	Buttons[0].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
+	Buttons[0].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
+	Buttons[1].RegisterTex( Texture'GUI_Settings', 3/*trans*/, WhiteColor);
+	Buttons[2].RegisterTex( Texture'GUI_RemoveModu', 4/*modu*/, WhiteColor);
+	Buttons[2].RegisterTex( Texture'GUI_RemoveFront', 3/*trans*/, WhiteColor);
+}
+
+function SetupCategory( sgCategoryInfo CatActor)
+{
+}
 
 function ConstructorDown()
 {

@@ -43,14 +43,14 @@ function Upgraded()
 	Energy = Percent * MaxEnergy;
 }
 
-
+/*
 simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
 {
 	TraceDir = Normal(TraceDir);
 	HitLocation = HitLocation + 0.4 * CollisionRadius * TraceDir;
 	return true;
 }
-
+*/
 event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
 {
 

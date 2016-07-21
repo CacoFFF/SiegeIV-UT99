@@ -19,8 +19,13 @@ var float XOffset, YOffset;
 var vector CachedOffset; //Calc XOffset, YOffset using this ||| only for drawing
 var float MinAngle, MaxAngle; //Calc collision using this
 var int ButtonId;
+var string Abbreviation;
 
-//Used for buildings
+//Status
+var bool bIsSelected; //Only valid during rendering
+var bool bIsCategory;
+
+//Used for buildings and actions
 var bool bIsBuilding;
 var int RuleSlot; 
 
@@ -29,7 +34,7 @@ var int RuleSlot;
 function PostRender( Canvas C)
 {
 	local int i;
-	local float Scale;
+	local float Scale, XL, YL, XO, YO;
 	
 	Scale = FV_ConstructorWheel(Parent).Scale;
 	XOffset = C.ClipX * 0.5 + (CachedOffset.X - SizeX * 0.5) * Scale;
@@ -37,6 +42,8 @@ function PostRender( Canvas C)
 
 	ColorScale = FV_ConstructorWheel(Parent).ColorScale;
 	LOOP:
+	if ( !bIsSelected )
+		ColorScale *= 0.8;
 	if ( ColorScale < 1 && (Style[i] != 4) )
 		C.DrawColor = ScaleColor(Colors[i]);
 	else if ( bIsBuilding && !sgConstructor(LocalPlayer.Weapon).CatActor.RulesAllow( RuleSlot) )
@@ -52,13 +59,28 @@ function PostRender( Canvas C)
 	C.DrawTileClipped( Texture[i], SizeX * Scale, SizeY * Scale, 0, 0, Texture[i].USize, Texture[i].VSize);
 	if ( ++i < iTex )
 		Goto LOOP;
+		
+	if ( Abbreviation != "" && (Scale >= 1) && (C.Font != None) )
+	{
+		C.StrLen( Abbreviation, XL, YL);
+		XO = C.ClipX * 0.5 + CachedOffset.X * Scale * 1.3;
+		YO = C.ClipY * 0.5 + CachedOffset.Y * Scale * 1.3 - YL * 0.5;
+		if ( CachedOffset.X < 0 )
+			XO -= XL;
+		else if ( CachedOffset.X < 8 )
+			XO -= XL * CachedOffset.X / 8;
+		C.SetPos( XO, YO);
+		C.Style = 2;
+		C.DrawText( Abbreviation);
+	}
 }
 
 //Wheel styled setup
 function Setup( float sX, float sY, float mySlot, float numSlots, string aName, optional string aDescription, optional string ButtonCode)
 {
 	local float Angle;
-
+	local int i;
+	
 	SizeX = sX;
 	SizeY = sY;
 	ButtonID = int(mySlot + 0.1); //This crap had better not fail
@@ -76,6 +98,17 @@ function Setup( float sX, float sY, float mySlot, float numSlots, string aName, 
 	ButtonDescription = aDescription;
 	if ( ButtonCode != "" ) //THIS IS THE CONSOLE COMMAND!
 		GUI_Code = ButtonCode;
+	
+//Generate an abbreviation	
+	Abbreviation = "";
+CHOP_AGAIN:
+	Abbreviation = Abbreviation $ Left(aName,1); //Get first letter
+	i = InStr( aName, " ");
+	if ( i >= 0 )
+	{
+		aName = Mid( aName, i+1);
+		goto CHOP_AGAIN;
+	}
 }
 
 /*

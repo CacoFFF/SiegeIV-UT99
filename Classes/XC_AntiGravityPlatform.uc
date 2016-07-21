@@ -35,7 +35,8 @@ simulated event PreBeginPlay()
 	if ( Level.NetMode != NM_Client )
 	{
 		SetLocation( Location - vect(0,0,7));
-		ForEach RadiusActors (class'Teleporter', T, CollisionRadius * 1.1)
+		SetCollisionSize( CollisionRadius / 0.75, CollisionHeight / 0.75);
+		ForEach RadiusActors (class'Teleporter', T, CollisionRadius * 1.2)
 			if ( T.bCollideActors )
 			{
 				Destroy();
@@ -234,8 +235,8 @@ defaultproperties
      SpriteGreenTeam=Texture'ProtectorSkinTeam2'
      SpriteYellowTeam=Texture'ProtectorSkinTeam3'
      MFXrotX=(Yaw=10000)
-     CollisionRadius=65.000000
-     CollisionHeight=16.000000
+     CollisionRadius=49.000000
+     CollisionHeight=13.000000
      BuildDistance=52
      GUI_Icon=Texture'GUI_AGPlatform'
 }

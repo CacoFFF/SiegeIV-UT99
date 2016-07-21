@@ -6,7 +6,6 @@ class sgMeshFX extends Effects;
 
 var sgMeshFX NextFX;
 
-
 function PostBeginPlay()
 {
 	if ( sgBuilding(Owner) != None )

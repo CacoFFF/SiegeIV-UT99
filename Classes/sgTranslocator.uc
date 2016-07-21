@@ -31,7 +31,6 @@ function AltFire( float Value )
 {
 	local sgBuilding B;
 	local sgHomingBeacon sgHB;
-	local EPhysics OldPhys;
 
 	local byte OwnerTeam;
 
@@ -54,19 +53,14 @@ function AltFire( float Value )
 		return;
 */
 		OwnerTeam = Pawn(Owner).PlayerReplicationInfo.Team;
-		OldPhys = TTarget.Physics;
-		TTarget.SetPhysics( PHYS_None);
-		TTarget.bCollideWorld = false;
-		TTarget.SetCollisionSize( Owner.CollisionRadius, Owner.CollisionHeight);
 		ForEach AllActors(class'sgBuilding',B)
-			if ( B.bCollideActors && B.bBlockActors && (B.Team != OwnerTeam) && class'SiegeStatics'.static.ActorsTouching( TTarget, B) )
+			if ( B.bCollideActors && B.bBlockActors && (B.Team != OwnerTeam) && class'SiegeStatics'.static.ActorsTouchingExt( TTarget, B, Owner.CollisionRadius, Owner.CollisionHeight) )
 			{
 				Owner.PlaySound(AltFireSound, SLOT_Misc, 4 * Pawn(Owner).SoundDampening);
 				TTarget.Destroy();
 				TTarget = none;
 				return;
 			}
-		TTarget.SetPhysics(OldPhys);
 		Translocate();
 		return;
 	}

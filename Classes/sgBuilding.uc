@@ -361,8 +361,8 @@ simulated function Cloak()
 
 simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
 {
-	TraceDir = Normal(TraceDir);
-	HitLocation = HitLocation + 0.4 * CollisionRadius * TraceDir;
+//	TraceDir = Normal(TraceDir);
+//	HitLocation = HitLocation + 0.4 * CollisionRadius * TraceDir;
 	return true;
 }
 
@@ -388,20 +388,22 @@ simulated function FinishBuilding()
     if ( Level.NetMode == NM_DedicatedServer )
         return;
 
-    if ( myFX == None && Model != None )
-        for ( i = 0; i < numOfMFX; i++ )
-        {
+	if ( myFX == None && Model != None )
+	{
+		for ( i = 0; i < numOfMFX; i++ )
+		{
             newFX = Spawn(class'WildcardsMeshFX', Self,,,       rotator(vect(0,0,0)));
 			
-            newFX.NextFX = myFX;
-            myFX = newFX;
-            myFX.Mesh = Model;
+			newFX.NextFX = myFX;
+			myFX = newFX;
+			myFX.Mesh = Model;
             myFX.DrawScale = DSofMFX;
-            myFX.RotationRate.Pitch = MFXrotX.Pitch*FRand();
-            myFX.RotationRate.Roll = MFXrotX.Roll*FRand();
-            myFX.RotationRate.Yaw = MFXrotX.Yaw*FRand();
-            myFX.Fatness = MFXFatness;
+			myFX.RotationRate.Pitch = MFXrotX.Pitch*FRand();
+			myFX.RotationRate.Roll = MFXrotX.Roll*FRand();
+			myFX.RotationRate.Yaw = MFXrotX.Yaw*FRand();
+			myFX.Fatness = MFXFatness;
         }
+	}
 }
 
 function bool RemovedBy( pawn Other, optional bool bWasLeech, optional float CheatMargin)

@@ -72,7 +72,7 @@ class sgConstructor extends TournamentWeapon;
 #exec MESHMAP SCALE MESHMAP=ConstructorL X=0.013 Y=0.009 Z=0.022
 
 //Selection icon by DeepakOV
-#exec TEXTURE IMPORT FILE=Graphics\UseCon.pcx GROUP=Icons MIPS=OFF
+#exec TEXTURE IMPORT FILE=Graphics\UseCon.pcx GROUP=HUD MIPS=OFF
 
 var FontInfo MyFonts;
 var Texture ColorPals[6];
@@ -350,7 +350,7 @@ function ClientSetCat( int CatMode)
 	SelectedIndex = 255;
 }
 
-simulated function SimSetCat( int CatMode)
+exec simulated function SimSetCat( int CatMode)
 {
 	Category = CatMode;
 	Selection = -1;

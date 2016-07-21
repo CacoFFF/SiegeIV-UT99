@@ -10,9 +10,22 @@ class MiniShield extends sgBuilding;
 
 simulated function FinishBuilding()
 {
+    local sgMeshFX newFX;
+
 	if ( Role == ROLE_Authority )
 		SetCollisionSize(50,50);
-	super.FinishBuilding();
+	Super.FinishBuilding();
+	
+	if ( WildcardsMeshFX(myFX) != None ) //Generic MeshFX created, add HQ version now
+	{
+		newFX = Spawn(class'sgMeshFX_MiniShieldHQ', Self);
+		newFX.RotationRate.Pitch = MFXrotX.Pitch*FRand();
+		newFX.RotationRate.Roll = MFXrotX.Roll*FRand();
+		newFX.RotationRate.Yaw = MFXrotX.Yaw*FRand();
+		newFX.DrawScale = CollisionRadius / 50;
+		newFX.NextFX = myFX;
+		myFX = newFX;
+	}
 }
 
 simulated event TakeDamage( int damage, Pawn instigatedBy, Vector HitLocation, 
@@ -25,7 +38,7 @@ simulated event TakeDamage( int damage, Pawn instigatedBy, Vector HitLocation,
 		damage *= Factor;
 	}
 	Super.TakeDamage(damage, instigatedBy, hitLocation, momentum, damageType);
-	Spawn(class'ForceFieldFlash',,,hitlocation);
+	Spawn(class'ForceFieldFlash',,,hitlocation).DrawScale *= 0.7;
 	Self.PlaySound(Sound'UnrealShare.General.Expla02',,7.0);
 }
 
@@ -43,7 +56,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 	if ( discr < 0 )
 	{
 		HitLocation += Location;
-		HitLocation += Normal(TraceDir); //This should help prevent infinite recursions
+		HitLocation += Normal(TraceDir) * 2; //This should help prevent infinite recursions
 		return false;
 	}
 
@@ -54,7 +67,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 defaultproperties
 {
      bNoUpgrade=True
-     RuRewardScale=0.75
+     RuRewardScale=0.74
      BuildingName="Mini Shield"
      BuildCost=800
      UpgradeCost=0
@@ -76,7 +89,7 @@ defaultproperties
      MultiSkins(1)=Texture'ContainerSpriteTeam1'
      MultiSkins(2)=Texture'ContainerSpriteTeam2'
      MultiSkins(3)=Texture'ContainerSpriteTeam3'
-     CollisionRadius=28.000000
-     CollisionHeight=28.000000
+     CollisionRadius=20.000000
+     CollisionHeight=20.000000
      GUI_Icon=Texture'GUI_MiniShield'
 }
