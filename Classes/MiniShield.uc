@@ -38,7 +38,7 @@ simulated event TakeDamage( int damage, Pawn instigatedBy, Vector HitLocation,
 		damage *= Factor;
 	}
 	Super.TakeDamage(damage, instigatedBy, hitLocation, momentum, damageType);
-	Spawn(class'ForceFieldFlash',,,hitlocation).DrawScale *= 0.7;
+	Spawn(class'ForceFieldFlash',,,hitlocation).DrawScale *= 0.1 + 300 / float(damage);
 	Self.PlaySound(Sound'UnrealShare.General.Expla02',,7.0);
 }
 
@@ -47,7 +47,10 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 	local float hitDist, discr;
 
 	if ( VSize(Location - HitLocation) < CollisionRadius * 0.88)
+	{
+		HitLocation += Normal(TraceDir) * 2;
 		return false;
+	}
 
 	TraceDir = Normal(TraceDir);
 	HitLocation -= Location;
@@ -67,7 +70,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 defaultproperties
 {
      bNoUpgrade=True
-     RuRewardScale=0.74
+     RuRewardScale=0.75
      BuildingName="Mini Shield"
      BuildCost=800
      UpgradeCost=0
