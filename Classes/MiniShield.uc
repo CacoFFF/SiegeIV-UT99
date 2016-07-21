@@ -38,7 +38,7 @@ simulated event TakeDamage( int damage, Pawn instigatedBy, Vector HitLocation,
 		damage *= Factor;
 	}
 	Super.TakeDamage(damage, instigatedBy, hitLocation, momentum, damageType);
-	Spawn(class'ForceFieldFlash',,,hitlocation).DrawScale *= 0.1 + 300 / float(damage);
+	Spawn(class'ForceFieldFlash',,,hitlocation).DrawScale *= 0.1 + float(damage) / 300;
 	Self.PlaySound(Sound'UnrealShare.General.Expla02',,7.0);
 }
 
