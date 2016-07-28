@@ -99,6 +99,14 @@ var() int CacheTypes[11];
 var() int iCacheInvs;
 
 
+//UTPure sets enemy health to random values
+simulated function PostBeginPlay()
+{
+	Super.PostBeginPlay();
+	if ( Owner != none && Owner.IsA('bbPlayer') )
+		bEnforceHealth = true;
+}
+
 //Weapon wasn't hooked in inventory chain
 simulated final function FixInventoryChain( optional bool bOnlyBreak)
 {
@@ -1191,10 +1199,15 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 		if ( (IdentifyTarget != None) && (IdentifyTarget.PlayerName != "") && (IdentifyPawn != none) )
 		{
 			if ( bEnforceHealth )
-			{	ForEach IdentifyPawn.ChildActors (class'sgPlayerData', sgData)
-				{
-					sgData.SetHealth();
-					break;
+			{
+				if ( sgPRI(IdentifyTarget) != none && sgPRI(IdentifyTarget).PlayerData != none )
+					sgPRI(IdentifyTarget).PlayerData.SetHealth();
+				else
+				{	ForEach IdentifyPawn.ChildActors (class'sgPlayerData', sgData)
+					{
+						sgData.SetHealth();
+						break;
+					}
 				}
 			}
 			Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
@@ -1440,7 +1453,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	}
 
 	//////////////////////// SPEED ////////////////////////////////
-	if ( CachedSpeed != None && CachedSpeed.bActivated )
+	if ( CachedSpeed != None && CachedSpeed.bActive )
 	{
 		YOffset -= HudItemSlotSpace;
 		Canvas.Style = ERenderStyle.STY_Normal;

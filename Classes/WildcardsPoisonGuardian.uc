@@ -30,7 +30,7 @@ function bool CanAttackPlayer( pawn P)
 	}
 }
 
-function bool AlreadyPoisoned( Pawn Other)
+function PoisonPlayer AlreadyPoisoned( Pawn Other)
 {
 	local int i;
 
@@ -44,10 +44,9 @@ function bool AlreadyPoisoned( Pawn Other)
 			continue;
 		}
 		if ( Poisoned[i].PoisonedPlayer == Other )
-			return true;
+			return Poisoned[i];
 		i++;
 	}
-	return false;
 }
 
 function Damage()
@@ -64,42 +63,21 @@ function Damage()
 			dir = normal( Location - p.Location);
 			dist = VSize( Location - p.Location);
 			MoScale = (((ShockSize)-dist)/(ShockSize))+0.1;
-
-			if ( (sgBuilding(p) == none) && !AlreadyPoisoned(p) )
+			
+			if ( StationaryPawn(p) == none )
 			{
-				Poison = Spawn(Class'PoisonPlayer', Owner, , Location);
-				Poison.PoisonedPlayer = p;
-				Poisoned[iPoisoned++] = Poison;
-
-				switch ( int(Grade) )
+				Poison = AlreadyPoisoned(p);
+				if ( Poison == None && iPoisoned < ArrayCount(Poisoned) )
 				{
-					case 0:
-						Poison.Slowness	= 0.5;
-						Poison.RecoverRate = 0.800;
-						break;
-					case 1:
-						Poison.Slowness	= 1;
-						Poison.RecoverRate = 0.600;
-						break;
-					case 2:
-						Poison.Slowness	= 1.5;
-						Poison.RecoverRate = 0.400;
-						break;
-					case 3:
-						Poison.Slowness	= 2;
-						Poison.RecoverRate = 0.200;
-						break;
-					case 4:
-						Poison.Slowness	= 2.5;
-						Poison.RecoverRate = 0.100;
-						break;
-					case 5:
-						Poison.Slowness	= 3;
-						Poison.RecoverRate = 0.050;
-						break;
+					Poison = Spawn( class'PoisonPlayer', p, , p.Location);
+					Poisoned[iPoisoned++] = Poison;
+				}
+				if ( Poison != none )
+				{
+					Poison.Slowness = 1 + Grade * 0.6; //1 to 3
+					Poison.RecoverRate = 0.33; //Around 7 secs...
 				}
 			}
-
 			p.TakeDamage(moScale*10, Instigator, 0.5 * (p.CollisionHeight + p.CollisionRadius)*dir, vect(0,0,0), 'sgSpecial');
 			if ( FRand() < 0.25) 
 			{

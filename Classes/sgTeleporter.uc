@@ -53,8 +53,8 @@ event Spawned()
 	else
 		aTeam = Pawn(Owner).PlayerReplicationInfo.Team;
 
-	ForEach RadiusActors (class'sgTeleporter', aTele, 70)
-		if ( (aTele != self) && (aTele.Team == aTeam) && class'SiegeStatics'.static.ActorsTouching(self,aTele) )
+	ForEach RadiusActors (class'sgTeleporter', aTele, 80)
+		if ( (aTele != self) && (aTele.Team == aTeam) && class'SiegeStatics'.static.ActorsTouchingExt(self,aTele, 2, 8) )
 		{
 			Destroy();
 			return;
@@ -66,7 +66,7 @@ event Spawned()
 			return;
 		}
 	ForEach AllActors (class'Teleporter', Tele)
-		if ( (Tele.URL != "") && class'SiegeStatics'.static.ActorsTouching(self,Tele) )
+		if ( (Tele.URL != "") && class'SiegeStatics'.static.ActorsTouchingExt(self,Tele, 2, 8) )
 		{
 			Destroy();
 			return;

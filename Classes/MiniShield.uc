@@ -22,7 +22,8 @@ simulated function FinishBuilding()
 		newFX.RotationRate.Pitch = MFXrotX.Pitch*FRand();
 		newFX.RotationRate.Roll = MFXrotX.Roll*FRand();
 		newFX.RotationRate.Yaw = MFXrotX.Yaw*FRand();
-		newFX.DrawScale = CollisionRadius / 50;
+		if ( CollisionRadius != default.CollisionRadius )
+			newFX.DrawScale = CollisionRadius / 50;
 		newFX.NextFX = myFX;
 		myFX = newFX;
 	}

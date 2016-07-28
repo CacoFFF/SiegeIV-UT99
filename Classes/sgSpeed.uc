@@ -6,62 +6,48 @@
 class sgSpeed extends TournamentPickup
     config;
 
-var bool               bActivated;
-
+var XC_MA_sgSpeed Affector;
+	
 replication
 {
     reliable if ( Role < ROLE_Authority )
-        SetSpeed;
-
-    reliable if ( Role == ROLE_Authority )
-        ClientActivate, ClientDeactivate,bActivated;
+        ToggleSpeed;
 }
 
 function PostBeginPlay()
 {
-    Super.PostBeginPlay();
-    bAutoActivate = false;
+	bAutoActivate = false;
+	Super.PostBeginPlay();
 }
 
 function GiveTo(Pawn other)
 {
     Super.GiveTo(other);
-    if ( Owner == other )
-    {
-        if ( PlayerPawn(Owner) != None )
-        {
-            ClientActivate();
-        }
+    if ( Owner == Other )
         GotoState('Activated');
-    }
 }
 
-/*--- Client Functions. -----------------------------------------------------*/
-
-simulated function ClientActivate()
+function CheckAffector()
 {
-    if ( Role == ROLE_Authority )
-        return;
+	local sgPlayerData PlayerData;
 
-    GotoState('Activated');
-}
-
-simulated function ClientDeactivate()
-{
-    if ( Role == ROLE_Authority )
-        return;
-
-    GotoState('DeActivated');
+	if ( Affector != None && !Affector.bDeleteMe )
+	{
+		if ( Affector.Owner != Owner )
+			Affector.Destroy();
+		return;
+	}
+	PlayerData = class'SiegeStatics'.static.GetPlayerData( Pawn(Owner), true);
+	Affector = Spawn( class'XC_MA_sgSpeed', Owner);
+	Affector.Item = self;
+	PlayerData.AddMAffector( Affector);
 }
 
 /*--- Console Functions. ----------------------------------------------------*/
 
-exec function SetSpeed(bool enabled)
+exec function ToggleSpeed()
 {
-    if ( enabled )
-        GotoState('Activated');
-    else
-        GotoState('DeActivated');
+    Activate();
 }
 
 
@@ -69,60 +55,33 @@ exec function SetSpeed(bool enabled)
  * STATES Activated.
  * --------------------------------------------------------------------------*/
 
-
 state Activated
 {
 	function BeginState()
 	{
-
-		SetTimer(0.2, True);
-
 		Super.BeginState();
-
-
-		// Alter player's stats.
-		Pawn(Owner).AirControl = 0.65;
-		//Pawn(Owner).JumpZ *= 1.1;
-		Pawn(Owner).GroundSpeed *= 1.5;
-		Pawn(Owner).WaterSpeed *= 1.5;
-		Pawn(Owner).AirSpeed *= 1.5;
-		Pawn(Owner).Acceleration *= 1.5;
-
-		// Add wind blowing.
-		Pawn(Owner).AmbientSound = sound'SpeedWind';
-		Pawn(Owner).SoundRadius = 64;
-		bActivated=true;
+		CheckAffector();
+		Owner.AmbientSound = Sound'SpeedWind';
+		Owner.SoundRadius = 64;
 	}
 
 	function EndState()
 	{
-		local float SpeedScale;
-		SetTimer(0.0, False);
-
 		Super.EndState();
-
-		if ( Level.Game.IsA('DeathMatchPlus') && DeathMatchPlus(Level.Game).bMegaSpeed )
-			SpeedScale = 1.3;
-		else
-			SpeedScale = 1.0;
-
-		// Restore player's stats.
-		Pawn(Owner).AirControl = DeathMatchPlus(Level.Game).AirControl;
-		//Pawn(Owner).JumpZ = Pawn(Owner).Default.JumpZ * Level.Game.PlayerJumpZScaling();
-		Pawn(Owner).GroundSpeed = Pawn(Owner).Default.GroundSpeed * SpeedScale;
-		Pawn(Owner).WaterSpeed = Pawn(Owner).Default.WaterSpeed * SpeedScale;
-		Pawn(Owner).AirSpeed = Pawn(Owner).Default.AirSpeed * SpeedScale;
-		Pawn(Owner).Acceleration = Pawn(Owner).Default.Acceleration * SpeedScale;
-
-		// Remove sound.
-		Pawn(Owner).AmbientSound = None;
-		bActivated=false;
+		Owner.AmbientSound = None;
+		Owner.SoundRadius = Owner.default.SoundRadius;
 	}
 }
 
 state DeActivated
 {
+	simulated event BeginState()
+	{
+		if ( Level.NetMode == NM_Client )
+			bActive = false; //For client sim
+	}
 }
+
 
 defaultproperties
 {

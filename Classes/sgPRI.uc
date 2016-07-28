@@ -25,6 +25,7 @@ var bool bIpToCountry;
 var float           RU;
 var WildcardsOrbs Orb;
 var sg_XC_Orb XC_Orb;
+var sgPlayerData PlayerData;
 
 //Server only
 var float AccRU; //Accumulated addition

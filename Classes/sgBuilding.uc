@@ -372,6 +372,7 @@ simulated function FinishBuilding()
     local sgMeshFX newFX;
 
     DrawScale = SpriteScale;
+	DoneBuilding = true; //To make sure
 
 	if ( Role == ROLE_Authority )
 	{

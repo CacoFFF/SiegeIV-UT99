@@ -53,10 +53,9 @@ function PoisonRadius( float DamageAmount, float DamageRadius )
 		}
 		if ( (aHealth != Victims.Health) && !Master.AlreadyPoisoned(Victims) )
 		{
-			Master.Poisoned[Master.iPoisoned] = Spawn(Class'PoisonPlayer', Owner, , Location);
-			Master.Poisoned[Master.iPoisoned].PoisonedPlayer = Victims;
-			Master.Poisoned[Master.iPoisoned].Slowness = 1 + DamageAmount / 7; //4 to 1
-			Master.Poisoned[Master.iPoisoned++].RecoverRate = 0.700 - DamageAmount / 60; //0.2 to 0.7
+			Master.Poisoned[Master.iPoisoned] = Spawn(Class'PoisonPlayer', Victims, , Location);
+			Master.Poisoned[Master.iPoisoned].Slowness = 1 + DamageAmount / 5; //5 to 1
+			Master.Poisoned[Master.iPoisoned++].RecoverRate = 0.5;
 		}
 	}
 }

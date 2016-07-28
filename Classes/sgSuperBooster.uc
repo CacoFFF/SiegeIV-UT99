@@ -4,38 +4,27 @@
 //=============================================================================
 class sgSuperBooster extends sgBuilding;
 
-var sound           BoostSound;
-var float           RepairTimer;
+var Sound BoostSound;
+var float RepairTimer;
 
-simulated event Timer()
+function CompleteBuilding()
 {
-    Super.Timer();
-
-    if ( SCount > 0 || Role != ROLE_Authority || RepairTimer > 0 )
-        return;
-
-    Energy = FMin(Energy + 18, MaxEnergy);
-}
-
-simulated event Tick(float deltaTime)
-{
-    Super.Tick(deltaTime);
-
-    if ( Role == ROLE_Authority && RepairTimer > 0 )
-        RepairTimer -= deltaTime;
+	if ( RepairTimer > 0 )
+		RepairTimer -= 0.1;
+	else
+		Energy = FMin( Energy + 18, MaxEnergy);
 }
 
 event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, 
   Vector momentum, name damageType)
 {
     RepairTimer = 6;
-    Super.TakeDamage(Damage * (1 - Grade*0.05), instigatedBy, hitLocation,
-      momentum, damageType);
+    Super.TakeDamage(Damage * (1 - Grade*0.05), instigatedBy, hitLocation, momentum, damageType);
 }
 
 event Touch(Actor other)
 {
-    if ( SCount <= 0 && Pawn(other) != None && Pawn(other).bIsPlayer &&
+    if ( DoneBuilding && Pawn(other) != None && Pawn(other).bIsPlayer &&
       Pawn(other).PlayerReplicationInfo != None &&
       Pawn(other).PlayerReplicationInfo.Team == Team && !bDisabledByEMP)
     {
@@ -52,7 +41,7 @@ event PostTouch(Actor other)
     local float boost;
     local float Zboost;
 
-    if ( SCount > 0 || Pawn(other) == None )
+    if ( DoneBuilding || Pawn(other) == None )
         return;
 
     target = Pawn(other);

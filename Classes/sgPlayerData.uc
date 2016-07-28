@@ -17,6 +17,7 @@ var float BaseEyeHeight;
 var int OwnerID;
 var sgPRI OwnerPRI;
 var SiegeGI SiegeGame;
+var XC_MovementAffector MA_List;
 var int RealHealth;
 var vector LastRepLoc;
 var float LastRepLocTime;
@@ -57,7 +58,12 @@ simulated event SetInitialState()
 {
 	bScriptInitialized = true;
 	if ( Level.NetMode != NM_Client )
-		GotoState('Server','InitID');
+	{
+		if ( OwnerPRI == None || Level.NetMode == NM_Standalone || SiegeGI(Level.Game) == none )
+			GotoState('Standalone');
+		else
+			GotoState('Server');
+	}
 }
 
 simulated event PostNetBeginPlay()
@@ -65,12 +71,18 @@ simulated event PostNetBeginPlay()
 	GotoState('Client');
 }
 
-
+// Run on Siege servers
 state Server
 {
-InitID:
+	event Tick( float DeltaTime)
+	{
+		if ( (POwner != none) && (MA_List != none) )
+			AffectMovement( DeltaTime);
+	}
+Begin:
 	Sleep(0.0);
 	OwnerID = POwner.PlayerReplicationInfo.PlayerID;
+	SetPropertyText("bRelevantIfOwnerIs","1"); //XC_Engine future feature
 WaitForReady:
 	Sleep(0.0);
 	if ( POwner == none || POwner.bDeleteMe )
@@ -81,7 +93,7 @@ WaitForReady:
 	if ( PPOwner != none && (NetConnection(PPOwner.Player) != none) && (PPOwner.CurrentTimeStamp == 0) ) //Network player not ready
 		Goto('WaitForReady');
 	RemoteRole = ROLE_SimulatedProxy; //Init replication
-Begin:
+CheckPlayer:
 	if ( POwner == none || POwner.bDeleteMe )
 	{
 		Destroy();
@@ -95,9 +107,22 @@ Begin:
 	if ( bReplicateHealth )
 		RealHealth = POwner.Health;
 	Sleep(0.0);
-	Goto('Begin');
+	Goto('CheckPlayer');
 }
 
+//Run on non-Siege/local games
+state Standalone
+{
+	event Tick( float DeltaTime)
+	{
+		if ( POwner == none || POwner.bDeleteMe )
+			Destroy();
+		else if ( MA_List != none )
+			AffectMovement( DeltaTime);
+	}
+}
+
+//Run on remote clients
 simulated state Client
 {
 Begin:
@@ -113,9 +138,12 @@ FindPawn:
 	{
 		SetOwner( POwner);
 		PPOwner = PlayerPawn(POwner);
+		if ( (PPOwner != none) && ViewPort(PPOwner.Player) != none )
+		{
+			GotoState('OwnerClient');
+			Stop;
+		}
 	}
-	if ( (PPOwner != none) && ViewPort(PPOwner.Player) != none )
-		Goto('OwnerClient');
 SetProps:
 	if ( POwner == none || POwner.bDeleteMe )
 	{
@@ -126,12 +154,20 @@ SetProps:
 	POwner.EyeHeight = BaseEyeHeight;
 	Sleep(0.0);
 	Goto('SetProps');
-OwnerClient:
-	DetectXCGE_Octree();
-	Sleep(5);
-	if ( POwner.IsA('bbPlayer') && sgHUD(PlayerPawn(POwner).myHud) != none )
-		sgHUD(PlayerPawn(POwner).myHud).bEnforceHealth = true;
-	Stop;
+}
+
+// Owner client pawn is never gone
+state OwnerClient
+{
+	simulated event BeginState()
+	{
+		DetectXCGE_Octree();
+	}
+	simulated event Tick( float DeltaTime)
+	{
+		if ( MA_List != none )
+			AffectMovement( DeltaTime);
+	}
 }
 
 //This only happens once
@@ -169,6 +205,7 @@ simulated function bool FindPRI()
 			if ( PRI.bAdmin && PRI.bIsSpectator ) //This is most likely a playerless bot
 				continue;
 			OwnerPRI = PRI;
+			PRI.PlayerData = self;
 			return true;
 		}
 	//No return equals False
@@ -207,6 +244,36 @@ simulated function AdjustPlayerLocation( Pawn Other, float LX, float LY, float L
 	Other.SetLocation( aVec);
 	Other.bCollideWorld = bOldCol;
 	Other.bCollideWhenPlacing = true;
+}
+
+simulated function AddMAffector( XC_MovementAffector Other)
+{
+	if ( MA_List == none )
+		MA_List = Other;
+	else
+		MA_List = MA_List.InsertSorted( Other);
+}
+
+simulated function AffectMovement( float DeltaTime)
+{
+	local XC_MovementAffector M, N;
+	
+	if ( MA_List == none )
+		return;
+	POwner.GroundSpeed = POwner.default.GroundSpeed;
+	POwner.WaterSpeed = POwner.default.WaterSpeed;
+	POwner.AirSpeed = POwner.default.AirSpeed;
+	POwner.AccelRate = POwner.default.AccelRate;
+	M = MA_List;
+//This loop allows affectors to self destruct during 'AffectMovement'
+LOOP_AGAIN:
+	N = M.NextAffector;
+	M.AffectMovement( DeltaTime);
+	if ( N != none )
+	{
+		M = N;
+		Goto LOOP_AGAIN;
+	}
 }
 
 

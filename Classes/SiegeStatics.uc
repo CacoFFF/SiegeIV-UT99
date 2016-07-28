@@ -278,6 +278,24 @@ static function Info FindNexgenClient( PlayerPawn Player)
 			return aInfo;
 }
 
+//***************************************
+//Find the sgPlayerData element of a pawn
+//***************************************
+static function sgPlayerData GetPlayerData( Pawn Other, optional bool bCreate)
+{
+	local sgPlayerData Result;
+	if ( Other == None )
+		return None;
+	if ( sgPRI(Other.PlayerReplicationInfo) != None )
+		Result = sgPRI(Other.PlayerReplicationInfo).PlayerData;
+	if ( Result == None )
+		ForEach Other.ChildActors ( class'sgPlayerData', Result)
+			break;
+	if ( bCreate && Result == None )
+		Result = Other.Spawn( class'sgPlayerData', Other);
+	return Result;
+}
+
 
 //**********************************************
 //Announce to all player and pseudo-player pawns
