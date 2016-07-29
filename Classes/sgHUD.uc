@@ -40,7 +40,6 @@ var() string sgRanks[8];
 var() texture TeamIcons[5];
 var bool UseSpecialColor;
 var int AmpCharge;
-var bool bHasAmp;
 
 // HUD Item Postions
 var float HudItemSpeedX;
@@ -1234,7 +1233,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
                         YOffset,
                         Fade;
     local int           i, j,
-                        X;
+                        X, AmpCharge;
     local string        text;
 
 	// Percents
@@ -1326,11 +1325,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	//////////////////////// AMPLIFIER/////////////////////////
 	if ( CachedAmp != None )
 	{
-		if(!bHasAmp)
-		{
-			AmpCharge = 0.1 * CachedAmp.Charge;
-			bHasAmp = true;
- 		}
+		AmpCharge = 0.1 * CachedAmp.Charge;
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor; //SolidHUDcolor?
 		Canvas.SetPos(0,YOffset);	
@@ -1568,14 +1563,6 @@ simulated function DrawGameSynopsis(canvas Canvas)
 
 }
 
-function Timer()
-{
-	Super.Timer();
-	if ( AmpCharge >= 1 )
-		AmpCharge--;
-	else
-		bHasAmp = False;
-}
 
 simulated function DrawStatus(Canvas Canvas)
 {
