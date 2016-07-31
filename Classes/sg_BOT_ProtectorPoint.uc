@@ -26,47 +26,39 @@ function bool CheckPending()
 function int SelectBuilding()
 {
 	local sgCategoryInfo sgC;
-	local int i, iBest;
+	local int i, j, cc, iBest;
 	local float fCur, fBest;
 
 	sgC = SiegeGI(Level.Game).CategoryInfo[Team];
-	if ( (CatBStart == -1) || (CatBCount != sgC.iBuilds) )
-		ScanOptCat( sgC);
+	if ( CatBStart == -1 ) //Cache builds
+	{
+		CatBStart = sgC.NextTypedBuild( class'sgProtector', 0);
+		CatBCount = sgC.CountTypedBuilds( class'sgProtector', CatBStart);
+	}
 
 	iBest = -1;
-	For ( i=CatBStart ; i<CatBCount ; i++ )
+	if ( CatBStart >= 0 )
 	{
-		if ( ClassIsChildOf(sgC.GetBuild(i),class'sgProtector') )
+		i = CatBStart;
+		while ( cc < CatBCount )
 		{
-			fCur = sgC.GetBuild(i).static.AI_Rate( SiegeGI(Level.Game).BotControllers[Team], sgC, i);
-			if ( fCur > fBest )
+			i = sgC.NextTypedBuild( class'sgProtector', i);
+			if ( i >= 0 )
 			{
-				fBest = fCur;
-				iBest = i;
+				fCur = sgC.GetBuild(i).static.AI_Rate( SiegeGI(Level.Game).BotControllers[Team], sgC, i);
+				if ( fCur > fBest )
+				{
+					fBest = fCur;
+					iBest = i;
+				}
 			}
+			i++; //Lookup from next index
+			cc++;
 		}
 	}
 	return iBest;
 }
 
-
-//If no build, return iBuild
-//If something edits the iBuild, we'll check again
-function ScanOptCat( sgCategoryInfo sgC)
-{
-	local int i;
-
-	CatBCount = sgC.iBuilds;
-	For ( i=0 ; i<CatBCount ; i++ )
-	{
-		if ( ClassIsChildOf(sgC.GetBuild(i),class'sgProtector') )
-		{
-			CatBStart = i;
-			return;
-		}
-	}
-	CatBStart = CatBCount;
-}
 
 
 //Local method

@@ -5,20 +5,22 @@
 class sgCategoryInfo expands ReplicationInfo;
 
 var byte Team;
+var byte sgNetDirty; //Native replication tag
 
-var class<sgBuilding> NetBuild[128];
-var byte NetCategory[128];
-var sgBaseBuildRule NetRules[128];
-var int NetCost[128]; //0 = default
-var string NetCategories[17], CatLocalized[17]; //Optional localized vars
-var Texture NetCatIcons[17]; //Optional icons for categories
-var int iCat;
-var string NetProperties[128];
-var byte iBuilds;
+var private class<sgBuilding> NetBuild[128];
+var private byte NetCategory[128];
+var private sgBaseBuildRule NetRules[128];
+var private int NetCost[128]; //0 = default
+var private string NetCategories[17], CatLocalized[17]; //Optional localized vars
+var private Texture NetCatIcons[17]; //Optional icons for categories
+var private string NetProperties[128];
+var private byte bCatS[17], bCatE[17]; //Cached end/start indices
+
+var byte iCat, iBuilds, iRecBuilds;
 
 var float PriorityTimer; //Scan if > 0
-var byte CurPriItem; //Scan this item currently
 var byte PossiblePriorities[128]; //AI functions
+var byte CurPriItem; //Scan this item currently
 
 var string NewBuild;
 var string NewCategory;
@@ -44,6 +46,46 @@ simulated event PostNetBeginPlay()
 		sgB.Master = self;
 		sgB.MasterSet();
 	}
+	Timer();
+}
+
+simulated event SetInitialState()
+{
+	bScriptInitialized = true;
+	SetTimer( 2, true);
+	if ( Level.NetMode != NM_Client )
+		GotoState( 'ServerOp');
+}
+
+
+//Setup on server
+state ServerOp
+{
+	function LoadRules()
+	{
+		local sgCategoryInfo sgC;
+
+		if ( SiegeGI(Level.Game).ProfileObject == none )
+		{
+			SiegeGI(Level.Game).ProfileObject = new(Level.Game,SiegeGI(Level.Game).GameProfile) class'Object'; //This will be the profile's INI name
+			SiegeGI(Level.Game).CategoryRules = new(SiegeGI(Level.Game).ProfileObject,'CategoryRules') class'SiegeCategoryRules';
+			SiegeGI(Level.Game).CoreRules = new(SiegeGI(Level.Game).ProfileObject,'CoreModifier') class'CoreModifierRules';
+			SiegeGI(Level.Game).CoreRules.ApplyRules( SiegeGI(Level.Game) );
+		}
+
+		CatObject = SiegeGI(Level.Game).CategoryRules;
+		if ( !CatObject.bHasConfig )
+		{
+			CatObject.bHasConfig = true;
+			CatObject.SaveConfig();
+		}
+		CatObject.FullParse(self);
+		sgNetDirty++;
+	}
+Begin:
+	Sleep(0.2 * Level.TimeDilation);
+	LoadRules();
+	GotoState('');
 }
 
 function AttachRule( sgBaseBuildRule Other)
@@ -120,25 +162,28 @@ event Tick( float DeltaTime)
 }
 */
 
-event Timer()
+//Cache starting/end indices to run faster iterations
+simulated event Timer()
 {
-	local sgCategoryInfo sgC;
-
-	if ( SiegeGI(Level.Game).ProfileObject == none )
+	local int i, k;
+	if ( iBuilds != iRecBuilds )
 	{
-		SiegeGI(Level.Game).ProfileObject = new(Level.Game,SiegeGI(Level.Game).GameProfile) class'Object'; //This will be the profile's INI name
-		SiegeGI(Level.Game).CategoryRules = new(SiegeGI(Level.Game).ProfileObject,'CategoryRules') class'SiegeCategoryRules';
-		SiegeGI(Level.Game).CoreRules = new(SiegeGI(Level.Game).ProfileObject,'CoreModifier') class'CoreModifierRules';
-		SiegeGI(Level.Game).CoreRules.ApplyRules( SiegeGI(Level.Game) );
+		iRecBuilds = iBuilds;
+		For ( k=0 ; k<iCat ; k++ )
+		{
+			bCatS[k] = ArrayCount(NetBuild);
+			bCatE[k] = 0;
+		}
+		For ( k=0 ; k<iBuilds ; k++ )
+		{
+			i = NetCategory[k];
+			if ( NetBuild[k] != None && i < iCat )
+			{
+				bCatS[i] = Min( bCatS[i], k);
+				bCatE[i] = Max( bCatE[i], k);
+			}
+		}
 	}
-
-	CatObject = SiegeGI(Level.Game).CategoryRules;
-	if ( !CatObject.bHasConfig )
-	{
-		CatObject.bHasConfig = true;
-		CatObject.SaveConfig();
-	}
-	CatObject.FullParse(self);
 }
 
 event PostBeginPlay()
@@ -179,6 +224,7 @@ event Trigger( actor Other, Pawn EventInstigator)
 			return;
 	}
 
+	sgNetDirty++;
 	For ( i=0 ; i<ArrayCount(NetCategories) ; i++ )
 	{
 		if ( NetCategories[i] == "" )
@@ -195,9 +241,15 @@ event Trigger( actor Other, Pawn EventInstigator)
 			NetCategory[iBuilds] = i;
 			NetBuild[iBuilds] = NewClass;
 			iBuilds++;
+
 			return;
 		}
 	}
+}
+
+simulated final function int NumBuilds()
+{
+	return iBuilds;
 }
 
 simulated final function int FindBuild( class<sgBuilding> sgB)
@@ -217,7 +269,8 @@ simulated final function int BuildIndex( int iBuild)
 	local int i, j;
 	
 	//Count other builds in this category
-	For ( i=0 ; i<iBuild ; i++ )
+	iBuild = NetCategory[iBuild];
+	For ( i=bCatS[iBuild] ; i<=bCatE[iBuild] ; i++ )
 	{
 		if ( NetCategory[i] == NetCategory[iBuild] )
 			j++;
@@ -230,44 +283,41 @@ simulated final function class<sgBuilding> GetBuild( int i)
 	return NetBuild[i];
 }
 
+simulated final function int GetSetMode( int Category, int Index)
+{
+	local int i, j;
+
+	For ( i=bCatS[Category] ; i<=bCatE[Category] ; i++ )
+		if ( (NetCategory[i] == Category) && (j++ == Index) )
+			return i;
+	return -1;
+}
+
 simulated final function class<sgBuilding> NextBuild( class<sgBuilding> From, out int iIndex)
 {
 	local int i, j;
 
-	if ( iIndex == 0 )
+	if ( iIndex <= 0 )
 		j = FindBuild( From);
 	else
 		j = iIndex;
-	For ( i=j+1 ; i<iBuilds ; i++ )
+
+	iIndex = -1;
+	if ( j >= 0 )
 	{
-		if ( NetCategory[j] == NetCategory[i] )
+		i = j+1;
+		j = NetCategory[j];
+		while ( i<=bCatE[j] )
 		{
-			iIndex = i;
-			return NetBuild[i];
+			if ( j == NetCategory[i] )
+			{
+				iIndex = i;
+				return NetBuild[i];
+			}
+			i++;
 		}
 	}
-	iIndex = -1;
-	return none;
-}
-
-simulated final function class<sgBuilding> PrevBuild( class<sgBuilding> From, out int iIndex)
-{
-	local int i, j;
-
-	if ( iIndex == 0 )
-		j = FindBuild( From);
-	else
-		j = iIndex;
-	For ( i=j-1 ; i>=0 ; i-- )
-	{
-		if ( NetCategory[j] == NetCategory[i] )
-		{
-			iIndex = i;
-			return NetBuild[i];
-		}
-	}
-	iIndex = -1;
-	return none;
+	return None;
 }
 
 simulated final function int NextCategory( int From)
@@ -306,8 +356,30 @@ simulated final function int PrevCategory( int From)
 simulated final function int CountCategoryBuilds( int Category)
 {
 	local int i, j;
-	For ( i=0 ; i<iBuilds ; i++ )
+	For ( i=bCatS[Category] ; i<=bCatE[Category] ; i++ )
 		if ( NetCategory[i] == Category )
+			j++;
+	return j;
+}
+
+
+//=====================================
+// Type locator
+simulated final function int NextTypedBuild( class<sgBuilding> Type, optional int i)
+{
+	while ( i<iBuilds )
+	{
+		if ( NetBuild[i] != none && ClassIsChildOf(NetBuild[i], Type) )
+			return i;
+		i++;
+	}
+	return -1;
+}
+simulated final function int CountTypedBuilds( class<sgBuilding> Type, optional int i)
+{
+	local int j;
+	for ( j=0 ; i<iBuilds ; i++ )
+		if ( NetBuild[i] != none && ClassIsChildOf(NetBuild[i], Type) )
 			j++;
 	return j;
 }
@@ -316,11 +388,9 @@ simulated final function int FirstCatBuild( int Category)
 {
 	local int i;
 	
-	For ( i=0 ; i<iBuilds ; i++ )
-	{
+	For ( i=bCatS[Category] ; i<=bCatE[Category] ; i++ )
 		if ( NetCategory[i] == Category )
 			return i;
-	}
 	return -1; //OH SHIT
 }
 
@@ -329,6 +399,16 @@ simulated final function string CatName( int i)
 	if ( CatLocalized[i] != "" )
 		return CatLocalized[i];
 	return NetCategories[i];
+}
+
+simulated final function int NumCats()
+{
+	return iCat;
+}
+
+simulated final function int CatIndex( int iIndex)
+{
+	return NetCategory[iIndex];
 }
 
 //Do a graceful destruction

@@ -416,7 +416,7 @@ function ProjectFirstSupplier()
 	sgC = Game.CategoryInfo[TeamID];
 	TeamRU = AIList.TeamRU();
 	fHigh = 99999;
-	For ( i=0 ; i<sgC.iBuilds ; i++ ) //Choose the supplier
+	For ( i=0 ; i<sgC.NumBuilds() ; i++ ) //Choose the supplier
 	{
 		if ( ClassIsChildOf( sgC.GetBuild(i), class'sgSupplier') || (sgC.GetBuild(i) == class'sgSupplierXXL') )
 		{
@@ -678,7 +678,7 @@ function int SelectContainer( out float fBest)
 	local float fCur;
 
 	sgC = Game.CategoryInfo[TeamID];
-	if ( (ContBStart == -1) || (ContBCount != sgC.iBuilds) )
+	if ( (ContBStart == -1) || (ContBCount != sgC.NumBuilds()) )
 		ScanOptCat( sgC);
 
 	iBest = -1;
@@ -703,7 +703,7 @@ function ScanOptCat( sgCategoryInfo sgC)
 {
 	local int i;
 
-	ContBCount = sgC.iBuilds;
+	ContBCount = sgC.NumBuilds();
 	For ( i=0 ; i<ContBCount ; i++ )
 	{
 		if ( ClassIsChildOf(sgC.GetBuild(i),class'sgContainer') )

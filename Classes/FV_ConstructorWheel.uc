@@ -163,12 +163,12 @@ function PointerHit( float X, float Y, optional byte Code)
 			if ( (SelectedButton >= 0) && (SelectedButton < iButtons) && (Buttons[SelectedButton] != none) )
 			{
 				LocalPlayer.ConsoleCommand( Buttons[Selectedbutton].GUI_Code );
-				Log( Buttons[Selectedbutton].GUI_Code );
 				if ( FV_ConstructorWheelButton(Buttons[0]).bIsCategory ) //Action pseudo category
 				{
 					if ( SelectedButton == 0 )
 						SetupActions();
-					//else SetupCategory(... )
+					else
+						SetupCategory( sgConstructor(LocalPlayer.Weapon).CatActor, SelectedButton-1);
 				}
 				else
 					bSelectingElement = false;
@@ -304,7 +304,7 @@ function SetupCategories( sgCategoryInfo CatActor)
 	//Setup other categories
 	for ( i=1 ; i<NumCats ; i++ )
 	{
-		Buttons[i].Setup( 64, 64, i, NumCats, CatActor.NetCategories[i-1], "", "simsetcat "$string(i+3));
+		Buttons[i].Setup( 64, 64, i, NumCats, CatActor.CatName(i-1), "", "simsetcat "$string(i+3));
 		Buttons[i].RegisterTex( Texture'GUI_UpgradeModu', 4 /*modu*/, WhiteColor);
 		Buttons[i].RegisterTex( Texture'GUI_UpgradeFront', 3 /*trans*/, WhiteColor); //Use a custom texture
 	}
@@ -342,8 +342,40 @@ function SetupActions()
 	Buttons[2].RegisterTex( Texture'GUI_RemoveFront', 3/*trans*/, WhiteColor);
 }
 
-function SetupCategory( sgCategoryInfo CatActor)
+function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 {
+	local int i, NumBuilds, BuildIndex;
+	local class<sgBuilding> sgB;
+	
+	//Find out how many builds we have
+	NumBuilds = CatActor.CountCategoryBuilds( CatIndex);
+	BuildIndex = CatActor.FirstCatBuild( CatIndex);
+	sgB = CatActor.GetBuild( BuildIndex);
+	
+	//See that all buttons are there and cleaned up...
+	for ( i=0 ; i<NumBuilds ; i++ )
+	{
+		if ( Buttons[i] == none )
+		{
+			Buttons[i] = new(self) class'FV_ConstructorWheelButton';
+			Buttons[i].InheritFrom( self);
+		}
+		else
+		{
+			FV_ConstructorWheelButton(Buttons[i]).bIsCategory = False;
+			Buttons[i].FastReset();
+		}
+		FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = True;
+		Buttons[i].Setup( 64, 64, i, NumBuilds, sgB.default.BuildingName,"", "setmode "$string(CatIndex+4)@string(i) );
+		if ( (sgB != None) && (sgB.default.GUI_Icon != None) )
+			Buttons[i].RegisterTex( sgB.default.GUI_Icon, 3/*trans*/, WhiteColor );
+		else if ( ClassIsChildOf( sgB, Class'sgItem') && (Class<sgItem>(sgB).default.InventoryClass != None) && (Class<sgItem>(sgB).default.InventoryClass.default.Icon != none) )
+			Buttons[i].RegisterTex( Class<sgItem>(sgB).default.InventoryClass.default.Icon, 3/*trans*/, WhiteColor );
+		else
+			Buttons[i].RegisterTex( Texture'GUI_UpgradeFront', 3/*trans*/, WhiteColor );
+		sgB = CatActor.NextBuild( sgB, BuildIndex);
+	}
+	iButtons = NumBuilds;
 }
 
 function ConstructorDown()

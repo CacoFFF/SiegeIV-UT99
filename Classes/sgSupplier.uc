@@ -224,5 +224,6 @@ defaultproperties
      MultiSkins(1)=Texture'ContainerSpriteTeam1'
      MultiSkins(2)=Texture'ContainerSpriteTeam2'
      MultiSkins(3)=Texture'ContainerSpriteTeam3'
+     GUI_Icon=Texture'GUI_Sup'
      bUseSubclasses=True
 }

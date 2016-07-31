@@ -110,8 +110,6 @@ var(test) int GuiState; //Use bitwise?
 var(test) float MX, MY, maxX, maxY, lastXL, lastYL;
 var rotator LastView;
 var bool bHadFire;
-var class<sgBuilding> guiTemp[28];
-var byte guiTempIdx[28];
 //var bool bJustOpenedGUI;
 var bool bCanOpenGui;
 
@@ -401,7 +399,7 @@ exec simulated function SetBuild( class<sgBuilding> sgB, optional byte idx, opti
 	if ( i == -1 )
 		return; //Building unavailable
 
-	Category = CatActor.NetCategory[i] + 4;
+	Category = CatActor.CatIndex(i) + 4;
 	Selection = CatActor.BuildIndex(i);
 	SelectedBuild = sgB;
 	SelectedIndex = i;
@@ -429,7 +427,7 @@ function ClientSetBuild( class<sgBuilding> sgB, byte idx, optional bool bSilent)
 	if ( i == -1 )
 		return; //Building unavailable
 
-	Category = CatActor.NetCategory[i] + 4;
+	Category = CatActor.CatIndex(i) + 4;
 	Selection = CatActor.BuildIndex(i);
 	SelectedBuild = sgB;
 	SelectedIndex = i;
@@ -494,21 +492,14 @@ exec simulated function SetMode(int newCategory, int newSelection)
 		SimSetCat( Clamp(newCategory,0,31) );
 		return;
 	}
-	newCategory -= 4;
 
-	For ( i=0 ; i<CatActor.iBuilds ; i++ )
+	i = CatActor.GetSetMode( newCategory-4, newSelection);
+	if ( i >= 0 )
 	{
-		if ( CatActor.NetCategory[i] == newCategory )
-		{
-			if ( j++ == newSelection )
-			{
-				Category = newCategory + 4;
-				Selection = newSelection;
-				SelectedBuild = CatActor.GetBuild(i);
-				SelectedIndex = i;
-				return;
-			}
-		}
+		Category = newCategory;
+		Selection = newSelection;
+		SelectedBuild = CatActor.GetBuild(i);
+		SelectedIndex = i;
 	}
 }
 
@@ -531,21 +522,14 @@ function ClientSetMode(int newCategory, int newSelection, optional bool bBound) 
 		SelectedIndex = 255;
 		return;
 	}
-	newCategory -= 4;
 
-	For ( i=0 ; i<CatActor.iBuilds ; i++ )
+	i = CatActor.GetSetMode( newCategory-4, newSelection);
+	if ( i >= 0 )
 	{
-		if ( CatActor.NetCategory[i] == newCategory )
-		{
-			if ( j++ == newSelection )
-			{
-				Category = newCategory + 4;
-				Selection = newSelection;
-				SelectedBuild = CatActor.GetBuild(i);
-				SelectedIndex = i;
-				return;
-			}
-		}
+		Category = newCategory;
+		Selection = newSelection;
+		SelectedBuild = CatActor.GetBuild(i);
+		SelectedIndex = i;
 	}
 }
 
@@ -1407,7 +1391,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	F = MyFonts.GetBigFont(1280);
 	SF = MyFonts.GetBigFont( 640);
 	
-	For ( i=3+CatActor.iCat ; i>=0 ; i-- )
+	For ( i=3+CatActor.NumCats() ; i>=0 ; i-- )
 	{
 		if ( i == 3 ) //Don't draw the orb for now
 			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_D', false);
@@ -1463,12 +1447,12 @@ simulated event RenderTexture( ScriptedTexture Tex)
 
 		if ( SelectedBuild == none )
 		{
-			Tex.DrawColoredText( 34, 32, CatActor.NetCategories[Category-4], F, OrangeColor);
+			Tex.DrawColoredText( 34, 32, CatActor.CatName(Category-4), F, OrangeColor);
 			Tex.DrawTile( 86, 107, 64, 64, 0, 0, 64, 64, Texture'GUI_UpgradeFront', true);
 		}
 		else
 		{
-			Tex.DrawColoredText( 34, 32, CatActor.NetCategories[Category-4], F, PurpleColor);
+			Tex.DrawColoredText( 34, 32, CatActor.CatName(Category-4), F, PurpleColor);
 			Tex.DrawText( 40, 52, "> "$SelectedBuild.default.BuildingName, F);
 			if ( SelectedBuild.default.GUI_Icon != none )
 			{
@@ -1556,7 +1540,7 @@ simulated function PostRender( canvas Canvas)
 		}
 		else if ( Category < 16 )
 		{
-			aStr = CatActor.NetCategories[ Category - 4];
+			aStr = CatActor.CatName( Category - 4);
 			aStr2 = Default.CategoryText;
 		}
 
@@ -1749,72 +1733,6 @@ simulated function DrawGui( canvas Canvas)
 		Canvas.DrawColor = Col(220,220,220);
 		Canvas.bNoSmooth = True;
 
-		k = CapsuleHit();
-		if ( j==0 )
-		{
-			For ( i=0 ; i<3 ; i++ )
-			{
-				cZ = YL * 1.25 * (1.5+i);
-				DrawCapsule( Canvas, aX + YL, aY + cZ, lastXL, YL+2);
-				Canvas.Style = ERenderStyle.STY_Translucent;
-				Canvas.SetPos( aX + YL + cY, aY + YL * 1.25 * (1.5+i) + 2);
-				if ( k == i )
-				{
-					Canvas.DrawColor = SwapColors( HUDColor() );			
-					Canvas.DrawText( Default.Functions[i] );
-					Canvas.DrawColor = Col(220,220,220);					
-				}
-				else	Canvas.DrawText( Default.Functions[i] );
-			}
-			if ( ActiveOrbs() )
-			{
-				cZ = YL * 1.25 * (1.5+3);
-				DrawCapsule( Canvas, aX + YL, aY + cZ, lastXL, YL+2);
-				Canvas.Style = ERenderStyle.STY_Translucent;
-				Canvas.SetPos( aX + YL + cY, aY + YL * 1.25 * (1.5+3) + 2);
-				if ( k == 4 )
-				{
-					Canvas.DrawColor = SwapColors( HUDColor() );			
-					Canvas.DrawText( "ORB" );
-					Canvas.DrawColor = Col(220,220,220);					
-				}
-				else	Canvas.DrawText( "ORB");
-			}
-			For ( i=4 ; i<7 ; i++ )
-			{
-				cZ = YL * 1.25 * (1.5+i);
-				DrawCapsule( Canvas, aX + YL, aY + cZ, lastXL, YL+2);
-				Canvas.Style = ERenderStyle.STY_Translucent;
-				Canvas.SetPos( aX + YL + cY, aY + YL * 1.25 * (1.5+i) + 2);
-				if ( k == i )
-				{
-					Canvas.DrawColor = SwapColors( HUDColor() );			
-					Canvas.DrawText( CatActor.NetCategories[i-4] );
-					Canvas.DrawColor = Col(220,220,220);					
-				}
-				else	Canvas.DrawText( CatActor.NetCategories[i-4] );
-			}
-		}
-		else
-		{
-			For ( i=0 ; i<7 ; i++ )
-			{
-				if ( CatActor.NetCategories[j*7+i-4] == "" )
-					continue;
-				cZ = YL * 1.25 * (1.5+i);
-				DrawCapsule( Canvas, aX + YL, aY + cZ, lastXL, YL+2);
-				Canvas.Style = ERenderStyle.STY_Translucent;
-				Canvas.SetPos( aX + YL + cY, aY + YL * 1.25 * (1.5+i) + 2);
-				if ( k == i )
-				{
-					Canvas.DrawColor = SwapColors( HUDColor() );			
-					Canvas.DrawText( CatActor.NetCategories[j*7+i-4] );
-					Canvas.DrawColor = Col(220,220,220);					
-				}
-				else	Canvas.DrawText( CatActor.NetCategories[j*7+i-4] );
-			}
-		}
-
 	}
 	//We're inside a category
 	else
@@ -1829,42 +1747,8 @@ simulated function DrawGui( canvas Canvas)
 		Canvas.bNoSmooth = True;
 
 		k = (GuiState >>> 1) & 31;
-		if ( k < 21 ) //Display build list we just generated
-		{
-			//Title
-			Canvas.TextSize( CatActor.NetCategories[k-4], XL, YL);
-			DrawCapsule( Canvas, aX + YL*2, int(aY + YL*0.5), XL+cY, YL+2);
-			Canvas.DrawColor = Col(220,220,220);
-			Canvas.Style = ERenderStyle.STY_Translucent;
-			Canvas.SetPos( aX + YL*2 + cY*0.5, aY + YL*0.5 + 2);
-			Canvas.DrawText( CatActor.NetCategories[k-4] );
 
-			k = CapsuleHit();
-			for ( i=0 ; i<7 ; i++ )
-			{
-				if ( guiTemp[j*7+i] == none )
-					break;
-				cZ = YL * 1.25 * (1.5+i);
-				DrawCapsule( Canvas, aX + YL, aY + cZ, lastXL, YL+2);
-				Canvas.Style = ERenderStyle.STY_Translucent;
-				Canvas.SetPos( aX + YL + cY, aY + YL * 1.25 * (1.5+i) + 2);
-				if ( !CatActor.RulesAllow(guiTempIdx[j*7+i]) )
-				{
-					Canvas.DrawColor = SwapBack( HUDColor() );			
-					Canvas.DrawText( guiTemp[j*7+i].Default.BuildingName );
-					Canvas.DrawColor = Col(220,220,220);					
-				}
-				else if ( k == i )
-				{
-					Canvas.DrawColor = SwapColors( HUDColor() );			
-					Canvas.DrawText( guiTemp[j*7+i].Default.BuildingName );
-					Canvas.DrawColor = Col(220,220,220);					
-				}
-				else
-					Canvas.DrawText( guiTemp[j*7+i].Default.BuildingName );
-			}
-		}
-		else if ( k == 31 ) //Draw settings window!
+		if ( k == 31 ) //Draw settings window!
 		{
 			//Title
 			Canvas.TextSize( GuiSettings, XL, YL);
@@ -2033,23 +1917,6 @@ simulated function color HoverColor( bool bHover)
 	if ( bHover )
 		return SwapColors( HUDColor() );
 	return Col(220,220,220);
-}
-
-simulated function GenBuildList( int aCat) //Uses global category (4 to 27)
-{
-	local int i, j;
-	aCat -= 4;
-	While( i < CatActor.iBuilds )
-	{
-		if ( CatActor.NetCategory[i] == aCat )
-		{
-			guiTempIdx[j] = i;
-			guiTemp[j++] = CatActor.GetBuild(i);
-		}
-		i++;
-	}
-	While( j < 28 )
-		guiTemp[j++] = none;
 }
 
 simulated function DrawPointer( canvas Canvas, float aX, float aY)
@@ -2403,46 +2270,12 @@ simulated function PlayerClick()
 	tV = lastYL * 12; //Total height
 	tH = int(tV * 1.2);
 	cZ = tH - int(lastYL * 1.8);
-	//Next page button
-	if ( PointerBetween( cZ, int(tV * 0.2), cZ + int(1.4 * lastYL), int(tV * 0.2) + int(1.4 * lastYL)) )
-	{
-		j = (GuiState >>> 11) & 3; //Get page:
-		if ( (GuiState & 63) == 1 ) //Category selection, see if there's more valid categories
-		{
-			k = CatActor.NextCategory(j*7+2);
-			GuiState = GuiState & 0xFFFFE7FF;
-			if ( k != -4 ) //No new categories beyond this page
-			{
-				j = (j+1) << 11;
-				GuiState = GuiState | j;
-			}
-			//Play a sound?
-		}
-		else
-		{
-			GuiState = GuiState & 0xFFFFE7FF;
-			if ( guiTemp[7*(j+1)] != none )
-			{
-				j = (j+1) << 11;
-				GuiState = GuiState | j;
-			}
-			//Play a sound?
-		}
-		return;
-	}
-	//Back page button
-	if ( PointerBetween( cZ, int(tV * 0.4), cZ + int(1.4 * lastYL), int(tV * 0.4) + int(1.4 * lastYL)) )
-	{
-		GuiState = GuiState & 0xFFFFFFC1;
-		//Play a sound?
-		return;
-	}
+
 	//Settings page button
 	if ( PointerBetween( cZ, int(tV * 0.6), cZ + int(1.4 * lastYL), int(tV * 0.6) + int(1.4 * lastYL)) )
 	{
 		if ( (GuiState & 63) != 1 )
 			return;
-		guiTemp[0] = none;
 		GuiState = 63;
 		return;
 	}
@@ -2454,36 +2287,8 @@ simulated function PlayerClick()
 
 	//Fortification
 	j = GuiState >>> 11; //Get page:
-	if ( (GuiState & 63) == 1 )
-	{
-		if (j == 0 && ((k<3) || (k==3 && ActiveOrbs() )) )
-		{
-			GuiState = 0;
-			SetMode( k, -1);
-			return;
-		}
-		i = j*7 + k - 4;
-		if ( CatActor.FirstCatBuild(i) == -1 )
-			return; //Reject this category
-		k += j*7;
-		GenBuildList( k);
-		k = k << 1;
-		GuiState = (GuiState | k) & 0xFFFFE7FF; //Back to first page
-		//Play a sound?
-		return;
-	}
-	else
-	{
-		if ( guiTemp[0] != none ) //We have a build list setup
-		{
-			if ( guiTemp[j*7+k] != none )
-			{
-				SetBuild( guiTemp[j*7+k], guiTempIdx[j*7+k]);
-				SimCloseGui();
-			}
-			return;
-		}
-		else if ( (GuiState & 63) == 63 ) //Settings page
+
+		if ( (GuiState & 63) == 63 ) //Settings page
 		{
 			if ( j == 0 ) //Page 1
 			{
@@ -2516,7 +2321,7 @@ simulated function PlayerClick()
 				return;
 			}
 		}
-	}
+
 }
 
 simulated function PlayerDrag(float dX, float dY);
