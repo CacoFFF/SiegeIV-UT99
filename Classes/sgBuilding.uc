@@ -813,6 +813,7 @@ function DeInitBlock()
 defaultproperties
 {
      NetUpdateFrequency=15
+	 NetPriority=1.9
      BurnPerSecond=100
      bCanTakeOrb=True
      UpgradeCost=50

@@ -328,10 +328,14 @@ function Tick(float deltaTime)
 		return;
 	
 	if ( AccRU != 0 )
+	{
 		AccRUTimer += DeltaTime;
+		NetPriority = default.NetPriority * 1.3;
+	}
 	if ( AccRUTimer > 0.5 * Level.TimeDilation )
 	{
 		ClientReceiveRU( AccRU);
+		NetPriority = default.NetPriority;
 		AccRU = 0;
 		AccRUTimer = 0;
 	}

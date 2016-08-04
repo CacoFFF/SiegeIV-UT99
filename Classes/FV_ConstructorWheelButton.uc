@@ -6,6 +6,7 @@ class FV_ConstructorWheelButton expands FV_GUI_Button;
 var Texture Texture[4];
 var byte Style[4]; //Change style to zero in order to cancel drawing
 var Color Colors[4];
+var Plane ScalePos[4]; //Use Z and W for offset later
 var float SizeX, SizeY;
 var float ColorScale;
 var int iTex;
@@ -56,7 +57,7 @@ function PostRender( Canvas C)
 		C.DrawColor = Colors[i];
 	C.Style = Style[i];
 	C.SetPos( XOffset, YOffset);
-	C.DrawTileClipped( Texture[i], SizeX * Scale, SizeY * Scale, 0, 0, Texture[i].USize, Texture[i].VSize);
+	C.DrawTileClipped( Texture[i], SizeX * Scale * ScalePos[i].X, SizeY * Scale * ScalePos[i].Y, 0, 0, Texture[i].USize, Texture[i].VSize);
 	if ( ++i < iTex )
 		Goto LOOP;
 		
@@ -112,46 +113,43 @@ CHOP_AGAIN_A:
 	i = InStr( aStr, " ");
 	if ( i >= 0 )
 	{
+		if ( Len(Abbreviation) == 1 ) //First letter, let's see if remaining letter in first word are upper case
+		{
+			while ( i > 1 )
+			{
+				aStr = Mid( aStr, 1);
+				i--;
+				if ( !IsUpperCase(Asc(aStr)) )
+					break;
+				if ( i==2 )
+				{
+					Abbreviation = Left(aName, InStr(aName," "));
+					return;
+				}
+			}
+		}
 		aStr = Mid( aStr, i+1);
 		goto CHOP_AGAIN_A;
 	}
 
-	//Find other upper case letters
+	//Find other upper case letters if there's only 1 word
 	if ( Len(Abbreviation) == 1 )
 	{
 		aStr = Mid(aName, 1);
 		while ( aStr != "" )
 		{
 			i = Asc( aStr); //Upper case letter
-			if ( i>=65 && i<=90 )
+			if ( IsUpperCase(i) )
 				Abbreviation = Abbreviation $ Chr(i);
 			aStr = Mid(aStr, 1);
 		}
 	}
 }
 
-/*
-function RegisterTex( Texture aTex, byte aStyle, Color aColor)
+final function bool IsUpperCase( int Char)
 {
-	assert( aTex != none);
-	assert( iTex < arrayCount(Texture) );
-	Texture[iTex] = aTex;
-	Style[iTex] = aStyle;
-	Colors[iTex++] = aColor;
+	return Char>=65 && Char <=90;
 }
-
-function Color ScaleColor( Color C)
-{
-	local float f;
-	f = float(C.R) * ColorScale;
-	C.R = byte(f);
-	f = float(C.G) * ColorScale;
-	C.G = byte(f);
-	f = float(C.B) * ColorScale;
-	C.B = byte(f);
-	return C;
-}
-*/
 
 
 defaultproperties

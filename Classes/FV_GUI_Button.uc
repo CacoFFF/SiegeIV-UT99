@@ -6,6 +6,7 @@ class FV_GUI_Button expands FV_GUI_Master;
 var Texture Texture[4];
 var byte Style[4]; //Change style to zero in order to cancel drawing
 var Color Colors[4];
+var Plane ScalePos[4]; //Use Z and W for offset later
 var float SizeX, SizeY;
 var float ColorScale;
 var int iTex;
@@ -43,12 +44,18 @@ function Setup( float sX, float sY, float oX, float oY, string aName, optional s
 		GUI_Code = ButtonCode;
 }
 
-function RegisterTex( Texture aTex, byte aStyle, Color aColor)
+function RegisterTex( Texture aTex, byte aStyle, Color aColor, optional float ScaleX, optional float ScaleY)
 {
 	assert( aTex != none);
 	assert( iTex < arrayCount(Texture) );
+	if ( ScaleX == 0 )
+		ScaleX = 1;
+	if ( ScaleY == 0 )
+		ScaleY = 1;
 	Texture[iTex] = aTex;
 	Style[iTex] = aStyle;
+	ScalePos[iTex].X = ScaleX;
+	ScalePos[iTex].Y = ScaleY;
 	Colors[iTex++] = aColor;
 }
 

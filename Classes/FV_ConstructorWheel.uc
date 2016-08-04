@@ -60,7 +60,6 @@ function Tick( float DeltaTime)
 	//Process and absorb mouse movement if possible
 	if ( bFire || bAltFire || bSelectingCategory || bSelectingElement )
 	{
-		LocalPlayer.bShowScores = false;
 		MPos.Z = 0;
 		LastMPos = MPos;
 
@@ -151,6 +150,7 @@ function PointerHit( float X, float Y, optional byte Code)
 			sgConstructor(LocalPlayer.Weapon).OpenGui(); //Tell constructor we cannot perform normal actions
 			SetupCategories( sgConstructor(LocalPlayer.Weapon).CatActor);
 			bSelectingCategory = true; //DO IT!
+			LocalPlayer.bShowScores = false;
 		}
 		return;
 	}
@@ -162,7 +162,8 @@ function PointerHit( float X, float Y, optional byte Code)
 		{
 			if ( (SelectedButton >= 0) && (SelectedButton < iButtons) && (Buttons[SelectedButton] != none) )
 			{
-				LocalPlayer.ConsoleCommand( Buttons[Selectedbutton].GUI_Code );
+				if ( Buttons[SelectedButton].GUI_Code != "" )
+					LocalPlayer.ConsoleCommand( Buttons[SelectedButton].GUI_Code );
 				if ( FV_ConstructorWheelButton(Buttons[0]).bIsCategory ) //Action pseudo category
 				{
 					if ( SelectedButton == 0 )
@@ -170,6 +171,8 @@ function PointerHit( float X, float Y, optional byte Code)
 					else
 						SetupCategory( sgConstructor(LocalPlayer.Weapon).CatActor, SelectedButton-1);
 				}
+				else if ( !FV_ConstructorWheelButton(Buttons[0]).bIsBuilding && (SelectedButton == (iButtons-1)) ) //Settings (bIsCategory already filtered)
+					SetupSettings();
 				else
 					bSelectingElement = false;
 			}
@@ -313,10 +316,12 @@ function SetupCategories( sgCategoryInfo CatActor)
 function SetupActions()
 {
 	local int i, NumCats;
+	local Color IconColor;
 	
-	NumCats = 3; //Five actions... implement GUI AND DRAG!!!!
+	NumCats = 4; //Five actions... implement GUI AND DRAG!!!!
 
 	//See that all buttons are there and cleaned up...
+	//I could use an empty button
 	for ( i=0 ; i<NumCats ; i++ )
 	{
 		if ( Buttons[i] == none )
@@ -330,16 +335,33 @@ function SetupActions()
 			Buttons[i].FastReset();
 		}
 		FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = False;
-		Buttons[i].Setup( 64, 64, i, NumCats, sgConstructor(LocalPlayer.Weapon).Functions[i],"", "setmode "$string(i) );
+		if ( i < NumCats-1 )
+			Buttons[i].Setup( 64, 64, i, NumCats, sgConstructor(LocalPlayer.Weapon).Functions[i],"", "setmode "$string(i) );
+		else
+			Buttons[i].Setup( 64, 64, i, NumCats, "Settings", "");
 	}
+	
+
 	iButtons = NumCats;
 
+	IconColor = SwapBack(HUDColor);
+	IconColor.R = IconColor.R + (255 - IconColor.R) / 2;
+	IconColor.G = IconColor.R + (255 - IconColor.G) / 2;
+	IconColor.B = IconColor.R + (255 - IconColor.B) / 2;
+	
 	//Setup actions
 	Buttons[0].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
 	Buttons[0].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
-	Buttons[1].RegisterTex( Texture'GUI_Settings', 3/*trans*/, WhiteColor);
+	Buttons[0].RegisterTex( Texture'GUI_Circle', 2/*masked*/, IconColor, 0.375, 0.375);
+	Buttons[1].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
+	Buttons[1].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
+	Buttons[1].RegisterTex( Texture'GUI_Plus', 2/*masked*/, IconColor, 0.375, 0.375);
 	Buttons[2].RegisterTex( Texture'GUI_RemoveModu', 4/*modu*/, WhiteColor);
 	Buttons[2].RegisterTex( Texture'GUI_RemoveFront', 3/*trans*/, WhiteColor);
+	Buttons[2].RegisterTex( Texture'GUI_Minus', 2/*masked*/, IconColor, 0.375, 0.375);
+
+	Buttons[3].RegisterTex( Texture'GUI_Settings', 3/*trans*/, IconColor);
+
 }
 
 function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
@@ -367,6 +389,7 @@ function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 		}
 		FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = True;
 		Buttons[i].Setup( 64, 64, i, NumBuilds, sgB.default.BuildingName,"", "setmode "$string(CatIndex+4)@string(i) );
+		Buttons[i].RegisterTex( Texture'Botpack.EnergyMark', 4/*modu*/, WhiteColor);
 		if ( (sgB != None) && (sgB.default.GUI_Icon != None) )
 			Buttons[i].RegisterTex( sgB.default.GUI_Icon, 3/*trans*/, WhiteColor );
 		else if ( ClassIsChildOf( sgB, Class'sgItem') && (Class<sgItem>(sgB).default.InventoryClass != None) && (Class<sgItem>(sgB).default.InventoryClass.default.Icon != none) )
@@ -377,6 +400,11 @@ function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 	}
 	iButtons = NumBuilds;
 }
+
+function SetupSettings()
+{
+}
+
 
 function ConstructorDown()
 {

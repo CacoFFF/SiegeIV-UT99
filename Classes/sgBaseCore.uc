@@ -301,7 +301,8 @@ function UpdateScore()
 
 defaultproperties
 {
-     bNoRemove=True
+     NetPriority=2.2
+	 bNoRemove=True
 	 StoredRU=10
      RuMultiplier=1
      bOnlyOwnerRemove=True

@@ -146,6 +146,18 @@ replication
 		CorrectStuff, bFreeBuild, bUseAmbient, bCanRemoveWithImpunity;
 }
 
+exec simulated function ToggleSiegePanel()
+{
+	if ( ClientActor != none )
+		ClientActor.ToggleConstructor();
+}
+
+exec simulated function ToggleSiegePerformance()
+{
+	if ( ClientActor != none )
+		ClientActor.TogglePerformance();
+}
+
 exec simulated function StateControl()
 {
 	PlayerPawn(Owner).ClientMessage( string(GetStateName()) );
