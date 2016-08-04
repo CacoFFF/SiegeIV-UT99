@@ -97,9 +97,15 @@ replication
 		DSofMFX, MFXFatness, NumOfMFX, MFXrotX, Model;
 }
 
+// XC_Engine interface
+native(3540) final iterator function PawnActors( class<Pawn> PawnClass, out pawn P, optional float Distance, optional vector VOrigin, optional bool bHasPRI);
+native(3542) final iterator function InventoryActors( class<Inventory> InvClass, out Inventory Inv, optional bool bSubclasses);
+
+
+
 simulated event BeginPlay()
 {
-	class'SiegeStatics'.static.DetectXCGE( self);
+//	class'SiegeStatics'.static.DetectXCGE( self);
 }
 
 event PostBeginPlay()

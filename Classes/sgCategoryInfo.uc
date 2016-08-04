@@ -83,6 +83,7 @@ state ServerOp
 		sgNetDirty++;
 	}
 Begin:
+	SetPropertyText("bRelevantToTeam","1");
 	Sleep(0.2 * Level.TimeDilation);
 	LoadRules();
 	GotoState('');
@@ -90,6 +91,7 @@ Begin:
 
 function AttachRule( sgBaseBuildRule Other)
 {
+	Other.SetPropertyText("bRelevantToTeam","1");
 	Other.nextRule = RuleList;
 	RuleList = Other;
 	Other.Team = Team;

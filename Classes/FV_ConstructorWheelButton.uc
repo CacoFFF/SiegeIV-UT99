@@ -60,7 +60,7 @@ function PostRender( Canvas C)
 	if ( ++i < iTex )
 		Goto LOOP;
 		
-	if ( Abbreviation != "" && (Scale >= 1) && (C.Font != None) )
+	if ( Abbreviation != "" && (ColorScale >= 0.2) && (C.Font != None) )
 	{
 		C.StrLen( Abbreviation, XL, YL);
 		XO = C.ClipX * 0.5 + CachedOffset.X * Scale * 1.3;
@@ -69,8 +69,12 @@ function PostRender( Canvas C)
 			XO -= XL;
 		else if ( CachedOffset.X < 8 )
 			XO -= XL * CachedOffset.X / 8;
-		C.SetPos( XO, YO);
+		C.SetPos( XO+1, YO+1);
 		C.Style = 2;
+		C.DrawColor = class'SiegeStatics'.default.BlackColor;
+		C.DrawText( Abbreviation);
+		C.SetPos( XO, YO);
+		C.DrawColor = FV_ConstructorWheel(Parent).WhiteColor;
 		C.DrawText( Abbreviation);
 	}
 }
@@ -80,6 +84,7 @@ function Setup( float sX, float sY, float mySlot, float numSlots, string aName, 
 {
 	local float Angle;
 	local int i;
+	local string aStr;
 	
 	SizeX = sX;
 	SizeY = sY;
@@ -101,13 +106,27 @@ function Setup( float sX, float sY, float mySlot, float numSlots, string aName, 
 	
 //Generate an abbreviation	
 	Abbreviation = "";
-CHOP_AGAIN:
-	Abbreviation = Abbreviation $ Left(aName,1); //Get first letter
-	i = InStr( aName, " ");
+	aStr = aName;
+CHOP_AGAIN_A:
+	Abbreviation = Abbreviation $ Left(aStr,1); //Get first letter
+	i = InStr( aStr, " ");
 	if ( i >= 0 )
 	{
-		aName = Mid( aName, i+1);
-		goto CHOP_AGAIN;
+		aStr = Mid( aStr, i+1);
+		goto CHOP_AGAIN_A;
+	}
+
+	//Find other upper case letters
+	if ( Len(Abbreviation) == 1 )
+	{
+		aStr = Mid(aName, 1);
+		while ( aStr != "" )
+		{
+			i = Asc( aStr); //Upper case letter
+			if ( i>=65 && i<=90 )
+				Abbreviation = Abbreviation $ Chr(i);
+			aStr = Mid(aStr, 1);
+		}
 	}
 }
 

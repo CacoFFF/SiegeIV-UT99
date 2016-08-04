@@ -3,8 +3,8 @@
 
 class sg_XC_ShieldBelt extends UT_ShieldBelt;
 
-var float aTimer;
-
+var float NUF_Timer;
+var UT_Invisibility Invis;
 
 function bool HandlePickupQuery( inventory Item )
 {
@@ -68,6 +68,7 @@ function PickupFunction(Pawn Other)
 	else
 		TeamNum = 3;
 	SetEffectTexture();
+	Tick(0.0f);
 
 
 	for ( I=Other.Inventory; I!=None; I=I.Inventory )
@@ -77,40 +78,43 @@ function PickupFunction(Pawn Other)
 			Charge = 150;
 			I.Destroy();
 		}
-		else if ( ClassIsChildOf(I.Class, class'UT_Invisibility') )
-			MyEffect.bHidden = true;
 		else if ( I.Class == class'WildcardsMetalSuit' || I.Class == class'WildcardsRubberSuit' )
 		{
 			I.Charge -= I.Default.Charge / 2;
 			if ( I.Charge <= 0 )
 				I.Destroy();
 		}
-
 	}
 	SetTimer(0.5, true);
 }
 
 event Tick( float DeltaTime)
 {
-	local Inventory I;
-	local bool bOldHidden;
+	local Pawn POwner;
 
-	if ( Owner == none)
+	Super.Tick( DeltaTime);
+
+	POwner = Pawn(Owner);
+	if ( POwner == none || MyEffect == None )
 		return;
 
-	aTimer += DeltaTime;
-	if ( aTimer > 0.5 )
+	if ( POwner.bMeshEnviroMap && POwner.Texture == FireTexture'unrealshare.Belt_fx.Invis' ) //Player has an invisibility powerup
 	{
-		aTimer -= 0.5;
+		MyEffect.DrawType = DT_None;
+		MyEffect.bHidden = true;
+		if ( NUF_Timer < 0.3 ) //Update ASAP to make sure the clients can null Owner before Timer() hits on the effect
+			MyEffect.NetUpdateFrequency = 100;
+		else
+			MyEffect.NetUpdateFrequency = MyEffect.default.NetUpdateFrequency;
+		NUF_Timer += DeltaTime / Level.TimeDilation;
+		MyEffect.SetOwner(None);
+	}
+	else
+	{
 		MyEffect.DrawType = DT_Mesh;
-//		MyEffect.bHidden = false;
-		for ( I=Owner.Inventory; I!=None; I=I.Inventory )
-			if ( ClassIsChildOf(I.Class, class'UT_Invisibility') )
-			{
-				MyEffect.DrawType = DT_None;
-//				MyEffect.bHidden = true;
-				break;
-			}
-
+		MyEffect.bHidden = false;
+		MyEffect.SetLocation(Owner.Location);
+		MyEffect.SetOwner(Owner);
+		NUF_Timer = 0;
 	}
 }

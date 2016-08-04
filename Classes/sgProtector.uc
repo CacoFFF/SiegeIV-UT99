@@ -14,10 +14,9 @@ var XC_ProtProjStorage Store;
 var native Pawn BufferedEnemies[4];
 var byte ScanCycle;
 
+
 function CompleteBuilding()
 {
-//	if ( ShouldFire() && !bDisabledByEMP)
-//		Shoot(FindEnemy());
 	if ( !bDisabledByEMP )
 		BufferAndShoot();
 }
@@ -84,6 +83,59 @@ final function Pawn FindTeamTarget( float Dist, byte aTeam)
 				{
 					BestDist = CurDist;
 					Best = P;
+				}
+			}
+	}
+	return Best;
+}
+
+//XC_Engine v19 variant
+final function Pawn XCGE_FindTeamTarget( float Dist, byte aTeam)
+{
+	local Pawn P, Best;
+	local sgBuilding sgB;
+	local ScriptedPawn SP;
+	local float BestDist, CurDist;
+	
+	BestDist = Dist;
+	
+	if ( ScanCycle == 3 ) //Monsters
+	{
+		ForEach PawnActors( class'ScriptedPawn', SP, Dist)
+			if ( SP.bCollideActors && (SP.Health > 10) && (SP.PlayerReplicationInfo == none || SP.PlayerReplicationInfo.Team != Team) )
+			{
+				CurDist = VSize( SP.Location - Location);
+				if ( CurDist < BestDist )
+				{
+					BestDist = CurDist;
+					Best = SP;
+				}
+			}
+	}
+	else //Players
+	{
+		if ( (SiegeGI(Level.Game) != none) && (SiegeGI(Level.Game).Cores[aTeam] == none) )
+			return none;
+		//Scan players first for quick reject
+		ForEach PawnActors( class'Pawn', P, Dist, Location, true)
+			if ( P.bCollideActors && ShouldAttackTeamPawn(P, aTeam) )
+			{
+				CurDist = VSize( P.Location - Location);
+				if ( CurDist < BestDist )
+				{
+					BestDist = CurDist;
+					Best = P;
+				}
+			}
+		//Scan sgBuildings in shorter range
+		ForEach PawnActors( class'sgBuilding', sgB, BestDist)
+			if ( P.bCollideActors && (sgB.Team == aTeam) && ShouldAttackTeamPawn(sgB, aTeam) )
+			{
+				CurDist = VSize( sgB.Location - Location);
+				if ( CurDist < BestDist )
+				{
+					BestDist = CurDist;
+					Best = sgB;
 				}
 			}
 	}
@@ -179,58 +231,7 @@ function bool ShouldAttackTeamPawn( Pawn aPawn, byte aTeam)
 		&& !SuitProtects(aPawn)
 		&& FastTrace(aPawn.Location);
 }
-/*
-function bool ShouldAttack(Pawn enemy)
-{
-    if ( ScriptedPawn(enemy) != None && (enemy.PlayerReplicationInfo == none || enemy.PlayerReplicationInfo.Team != Team) )
-    {
-        if ( enemy.Health <= 10 )
-            return false;
-        return FastTrace( enemy.Location);
-    }
-		
-    if ( sgBuilding(enemy) != None )
-    {
-        if ( sgBuilding(enemy).Team == Team || sgBuilding(enemy).Energy < 0 )
-            return false;
-    }
-    else if ( enemy.PlayerReplicationInfo == None || enemy.PlayerReplicationInfo.bIsSpectator ||
-      enemy.PlayerReplicationInfo.Team == Team ||
-      enemy.Health <= 10 || !enemy.bProjTarget || SuitProtects(enemy) )
-        return false;
-    return FastTrace(enemy.Location);
-}
 
-function Pawn FindEnemy()
-{
-	local Pawn p;
-	local float eDist;
-
-	//Should be applied during upgrade, does the function Upgraded() properly work?
-//	SightRadius = 1000 + 1750*Grade;
-
-	if ( Enemy != none )
-	{
-		eDist = VSize( Enemy.Location - Location);
-		if ( (eDist > SightRadius) || !ShouldAttack(Enemy) )
-			Enemy = none;
-		else
-		{
-			eDist -= 1;
-			foreach RadiusActors(class'Pawn', p, eDist)
-				if ( (VSize(p.Location - Location) < VSize(Enemy.Location - Location)) && ShouldAttack(p) )
-					Enemy = p;
-			return Enemy;
-		}
-	}
-
-	ForEach RadiusActors(class'Pawn', p, SightRadius)
-		if ( (Enemy == None || VSize(p.Location - Location) < VSize(Enemy.Location - Location)) && ShouldAttack(p) )
-			Enemy = p;
-
-    return Enemy;
-}
-*/
 function bool SuitProtects( pawn Other)
 {
 	local Inventory I;

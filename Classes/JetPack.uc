@@ -232,8 +232,8 @@ simulated function UserTimer()
 		return;
 	
 	sp = sgSpeed(Pawn(Owner).FindInventoryType(class'sgSpeed'));
-	if (sp != None)
-		sp.GotoState('DeActivated');
+	if (sp != None && sp.bActive )
+		sp.GotoState('');
 	VelAdd = PushVel( Pawn(Owner).bRun == 0 );
 //	Log("Real velocity is: "$VelAdd@"from"@Owner.Velocity);
 	if ( PushPool != none )

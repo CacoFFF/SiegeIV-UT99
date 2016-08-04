@@ -10,6 +10,13 @@ var bool bXCGE;
 var bool bXCGE_Octree;
 
 var int XCGE_Version;
+var Color BlackColor;
+
+
+
+native(3571) static final function float XCGE_HSize( vector A);
+
+native(3560) static final function bool ReplaceFunction( class<Object> ReplaceClass, class<Object> WithClass, name ReplaceFunction, name WithFunction, optional name InState);
 
 
 //*********************
@@ -18,11 +25,15 @@ var int XCGE_Version;
 
 static function bool DetectXCGE( Actor Other)
 {
-	if ( default.XCGE_Version == -1 )
-		return default.bXCGE;
 	default.bXCGE = InStr( Other.XLevel.GetPropertyText("Engine"), "XC_GameEngine") >= 0;
 	default.XCGE_Version = int(Other.Level.ConsoleCommand("get ini:Engine.Engine.GameEngine XC_Version"));
 	default.bXCGE_Octree = Other.Level.ConsoleCommand("get ini:Engine.Engine.GameEngine bCollisionHashHook") ~= string(default.bTrue);
+	if ( (default.XCGE_Version >= 19) && (Other.Level.NetMode != NM_Client) )
+	{
+		ReplaceFunction( class'SiegeStatics', class'SiegeStatics', 'HSize', 'XCGE_HSize');
+		ReplaceFunction( class'sgProtector', class'sgProtector', 'FindTeamTarget', 'XCGE_FindTeamTarget');
+		ReplaceFunction( class'sgProtector', class'SiegeStatics', 'SuitProtects', 'SuitProtects');
+	}
 	return default.bXCGE;
 }
 
@@ -316,9 +327,27 @@ static function AnnounceAll( Actor Broadcaster, string Msg)
 }
 
 
+
+
+//*******************************************************
+//** XC_ENGINE - Function storage for other classes *****
+//** Stored here to reduce field count in said classes **
+//*******************************************************
+
+//Nasty hack, changes type of parameter to gain access to 'InventoryActors' native
+function bool SuitProtects( sgBuilding Other)
+{
+	local sgSuit sgS;
+	ForEach Other.InventoryActors( class'sgSuit', sgS, true)
+		return sgS.bNoProtectors;
+}
+
+
+
 defaultproperties
 {
 	bRelease=True
 	bTrue=True
 	XCGE_Version=-1
+	BlackColor=(R=0,G=0,B=0)
 }

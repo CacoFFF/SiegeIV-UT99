@@ -253,7 +253,7 @@ function PostRender( Canvas C)
 			{
 				C.DrawColor = SwapColors( HUDColor );
 				C.Style = 3; //Trans
-				C.SetPos( Buttons[SelectedButton].XOffset - 16, Buttons[SelectedButton].YOffset - 16); //Extremely ugly
+				C.SetPos( Buttons[SelectedButton].XOffset - 16 * Scale, Buttons[SelectedButton].YOffset - 16 * Scale); //Extremely ugly
 				C.DrawIcon( Texture'GWeel_Rotator_a00', Scale * 0.75);
 			}
 		}
