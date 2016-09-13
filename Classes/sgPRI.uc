@@ -136,6 +136,8 @@ simulated event SetInitialState()
 	bScriptInitialized = true;
 	if ( Level.NetMode == NM_Client )
 		GotoState('ClientOp');
+	else if ( Spectator(Owner) != None )
+		GotoState('ServerSpectatorOp');
 	else
 		GotoState('ServerOp');
 }
@@ -156,6 +158,7 @@ Begin:
 		sgClientSetup();
 }
 
+//Procedural one-time actions in the server
 state ServerOp
 {
 	function LocateIpToCountry()
@@ -166,19 +169,44 @@ state ServerOp
 	}
 Begin:
 	Sleep(0.0);
+	Owner.Spawn(class'sgPlayerData',Owner);
 	if ( SiegeGI(Level.Game) != none )
 		RU = SiegeGI(Level.Game).StartingRU;
-	if ( Spectator(Owner) == none )
-		Owner.Spawn(class'sgPlayerData',Owner);
 	if ( PlayerPawn(Owner) == none )
-		PlayerFingerPrint = "BOT_"$PlayerName;
+		SendFingerPrint("ARTIFICIAL_"$PlayerName);
 	else if ( ViewPort(PlayerPawn(Owner).Player) != none ) //Local player found
 	{
 		PlayerFingerPrint = "LocalPlayer";
 		Owner.Spawn(class'sgClient');
 	}
 	LocateIpToCountry();
+
+	//Pre-Game, maybe use other checks?
+	while ( Pawn(Owner).Weapon == None )
+	{
+		if ( SiegeGI(Level.Game).bTournament && PlayerPawn(Owner) != None )
+			bReadyToPlay = PlayerPawn(Owner).bReadyToPlay;
+		else
+			bReadyToPlay = true;
+		Sleep(0.0);
+	}
+	bReadyToPlay = false;
+	bGameStarted = true;
 }
+
+//Spectators don't need to pass the fingerprint check
+state ServerSpectatorOp
+{
+	ignores Tick;
+Begin:
+	Sleep(0.0);
+	if ( ViewPort(Spectator(Owner).Player) != none ) //Local player found
+	{
+		PlayerFingerPrint = "LocalPlayer";
+		Owner.Spawn(class'sgClient');
+	}
+}
+
 
 simulated function RequestFingerPrint( optional bool bRegen)
 {
@@ -319,11 +347,6 @@ function Tick(float deltaTime)
     local PlayerPawn P;
     local string temp;
 
-	if ( Spectator(Owner) != none )
-	{
-		Disable('Tick');
-		return;
-	}
 	if ( Pawn(Owner) == none )
 		return;
 	
@@ -351,11 +374,6 @@ function Tick(float deltaTime)
 				Pawn(Owner).ClientMessage("Fingerprint not received by server, disconnecting");
 				Owner.Destroy();
 			}
-			else if ( !Owner.IsA('PlayerPawn') )
-			{
-				SendFingerPrint("ARTIFICIAL_"$PlayerName);
-				AIQueuer = Spawn(class'sgAIqueuer',Owner,'sgAIqueuer');
-			}
 			else
 			{
 				RequestFingerPrint();
@@ -372,18 +390,6 @@ function Tick(float deltaTime)
 	}
 	if ( bReachedSupplier && SupplierTimer > 0 )
 		SupplierTimer -= deltaTime;
-
-	if ( !bGameStarted && (Pawn(Owner).Weapon != none) )
-		bGameStarted = true;
-	if ( !bGameStarted && !bReadyToPlay )
-	{
-		if ( PlayerPawn(Owner) == none )
-			bReadyToPlay = true;
-		else if ( DeathMatchPlus(Level.Game).bTournament && (PlayerPawn(Owner) != none) )
-			bReadyToPlay = PlayerPawn(Owner).bReadyToPlay;
-	}
-	else if ( bReadyToPlay && bGameStarted )
-		bReadyToPlay = false;
 
 	RU = fMax( RU, 0.f);
 

@@ -6,6 +6,11 @@ class sgPRI_alerts expands sgPRI;
 
 var Mutator AdminAlert;
 
+simulated event SetInitialState()
+{
+	bScriptInitialized = true;
+}
+
 function FindAA()
 {
 	local mutator M;

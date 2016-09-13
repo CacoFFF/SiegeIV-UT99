@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0026);
+class SiegeGI extends TeamGamePlus config(SiegeIV_0027);
 
 var class<Object> GCBind; //SiegeNative plugin ref to prevent GC cleaning
 

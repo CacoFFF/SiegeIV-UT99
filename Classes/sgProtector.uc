@@ -129,7 +129,7 @@ final function Pawn XCGE_FindTeamTarget( float Dist, byte aTeam)
 			}
 		//Scan sgBuildings in shorter range
 		ForEach PawnActors( class'sgBuilding', sgB, BestDist)
-			if ( P.bCollideActors && (sgB.Team == aTeam) && ShouldAttackTeamPawn(sgB, aTeam) )
+			if ( sgB.bCollideActors && (sgB.Team == aTeam) && ShouldAttackTeamPawn(sgB, aTeam) )
 			{
 				CurDist = VSize( sgB.Location - Location);
 				if ( CurDist < BestDist )
