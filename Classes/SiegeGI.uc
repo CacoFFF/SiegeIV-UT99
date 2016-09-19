@@ -1728,6 +1728,24 @@ function bool ChangeTeam(Pawn other, int newTeam)
 	return false;
 }
 
+function PlayTeleportEffect( actor Incoming, bool bOut, bool bSound)
+{
+ 	local UTTeleportEffect PTE;
+
+	if ( bRequireReady && (Countdown > 0) )
+		return;
+
+	if ( Incoming.bIsPawn && (Incoming.Mesh != None) )
+	{
+		if ( bSound )
+		{
+ 			PTE = Spawn(class'UTTeleportEffect',Incoming,, Incoming.Location, Incoming.Rotation);
+ 			PTE.Initialize(Pawn(Incoming), bOut);
+			PTE.PlaySound(sound'Resp2A', PTE.TransientSoundVolume * Pawn(Incoming).SoundDampening, 10.0);
+		}
+	}
+}
+
 function CoreDestroyed(sgBaseCore core)
 {
     local int       remainingTeams,
