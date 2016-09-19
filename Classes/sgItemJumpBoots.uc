@@ -32,4 +32,5 @@ defaultproperties
      SkinYellowTeam=Texture'HealthPodSkinT3'
      SpriteGreenTeam=Texture'MotionAlarmSpriteT2'
      SpriteYellowTeam=Texture'MotionAlarmSpriteT3'
+     GUI_Icon=Texture'GUI_Boots'
 }

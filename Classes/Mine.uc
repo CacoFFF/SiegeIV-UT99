@@ -331,4 +331,5 @@ defaultproperties
      RULevelMult=4
      BuildDistance=37
 	 RuRewardScale=1.1
+     GUI_Icon=Texture'GUI_Mine'
 }

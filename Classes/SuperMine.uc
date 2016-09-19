@@ -18,4 +18,5 @@ defaultproperties
      ExpRadiusLevel=35
      SelfDamageDet=200
      RULevelMult=2
+     GUI_Icon=Texture'GUI_SuperMine'
 }

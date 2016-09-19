@@ -187,7 +187,7 @@ Begin:
 		if ( SiegeGI(Level.Game).bTournament && PlayerPawn(Owner) != None )
 			bReadyToPlay = PlayerPawn(Owner).bReadyToPlay;
 		else
-			bReadyToPlay = true;
+			bReadyToPlay = false;
 		Sleep(0.0);
 	}
 	bReadyToPlay = false;

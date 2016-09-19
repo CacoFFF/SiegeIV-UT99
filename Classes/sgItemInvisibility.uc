@@ -32,4 +32,5 @@ defaultproperties
      SkinYellowTeam=Texture'BoosterSkinTeam3'
      SpriteGreenTeam=Texture'PoisonGuardianSpriteT2'
      SpriteYellowTeam=Texture'PoisonGuardianSpriteT3'
+     GUI_Icon=Texture'GUI_Invis'
 }
