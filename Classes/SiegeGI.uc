@@ -1741,7 +1741,7 @@ function PlayTeleportEffect( actor Incoming, bool bOut, bool bSound)
 		{
  			PTE = Spawn(class'UTTeleportEffect',Incoming,, Incoming.Location, Incoming.Rotation);
  			PTE.Initialize(Pawn(Incoming), bOut);
-			PTE.PlaySound(sound'Resp2A', PTE.TransientSoundVolume * Pawn(Incoming).SoundDampening, 10.0);
+			PTE.PlaySound(sound'Resp2A',, 7.0 * Square(Pawn(Incoming).SoundDampening) );
 		}
 	}
 }

@@ -12,6 +12,7 @@ var() bool bFullAmmoRestock;
 var() bool bTakeProductVisual;
 var() bool bTouchMechanics; //Make product use simple pickup methods
 var() bool bOwnerlessCheck; //sgItem is particularly expensive when ownerless, check every 2 ticks instead
+var() bool bDeactivatable; //Activate at pickup, but de-regulate bAutoActivate so it can be deactivatable
 var() int ProductCount;
 
 var Inventory MyProduct; //Safety checks, Inventory chain isn't replicated
@@ -229,7 +230,11 @@ function bool GiveItems( Pawn Other)
 					if ( Other.SelectedItem == None)
 	 					Other.SelectedItem = MyProduct;
 					if ( Pickup(MyProduct).bAutoActivate && Other.bAutoActivate )
+					{
 						MyProduct.Activate();
+						if ( bDeactivatable )
+							Pickup(MyProduct).bAutoActivate = false;
+					}
 				}
 				if ( MyProduct.PickupMessageClass == None )
 					Other.ClientMessage(MyProduct.PickupMessage, 'Pickup');

@@ -13,6 +13,7 @@ function ModifyProduct( Inventory I, int Idx)
 defaultproperties
 {
      bTakeProductVisual=True
+	 bDeactivatable=True
      bNoUpgrade=True
      InventoryClass=Class'UnrealShare.SCUBAGear'
      BuildingName="Scuba Gear"

@@ -21,6 +21,11 @@ class sgHUD extends ChallengeTeamHUD config;
 #exec Texture Import File=Graphics\HUD_SpyEyes.pcx Name=HUD_SpyEyes Mips=Off Group=HUD Flags=2
 #exec Texture Import File=Graphics\HUD_Invis.pcx Name=HUD_Invis Mips=Off Group=HUD Flags=2
 #exec Texture Import File=Graphics\HUD_Scuba.pcx Name=HUD_Scuba Mips=Off Group=HUD Flags=2
+#exec Texture Import File=Graphics\HUD_DampenerON.pcx Name=HUD_DampenerON Mips=Off Group=HUD Flags=2
+#exec Texture Import File=Graphics\HUD_DampenerOFF.pcx Name=HUD_DampenerOFF Mips=Off Group=HUD Flags=2
+#exec Texture Import File=Graphics\HUD_DampenerModu.pcx Name=HUD_DampenerModu Mips=Off Group=HUD Flags=2
+
+
 
 var Pawn            IdentifyPawn;
 var() color         GreyColor;
@@ -41,18 +46,9 @@ var() texture TeamIcons[5];
 var bool UseSpecialColor;
 var int AmpCharge;
 
-// HUD Item Postions
-var float HudItemSpeedX;
-var float HudItemSpeedY;
-var float HudItemJetX;
-var float HudItemJetY;
-var float HudItemDashX;
-var float HudItemDashY;
-var float HudItemSlotX;
+var float DecimalTimer;
 var float HudItemSlotSpace;
 
-// Custom stuff by WILDCARD
-var DashPlayer DashPlayerInstance;
 
 // The message color variable
 var color SpecialMessageColor;
@@ -183,6 +179,7 @@ simulated function CacheInventory()
 {
 	local Inventory Inv;
 	local int LoopCount, i;
+	local Pawn P;
 	local bool bFoundWeaponInChain, bFoundAmmoInChain;
 	
 	CachedArmor = 0;
@@ -191,8 +188,11 @@ simulated function CacheInventory()
 	HiddenArmor = 0;
 	bFoundWeaponInChain = Pawn(Owner).Weapon != none; //We have a weapon to find
 	bFoundAmmoInChain = !bFoundWeaponInChain || (Pawn(Owner).Weapon.AmmoType == none); //We have ammo to find
+	P = Pawn(Owner);
+	if ( PawnOwner != None )
+		P = PawnOwner;
 	
-	For ( inv=Owner.Inventory ; inv!=none ; inv=inv.Inventory )
+	For ( inv=P.Inventory ; inv!=none ; inv=inv.Inventory )
 	{
 		if ( ++LoopCount > 100 )
 		{
@@ -1344,6 +1344,39 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(AmpCharge % 10), 0, 25.0, 64.0);
 		Canvas.Style = aStyle;
 	}
+	
+	//////////////////////// DAMPENER ////////////////////////
+	if ( CachedDamp != None )
+	{
+		AmpCharge = 0.1 * CachedDamp.Charge;
+		YOffset -= 63.9 * WeapScale;
+		Canvas.SetPos(0,YOffset);	
+		Canvas.Style = ERenderStyle.STY_Modulated;
+		Canvas.DrawColor = WhiteColor;
+		Canvas.DrawIcon(Texture'HUD_DampenerModu', WeapScale);
+		Canvas.SetPos(0,YOffset);	
+		Canvas.Style = ERenderStyle.STY_Translucent;
+		Canvas.DrawColor = HUDColor;
+		if ( CachedDamp.bActive && (AmpCharge > 0) )
+		{
+			Canvas.DrawIcon(Texture'HUD_DampenerON', WeapScale);
+			Canvas.DrawColor = GoldColor;
+		}
+		else
+		{
+			Canvas.DrawIcon(Texture'HUD_DampenerOFF', WeapScale);
+			Canvas.DrawColor = RedColor;
+		}
+		Canvas.Style = ERenderStyle.STY_Normal;
+		if ( AmpCharge >= 10 )
+		{
+			Canvas.SetPos( 79 * WeapScale, YOffset + 20 * WeapScale);
+			Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(AmpCharge / 10), 0, 25.0, 64.0);
+		}
+		Canvas.SetPos( 96 * WeapScale, YOffset + 20 * WeapScale);
+		Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(AmpCharge % 10), 0, 25.0, 64.0);
+		Canvas.Style = aStyle;
+	}
 
 	//////////////////////// TELENETWORK /////////////////////////
 	if ( CachedTelenet != None )
@@ -1361,7 +1394,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.DrawIcon(Texture'HUD_TNetworkT', WeapScale);
 	}
 
-	//////////////////////// SCUBAGEAR/////////////////////////
+	//////////////////////// SCUBAGEAR /////////////////////////
 	if ( CachedScuba != None )
 	{
 		YOffset -= 63.9 * WeapScale;
@@ -2058,6 +2091,22 @@ simulated function Message( PlayerReplicationInfo PRI, coerce string Msg, name M
 		ShortMessageQueue[3].StringMessage = Msg;
 	else
 		ShortMessageQueue[3].StringMessage = MessageClass.Static.AssembleString(self,0,PRI,Msg);
+}
+
+simulated function Tick( float DeltaTime)
+{
+	Super.Tick( DeltaTime);
+	if ( (DecimalTimer += DeltaTime) >= 0.1 )
+	{
+		DecimalTimer -= 0.1;
+		TimerDecimal();
+	}
+}
+
+simulated function TimerDecimal()
+{
+	if ( CachedDamp != None && CachedDamp.bActive && (CachedDamp.Charge > 0) && Level.NetMode == NM_Client )
+		CachedDamp.Charge--;
 }
 
 simulated function Color NewColor( byte r, byte g, byte b )

@@ -5,19 +5,22 @@ class sgItemDampener expands sgItem;
 
 function ModifyProduct( Inventory I, int Idx)
 {
+	local float Added;
 	Super.ModifyProduct( I, Idx);
-	I.Charge *= 2.2;
+	Added = (Grade ** 1.6) * 10;
+	I.Charge = I.Charge * 1.5 + Added;
 }
 
 
 defaultproperties
 {
-     bNoUpgrade=True
+     bNoUpgrade=False
      bTakeProductVisual=True
+	 bDeactivatable=True
      InventoryClass=Class'Unreali.Dampener'
      BuildingName="Dampener"
-     BuildCost=125
-     UpgradeCost=0
+     BuildCost=100
+     UpgradeCost=5
      SpriteScale=0.200000
      Model=LodMesh'Unreali.DampenerM'
      SkinRedTeam=Texture'ContainerSkinTeam0'
