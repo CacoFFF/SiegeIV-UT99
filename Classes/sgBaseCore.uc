@@ -83,6 +83,40 @@ simulated function int GetTeamSize()
 	return i;
 }
 
+//Returns how many are maxed out
+simulated final function int AddRuToPlayers( float SetRU, float MaxRU)
+{
+	local sgPRI PRI;
+	local int MaxedOut;
+
+	ForEach AllActors(class'sgPRI', PRI)
+		if( PRI.Team == Team )
+		{
+			if ( PRI.RU >= MaxRU )
+				MaxedOut++;
+			else
+				PRI.AddRU( SetRU, true);
+		}
+	return MaxedOut;
+}
+
+//XC_Engine version
+simulated final function int AddRuToPlayers_XC( float SetRU, float MaxRU)
+{
+	local sgPRI PRI;
+	local int MaxedOut;
+	
+	ForEach DynamicActors(class'sgPRI', PRI)
+		if( PRI.Team == Team )
+		{
+			if ( PRI.RU >= MaxRU )
+				MaxedOut++;
+			else
+				PRI.AddRU( SetRU, true);
+		}
+	return MaxedOut;
+}
+
 simulated function Timer()
 {
 	local sgPRI a;
@@ -129,12 +163,9 @@ simulated function Timer()
 		{
 			if ( StoredRU > SetRU*TeamSize*2 )
 				bRemoveFromStore = true;
-				
-/*			{
-				StoredRU -= SetRU*TeamSize*2;
-				SetRU *= 3;
-			}*/
-			ForEach AllActors(class'sgPRI', a)
+
+			MaxedOut = AddRuToPlayers( SetRU * (1+2*int(bRemoveFromStore)), MaxRU);
+/*			ForEach AllActors(class'sgPRI', a)
 			{
 				if( a.Team == Team )
 				{
@@ -144,7 +175,7 @@ simulated function Timer()
 						a.AddRU( SetRU * (1+2*int(bRemoveFromStore)), true);
 				}
 			}
-
+*/
 			if ( MaxedOut > 0 )
 				StoredRU += SetRU * 0.5 * MaxedOut; //Those maxed out give half their RU to core
 			if ( bRemoveFromStore )
