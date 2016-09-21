@@ -20,8 +20,6 @@ function bool GiveItems( Pawn Other)
 	if ( Super.GiveItems(Other) )
 	{
 		Other.DamageScaling = 2 + (Grade/10);
-		if ( UDamage(Other.Inventory) != none )
-			Spawn( class'sg_UDamage_Timer', Other).Item = UDamage(Other.Inventory);
 		return true;
 	}
 }

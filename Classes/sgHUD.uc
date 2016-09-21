@@ -2105,8 +2105,13 @@ simulated function Tick( float DeltaTime)
 
 simulated function TimerDecimal()
 {
-	if ( CachedDamp != None && CachedDamp.bActive && (CachedDamp.Charge > 0) && Level.NetMode == NM_Client )
-		CachedDamp.Charge--;
+	if ( Level.NetMode == NM_Client )
+	{
+		if ( CachedDamp != None && CachedDamp.bActive && (CachedDamp.Charge > 0) )
+			CachedDamp.Charge--;
+		if ( CachedAmp != None && CachedAmp.bActive && (CachedAmp.Charge > 0) )
+			CachedAmp.Charge--;
+	}
 }
 
 simulated function Color NewColor( byte r, byte g, byte b )

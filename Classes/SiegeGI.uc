@@ -1098,8 +1098,6 @@ function bool PickupQuery( Pawn Other, Inventory item )
 	{
 		sgPRI(Other.PlayerReplicationInfo).sgInfoSpreeCount += 10;
 	}
-	if ( Item.Class == Class'UDamage' && (PlayerPawn(Other) != none) )
-		Spawn( class'sg_UDamage_Timer', Other).Item = UDamage(Item);
 	return Result;
 }
 
