@@ -19,19 +19,20 @@ var() bool bBuildingLights;
 var() float GuiSensitivity; //0-1
 var() float SirenVol; //0-1
 var() string FingerPrint;
+var() float ScoreboardBrightness;
 var() bool bFPnoReplace; //Never replace fingerprint
 var() bool bUseLC; //Lag compensation >>>> DEPRECATED
 var() bool bUseNewDeco;
 var() bool bBuildInfo; //Alternative build interface
 var() bool bClientIGDropFix;
-var() config bool bHighPerformance;
-var() float ScoreboardBrightness;
+var() bool bHighPerformance;
 
 var bool bSendFingerPrint;
-var int iChance;
 var bool bTimeoutSafety;
-var IntFileWriter Writer;
 var bool bTriggerSave;
+var int iChance;
+var IntFileWriter Writer;
+var EffectsPool EffectsPool;
 
 var Object TmpOuter;
 var sgClientSettings sgSet;
@@ -74,6 +75,11 @@ simulated event PostBeginPlay()
 		break;
 	}
 
+	ForEach AllActors (class'EffectsPool', EffectsPool)
+		break;
+	if ( EffectsPool == None )
+		EffectsPool = Spawn(class'EffectsPool');
+	
 	ConstructorPanel = new( self, 'sgConstructorPanel') class'FV_sgConstructorPanel';
 	ConstructorPanel.LocalPlayer = LocalPlayer;
 

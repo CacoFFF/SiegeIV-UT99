@@ -326,7 +326,14 @@ static function AnnounceAll( Actor Broadcaster, string Msg)
 	}
 }
 
-
+//************************************
+//Get detail value, 3 is max, 0 is min
+//************************************
+static function int GetDetailMode( LevelInfo Level)
+{
+	return 2 + int(Level.bHighDetailMode)
+			- (int(Level.bDropDetail) + int(Level.bAggressiveLOD) + int(class'sgClient'.default.bHighPerformance));
+}
 
 
 //*******************************************************
@@ -341,6 +348,7 @@ function bool SuitProtects( sgBuilding Other)
 	ForEach Other.InventoryActors( class'sgSuit', sgS, true)
 		return sgS.bNoProtectors;
 }
+
 
 
 

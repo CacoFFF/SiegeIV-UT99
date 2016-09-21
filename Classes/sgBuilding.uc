@@ -22,6 +22,7 @@ var sgBuildingVolume MyVolume;
 var array<int> BlockedReachSpecs;
 var int iBlockPoll;
 var NavigationPoint N;
+var EffectsPool EffectsPool;
 
 var float               SCount, TotalScount;
 var sgMeshFX            myFX;
@@ -106,6 +107,11 @@ native(3542) final iterator function InventoryActors( class<Inventory> InvClass,
 simulated event BeginPlay()
 {
 //	class'SiegeStatics'.static.DetectXCGE( self);
+	if ( Level.NetMode != NM_DedicatedServer )
+	{
+		ForEach AllActors (class'EffectsPool', EffectsPool)
+			break;
+	}
 }
 
 event PostBeginPlay()
@@ -244,16 +250,14 @@ simulated event Timer()
 	    {
 		    DrawScale = SpriteScale * (0.8 * (1 - SCount / (BuildTime*10)) + 0.2);
 
-            if ( Level.NetMode != NM_DedicatedServer && DSofMFX > 0.4)
-		        for ( i = 0; i < rand(1)+1; i++ )
-		        {
-			        pt = Spawn(class'sgParticle',,, Location + VRand() * 400);
-                    if ( pt != None )
-			            pt.Velocity = Location - pt.Location;
-		        }
-
 			if( Energy <= 0 )
                 Destruct();
+			else if ( (EffectsPool != None) && DSofMFX > 0.4 * FRand() )
+			{
+				i = class'SiegeStatics'.static.GetDetailMode(Level) + rand(2); //1/2 chance to ignore minimum detail mode... 1/4 chance to spawn the particle
+		        for ( i=rand(i); i>0; i-- )
+					EffectsPool.RequestBuildParticle( self);
+			}
 	    }
 	    else
 	    {

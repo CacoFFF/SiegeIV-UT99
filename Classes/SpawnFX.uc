@@ -3,39 +3,43 @@
 //=============================================================================
 class SpawnFX expands WildcardsFX;
 
-simulated event PostBeginPlay()
+var EffectsPool EffectsPool;
+
+simulated function GetParticles( int Count)
 {
-	local rotator randRot;
 	local sgParticle pt;
-	local float velo;
-    local int Particals;
+    local int i;
 
-	if ( Level.NetMode != NM_DedicatedServer)
-		{
-			Spawn(class'ForceFieldFlash');
-			for ( Particals = 0; Particals < 50; Particals++ )
-				{
-					randRot.Pitch += Rand(32768)-16384;
-					randRot.Roll += Rand(32768)-16384;
-					randRot.Yaw += Rand(32768)-16384;
-					velo = rand(400);
-					pt = Spawn(class'sgParticle',,, Location+vector(randRot)*velo);
-						if ( pt != None )
-							{
-								pt.Texture = texture'RuParticle';
-								pt.Velocity = Normal(Location - pt.Location)*velo;
-							}
-				}
-		}
-	SetTimer(10,false);
+	for ( i=0; i<Count; i++ )
+	{
+		pt = EffectsPool.RequestGenericParticle( self, 400);
+		if ( pt != None )
+			pt.Texture = Texture'RuParticle';
+	}
 }
 
-simulated event timer()
+auto simulated state ParticleSpawn
 {
-	destroy();
+
+Begin:
+	ForEach AllActors (class'EffectsPool', EffectsPool)
+		break;
+	Spawn(class'ForceFieldFlash');
+	if ( EffectsPool == None )
+		Stop;
+	GetParticles( 6 + class'SiegeStatics'.static.GetDetailMode(Level)*2);
+	Sleep( 0.05);
+	GetParticles( 6 + class'SiegeStatics'.static.GetDetailMode(Level)*2);
+	Sleep( 0.05);
+	GetParticles( 6 + class'SiegeStatics'.static.GetDetailMode(Level)*2);
+	Sleep( 0.05);
+	GetParticles( 6 + class'SiegeStatics'.static.GetDetailMode(Level)*2);
+	Sleep( 0.05);
 }
+
 
 defaultproperties
 {
      DrawType=DT_None
+	 LifeSpan=3
 }
