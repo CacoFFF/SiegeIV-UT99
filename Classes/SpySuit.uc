@@ -41,7 +41,7 @@ function RemoveSkin()
 	P.static.SetMultiSkin( P, SkinName, FaceName, P.PlayerReplicationInfo.Team);
 	if ( sgPRI(P.PlayerReplicationInfo) != none )
 		sgPRI(P.PlayerReplicationInfo).bHideIdentify = false;
-	if ( P.Visibility == 9 )
+	if ( P.Visibility == 7 )
 		P.Visibility = 127;
 }
 
@@ -61,7 +61,7 @@ function byte PickTeam()
 	aTeam = aPRI1.Team;
 	SG = SiegeGI(Level.Game);
 	best = -1;
-	Pawn(Owner).Visibility = 9;
+	Pawn(Owner).Visibility = 7;
 
 	For ( i=0 ; i<4 ; i++ )
 	{
@@ -83,17 +83,20 @@ function byte PickTeam()
 
 	Message = class'sgSpyMsg';
 
-	//Broadcast to infiltration
-	for ( P=Level.PawnList; P != None; P=P.nextPawn )
-		if ( P.bIsPlayer || P.IsA('MessagingSpectator') )
-		{
-			if ( (Level.Game != None) && (Level.Game.MessageMutator != None) )
+	//Broadcast to infiltration (avoid multi-broadcast bug)
+	if ( sgPRI(aPRI1) != none && !sgPRI(aPRI1).bHideIdentify )
+	{
+		for ( P=Level.PawnList; P != None; P=P.nextPawn )
+			if ( P.bIsPlayer || P.IsA('MessagingSpectator') )
 			{
-				if ( Level.Game.MessageMutator.MutatorBroadcastLocalizedMessage(none, P, Message, Switch, aPRI1, aPRI2, OptionalObject) )
+				if ( (Level.Game != None) && (Level.Game.MessageMutator != None) )
+				{
+					if ( Level.Game.MessageMutator.MutatorBroadcastLocalizedMessage(none, P, Message, Switch, aPRI1, aPRI2, OptionalObject) )
+						P.ReceiveLocalizedMessage( Message, Switch, aPRI1, aPRI2, OptionalObject );
+				} else
 					P.ReceiveLocalizedMessage( Message, Switch, aPRI1, aPRI2, OptionalObject );
-			} else
-				P.ReceiveLocalizedMessage( Message, Switch, aPRI1, aPRI2, OptionalObject );
-		}
+			}
+	}
 
 	return best;
 }

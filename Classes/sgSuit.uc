@@ -11,16 +11,26 @@ var bool bNoProtectors;
 var Weapon AffectedWeapon;
 var Texture HUD_Icon; //For new sgHUD icon methodology
 
+//XC_Engine interface
+native(3542) final iterator function InventoryActors( class<Inventory> InvClass, out Inventory Inv, optional bool bSubclasses, optional Actor StartFrom); 
+
 function sgSuit OtherSuit( Pawn P)
 {
 	local inventory I;
 
 	For ( I=P.Inventory ; I!=none ; I=I.inventory )
 	{
-		if ( I.IsA('sgSuit') )
+		if ( I.IsA('sgSuit') && I != self )
 			return sgSuit(I);
 	}
-	return none;
+}
+
+function sgSuit OtherSuit_XC( Pawn P)
+{
+	local sgSuit sgS;
+	ForEach InventoryActors( class'sgSuit', sgS, true, P)
+		if ( sgS != self )
+			return sgS;
 }
 
 function ChangedWeapon()
@@ -73,36 +83,33 @@ function RemoveSkin()
 		return;
 
 	Instigator = none; //Make sure we don't repeat this call
-	P.SetDefaultDisplayProperties();
+	if ( P.bMeshEnviroMap && P.Texture == EnviroSkin ) //Only change to defaults if player has MY enviro skin
+		P.SetDefaultDisplayProperties();
 }
 
 event Destroyed()
 {
-	Super.Destroyed();
 	RemoveSkin();
-	aTimer = -99;
 	if ( AffectedWeapon != none )
 	{
 		AffectedWeapon.SetDefaultDisplayProperties();
 		AffectedWeapon = none;
 	}
+	Super.Destroyed();
+	aTimer = -99;
 }
 
 function PickupFunction(Pawn Other)
 {
-	local Inventory I;
+	local sgSuit Suit;
 
 	if ( Owner == none )
 		SetOwner( Other);
 
-	For ( I=Other.Inventory ; I!=none ; I=I.inventory )
-	{
-		if ( (sgSuit(I) != none) && (I!=self) )
-		{
-			I.Destroy(); //Returns skin back to normal?
-			break;
-		}
-	}
+	Suit = OtherSuit( Other);
+	Log("Othersuit is "@Suit);
+	if ( Suit != None && Suit != self ) //Skin SHOULD go back to normal
+		Suit.Destroy();
 
 	Super.PickupFunction( Other);
 	ApplySkin();

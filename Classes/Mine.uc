@@ -11,17 +11,10 @@ var Viewport LocalPlayer;
 var Pawn CheckOn[8];
 var int iCheckOn;
 var sgMineTrigger MyTrigger;
-var() float EffectGlow;
 var() float DetRadius; //Base detonation radius
 var() float ExpRadiusLevel; //Increase explosion radius per level
 var() float SelfDamageDet;
 var() float RULevelMult; //Additional RU given per damage instance scaler
-
-replication
-{
-	reliable if ( bNetInitial && (Role == ROLE_Authority) )
-		EffectGlow;
-}
 
 //First event in creation order?
 event Spawned()
@@ -217,10 +210,7 @@ simulated function CompleteBuilding()
 	local Pawn p;
 
 	if ( Level.NetMode == NM_Client )
-	{
-		Assert( Default.EffectGlow == 0.2);
 		Assert( LocalPlayer != none );
-	}
 
 	Assert( (LocalPlayer == None) == (MyFX == none) );
 	if ( LocalPlayer != none )
@@ -228,7 +218,11 @@ simulated function CompleteBuilding()
 		if ( LocalPlayer.Actor.PlayerReplicationInfo.Team == Team )
 			MyFX.AmbientGlow = 240;
 		else
+		{
 			MyFX.AmbientGlow = 1;
+			MyFX.ScaleGlow = 0.2;
+		}
+		Assert( sgMeshFX_MineModu(MyFX.NextFX) != None );
 	}
 
 	if ( Role != ROLE_Authority )
@@ -244,8 +238,9 @@ simulated function FinishBuilding()
 {
     local int i;
     local sgMeshFX newFX;
-    local vector spawnLocation;
 	local PlayerPawn P;
+	local Rotator R;
+	
 	
 	Texture=Texture'Botpack.FLAKAMMOLEDbase';
 
@@ -272,25 +267,28 @@ simulated function FinishBuilding()
 	if ( LocalPlayer == none )
 		return;
 
-	spawnLocation = Location;
-	spawnLocation.Z -= 10;
+	R = Rotation;
+	R.Pitch = 0;
+	R.Roll = 0;
+	SetRotation(R);
+	Assert( Model == LodMesh'Botpack.DiscStud' );
 	if ( myFX == None && Model != None )
-		for ( i = 0; i < numOfMFX; i++ )
-		{
-			newFX = Spawn(class'WildcardsMeshFX', Self,,,
-				rotator(vect(0,0,0)));
-			newFX.NextFX = myFX;
-			myFX = newFX;
-			myFX.Mesh = Model;
-			myFX.DrawScale = DSofMFX;
-			myFX.RotationRate.Pitch = MFXrotX.Pitch*FRand();
-			myFX.RotationRate.Roll = MFXrotX.Roll*FRand();
-			myFX.RotationRate.Yaw = MFXrotX.Yaw*FRand();
-			myFX.AmbientGlow=1;
-			myFX.Style = STY_Translucent;
-			myFX.ScaleGlow = EffectGlow;
-			//myFX.LODBias=0.200000;
-		}
+	{
+		myFX = Spawn(class'WildcardsMeshFX', Self);
+		myFX.Mesh = Model;
+		myFX.DrawScale = DSofMFX;
+		myFX.RotationRate.Pitch = MFXrotX.Pitch*FRand();
+		myFX.RotationRate.Roll = MFXrotX.Roll*FRand();
+		myFX.RotationRate.Yaw = MFXrotX.Yaw*FRand();
+		myFX.AmbientGlow=1;
+		myFX.Style = STY_Translucent;
+		myFX.ScaleGlow = 0.2;
+		
+		myFX.NextFX = Spawn(class'sgMeshFX_MineModu', Self);
+		myFX.NextFX.Mesh = Model;
+		myFX.NextFX.DrawScale = DSofMFX;
+		myFX.NextFX.RotationRate = myFX.RotationRate;
+	}
 }
 
 //Higor, use this function to alter the NetUpdateFrequency on net games
@@ -308,7 +306,6 @@ defaultproperties
 {
      bOnlyOwnerRemove=True
      BurnPerSecond=5
-     EffectGlow=0.2
      BuildingName="Mine"
      BuildCost=125
      UpgradeCost=15

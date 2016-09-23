@@ -147,6 +147,7 @@ function PointerHit( float X, float Y, optional byte Code)
 	{
 		if ( Code == 3 || (Code == 1 && bLastAltFire)  ) //Instant hit!
 		{
+			sgConstructor(LocalPlayer.Weapon).FindClientActor(); //Hidden constructors won't find it
 			sgConstructor(LocalPlayer.Weapon).OpenGui(); //Tell constructor we cannot perform normal actions
 			SetupCategories( sgConstructor(LocalPlayer.Weapon).CatActor);
 			bSelectingCategory = true; //DO IT!

@@ -57,7 +57,7 @@ auto state Pickup
 		}
 		if ( sgBuilding(Other) != none )
 		{
-			if ( Other.bBlockActors || (sgBuilding(Other).Team != Instigator.PlayerReplicationInfo.Team) )
+			if ( Other.bBlockActors || sgBuilding(Other).bStandable || (sgBuilding(Other).Team != Instigator.PlayerReplicationInfo.Team) )
 				BounceActor( Other);
 			return;
 		}

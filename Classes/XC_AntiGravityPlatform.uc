@@ -83,7 +83,7 @@ simulated function FinishBuilding()
 	if ( (Level.NetMode != NM_Client) && (myCollision == None) )
 	{
 		myCollision=Spawn(class'sgBuildingCH',Self,'',Location,Rotation);
-		myCollision.Setup( Self, 63, 8, vect(0,0,-5));
+		myCollision.Setup( Self, 62, 8, vect(0,0,-1));
 	}
 	BaseEnergy = MaxEnergy;
 	Texture = None;
@@ -91,6 +91,7 @@ simulated function FinishBuilding()
 	{
 		myFX.AmbientGlow=5;
 		myFX.ScaleGlow=1.5;
+		myFX.PrePivot.Z = 6;
 	}
 }
 
@@ -236,7 +237,7 @@ defaultproperties
      SpriteYellowTeam=Texture'ProtectorSkinTeam3'
      MFXrotX=(Yaw=10000)
      CollisionRadius=49.000000
-     CollisionHeight=13.000000
+     CollisionHeight=10.000000
      BuildDistance=52
      GUI_Icon=Texture'GUI_AGPlatform'
 }
