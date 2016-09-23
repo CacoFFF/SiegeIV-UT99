@@ -83,19 +83,22 @@ function RemoveSkin()
 		return;
 
 	Instigator = none; //Make sure we don't repeat this call
-	if ( P.bMeshEnviroMap && P.Texture == EnviroSkin ) //Only change to defaults if player has MY enviro skin
-		P.SetDefaultDisplayProperties();
+	if ( EnviroSkin != None )
+	{
+		if ( P.bMeshEnviroMap && P.Texture == EnviroSkin ) //Only change to defaults if player has MY enviro skin
+			P.SetDefaultDisplayProperties();
+		if ( (AffectedWeapon != none) && AffectedWeapon.bMeshEnviroMap && (AffectedWeapon.Texture == EnviroSkin) )
+		{
+			AffectedWeapon.SetDefaultDisplayProperties();
+			AffectedWeapon = none;
+		}
+	}
 }
 
 event Destroyed()
 {
-	RemoveSkin();
-	if ( AffectedWeapon != none )
-	{
-		AffectedWeapon.SetDefaultDisplayProperties();
-		AffectedWeapon = none;
-	}
 	Super.Destroyed();
+	RemoveSkin();
 	aTimer = -99;
 }
 
@@ -107,7 +110,6 @@ function PickupFunction(Pawn Other)
 		SetOwner( Other);
 
 	Suit = OtherSuit( Other);
-	Log("Othersuit is "@Suit);
 	if ( Suit != None && Suit != self ) //Skin SHOULD go back to normal
 		Suit.Destroy();
 
