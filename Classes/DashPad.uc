@@ -5,7 +5,7 @@
 // * Made by Higor
 //=========================================================
 
-class DashPad expands sgBuilding;
+class DashPad expands sgBooster;
 
 //Base model > bMeshEnviroMap with team texture
 #exec mesh import mesh=DashPadBase anivfile=Models\DashPadBasePrefab_a.3d datafile=Models\DashPadBasePrefab_d.3d x=0 y=0 z=0 mlod=0
@@ -24,50 +24,74 @@ class DashPad expands sgBuilding;
 #exec meshmap scale meshmap=DashPadPanel x=0.073 y=0.073 z=0.146
 
 
-var float RepairTimer;
 var vector PushDir;
+var rotator DashRot;
 
 replication
 {
 	reliable if ( bNetInitial && ROLE==ROLE_Authority )
-		PushDir;
+		DashRot;
 }
 
 simulated function FinishBuilding()
 {
 	Super.FinishBuilding();
 
-	SetRotation( rotator(PushDir) );
+	SetRotation( DashRot );
 	if ( Level.NetMode != NM_DedicatedServer ) //Setup custom MFX
 	{
 		myFX = Spawn(class'WildcardsMeshFX', Self, 'DashPadFX', Location, Rotation);
 		myFX.Mesh = Mesh'DashPadBase';
 		myFX.SetPhysics( PHYS_None);
 		myFX.NextFX = Spawn( class'sgMeshFX_DashPadPanel', Self, 'DashPadFX', Location, Rotation);
+		if ( Level.NetMode == NM_Client )
+			LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer(self);
 	}
 }
 
 function CompleteBuilding()
 {
-	if ( RepairTimer > 0 )
-		RepairTimer -= 0.1;
-	else
-		Energy = FMin( Energy + 18, MaxEnergy);
+	Super.CompleteBuilding();
 	if ( !bDisabledByEMP && !bIsOnFire ) //NEED AN EVENT HERE!!!
 		Texture = Texture'MiniammoLedBase';
 }
 
-event TakeDamage( int Damage, Pawn instigatedBy, vector HitLocation, Vector momentum, name DamageType)
+simulated function DoBoost( Pawn Other)
 {
-	RepairTimer = 6;
-	Super.TakeDamage(Damage * (1.0 - Grade*0.05), instigatedBy, HitLocation, momentum, DamageType);
+	local float boost;
+	local sgPlayerData sgPD;
+	local XC_MA_DashPad MA;
+	
+	if ( Level.NetMode == NM_Client )
+	{
+		return;
+	}
+	
+	sgPD = class'SiegeStatics'.static.GetPlayerData( Other);
+	if ( sgPD != None )
+	{
+		MA = XC_MA_DashPad(sgPD.FindMAffector( class'XC_MA_DashPad'));
+		if ( MA == None )
+		{
+			MA = Spawn(class'XC_MA_DashPad', Other,,Location);
+			sgPD.AddMAffector( MA);
+		}
+		if ( MA != None )
+		{
+			MA.Setup( self);
+		}
+	}
+/*	boost = 115 * (Grade + 3);
+	if ( Other.Velocity.Z < -1800 )
+		Other.Velocity.Z += boost;
+	else if ( Other.Velocity.Z < boost )
+		Other.Velocity.Z = boost;*/
 }
-
 
 //First event in creation order?
 event Spawned()
 {
-	local vector HitLocation, HitNormal, TraceStart, TraceEnd;
+	local vector HitLocation, HitNormal, TraceStart, TraceEnd, X, Y ,Z;
 	local plane CenterPlane;
 	local Actor A;
 	local rotator MyRot;
@@ -89,7 +113,7 @@ event Spawned()
 		CenterPlane.W = HitLocation dot HitNormal;
 		break;
 	}
-	if ( CenterPlane.Z < 0.8 )
+	if ( CenterPlane.Z < 0.73 )
 	{
 		Destroy();
 		return;
@@ -121,6 +145,13 @@ event Spawned()
 		HitLocation += HitNormal * 2;
 		PushDir = HitLocation - Location;
 		SetRotation( Rotator(PushDir));
+		PushDir.Z = 0;
+		GetAxes( Rotation, X, Y, Z);
+		X = Y + Z * (Y dot HitNormal); //Booster may be on a side slanted surface!!!
+		MyRot = Rotator(X); //Rotate 90º to left, this pitch is the original roll
+		DashRot = Rotation;
+		DashRot.Roll = MyRot.Pitch;
+		SetRotation( DashRot);
 		break;
 	}
 	if ( A == none )
@@ -129,6 +160,7 @@ event Spawned()
 
 defaultproperties
 {
+     BoostSound=Sound'sgUMedia.StrengthUse'
      bOnlyOwnerRemove=True
      BuildingName="Dash Pad"
      BuildCost=800
@@ -146,5 +178,5 @@ defaultproperties
      CollisionRadius=44
 	 SpriteScale=1.00000
      DSofMFX=1.0
-	 NumOfMFX=1
+	 NumOfMFX=0
 }
