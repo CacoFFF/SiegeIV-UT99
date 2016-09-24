@@ -1,80 +1,57 @@
 //=============================================================================
-// sgBooster.
-// * Revised by 7DS'Lust
+// sgSuperBooster.
+// * Higor: now it's a sgBooster derivate
 //=============================================================================
-class sgSuperBooster extends sgBuilding;
+class sgSuperBooster extends sgBooster;
 
-var Sound BoostSound;
-var float RepairTimer;
-
-function CompleteBuilding()
+function ServerSound()
 {
-	if ( RepairTimer > 0 )
-		RepairTimer -= 0.1;
-	else
-		Energy = FMin( Energy + 18, MaxEnergy);
+	PlaySound(BoostSound,,2);
 }
 
-event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, 
-  Vector momentum, name damageType)
+function ServerOwnedSound( pawn Other)
 {
-    RepairTimer = 6;
-    Super.TakeDamage(Damage * (1 - Grade*0.05), instigatedBy, hitLocation, momentum, damageType);
+	Other.PlayOwnedSound(BoostSound,,2);
 }
 
-event Touch(Actor other)
+simulated function DoBoost( Pawn Other)
 {
-    if ( DoneBuilding && Pawn(other) != None && Pawn(other).bIsPlayer &&
-      Pawn(other).PlayerReplicationInfo != None &&
-      Pawn(other).PlayerReplicationInfo.Team == Team && !bDisabledByEMP)
-    {
-        PendingTouch = other.PendingTouch;
-        other.PendingTouch = self;
-        PlaySound(BoostSound);
-        PlaySound(BoostSound);
-    }
-}
+	local float boost;
+	local float Zboost;
 
-event PostTouch(Actor other)
-{
-    local Pawn target;
-    local float boost;
-    local float Zboost;
-
-    if ( DoneBuilding || Pawn(other) == None )
-        return;
-
-    target = Pawn(other);
-
-	if (!bDisabledByEMP)
+	if ( Other.IsA('Bot') )
 	{
-    if ( target.IsA('Bot') )
-    {
-        if ( target.Physics == PHYS_Falling )
-            Bot(target).bJumpOffPawn = true;
-        Bot(target).SetFall();
-    }
-    if ( target.Physics != PHYS_Swimming )
-        target.SetPhysics(PHYS_Falling);
-    Zboost = 120 * (Grade + 5);
-    boost = Grade;
-
-        target.Velocity.X *= boost;
-        target.Velocity.Y *= boost;
-        target.Velocity.Z += Zboost;
+		if ( Other.Physics == PHYS_Falling )
+			Bot(Other).bJumpOffPawn = true;
+		Bot(Other).SetFall();
 	}
+    Zboost = 120 * (Grade + 5);
+	boost = Grade;
+
+	Other.Velocity.X *= boost;
+	Other.Velocity.Y *= boost;
+	Other.Velocity.Z += Zboost;
+
+	if ( Other.IsA('PlayerPawn') && Other.Physics == PHYS_Walking ) //Adjust boost angle
+	{
+		if ( PlayerPawn(Other).bDuck > 0 ) //Ducking
+			Other.Velocity = Normal(Other.Velocity * vect( 1.0, 1.0, 0.25)) * (VSize(Other.Velocity) * 1.5);
+		else if ( PlayerPawn(Other).bRun > 0 ) //Walking
+			Other.Velocity = Normal(Other.Velocity) * (VSize(Other.Velocity) * 1.5);
+	}
+
+	if ( Other.Physics != PHYS_Swimming )
+		Other.SetPhysics(PHYS_Falling);
 }
 
 defaultproperties
 {
      bOnlyOwnerRemove=True
-     BoostSound=Sound'UnrealI.Pickups.BootJmp'
      BuildingName="Super Booster"
      BuildCost=1200
      UpgradeCost=75
      BuildTime=15.000000
      MaxEnergy=2500.000000
-     Model=LodMesh'Botpack.Crystal'
      SkinRedTeam=Texture'SuperBoosterSkinT0'
      SkinBlueTeam=Texture'SuperBoosterSkinT1'
      SpriteRedTeam=Texture'SuperBoosterSpriteT0'
@@ -83,13 +60,11 @@ defaultproperties
      SkinYellowTeam=Texture'SuperBoosterSkinT3'
      SpriteGreenTeam=Texture'SuperBoosterSpriteT2'
      SpriteYellowTeam=Texture'SuperBoosterSpriteT3'
-	 SpriteScale=0.500000
      DSofMFX=1.250000
      MFXrotX=(Pitch=50000,Yaw=50000,Roll=50000)
      MultiSkins(0)=Texture'SuperBoosterSpriteT0'
      MultiSkins(1)=Texture'SuperBoosterSpriteT1'
      MultiSkins(2)=Texture'SuperBoosterSpriteT2'
      MultiSkins(3)=Texture'SuperBoosterSpriteT3'
-     CollisionHeight=30.000000
      GUI_Icon=Texture'GUI_SBooster'
 }

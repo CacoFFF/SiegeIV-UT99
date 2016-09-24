@@ -35,13 +35,14 @@ replication
 
 simulated event Timer()
 {
-	CheckForNukers();
+	if ( FRand() < 0.5 )
+		CheckForNukers();
 	Super.Timer();	
 
 	if ( Level.NetMode != NM_DedicatedServer )
 	{
 		if ( LocalPlayer == none )
-			LocalPlayer = FindLocalPlayer();
+			LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer(self);
 		else if ( LocalPlayer.PlayerReplicationInfo != none )
 			ClientEffects();
 	}
@@ -70,12 +71,6 @@ simulated function ClientEffects()
 		ClientEffect.Destroy();
 		ClientEffect = none;
 	}
-}
-
-simulated function FinishBuilding()
-{
-Super.FinishBuilding();
-SetTimer(1.0, True);
 }
 
 //Called on server
@@ -180,17 +175,6 @@ function AlertLight(bool on)
 		}
     else
 		LightType=LT_None;
-}
-
-simulated function PlayerPawn FindLocalPlayer()
-{
-	local PlayerPawn P;
-	ForEach AllActors (class'PlayerPawn', P)
-	{
-		if ( (P.Player != none) && (ViewPort(P.Player) != none) )
-			return P;
-	}
-	return none;
 }
 
 defaultproperties

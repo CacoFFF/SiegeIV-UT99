@@ -254,6 +254,14 @@ simulated function AddMAffector( XC_MovementAffector Other)
 		MA_List = MA_List.InsertSorted( Other);
 }
 
+simulated function XC_MovementAffector FindMAffector( class<XC_MovementAffector> AffectorClass)
+{
+	local XC_MovementAffector Aff;
+	For ( Aff=MA_List ; Aff!=None ; Aff=Aff.NextAffector )
+		if ( Aff.Class == AffectorClass )
+			return Aff;
+}
+
 simulated function AffectMovement( float DeltaTime)
 {
 	local XC_MovementAffector M, N;

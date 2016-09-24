@@ -4,23 +4,24 @@
 //=============================================================================
 class sgBooster extends sgBuilding;
 
-var sound           BoostSound;
-var float           RepairTimer;
+var sound BoostSound;
+var float RepairTimer;
 var float LastSim;
 var PlayerPawn LocalPlayer;
+var Pawn LastToucher;
 
-simulated event PostNetBeginPlay()
+
+simulated function FinishBuilding()
 {
-	Super.PostNetBeginPlay();
-	
-	ForEach AllActors (class'PlayerPawn', LocalPlayer)
-		if ( ViewPort(LocalPlayer.Player) != none )
-			return;
-	LocalPlayer = none;
+	Super.FinishBuilding();
+	if ( Level.NetMode == NM_Client )
+		LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer(self);
 }
 
 function CompleteBuilding()
 {
+	if ( (LastToucher != None) && (LastToucher.Physics != PHYS_Falling || LastToucher.Velocity.Z < 0) )
+		LastToucher = None;
 	if ( RepairTimer > 0 )
 		RepairTimer -= 0.1;
 	else
@@ -61,13 +62,16 @@ simulated event Touch(Actor other)
 			}
 			return;
 		}
-
-        PendingTouch = other.PendingTouch;
-        other.PendingTouch = self;
-		if ( (PlayerPawn(Other) != none) && (NetConnection(PlayerPawn(Other).Player) != none) )
-			ServerOwnedSound( Pawn(Other) );
-		else
-	        ServerSound();
+		//Prevent multi-boost bug
+		if ( Other != LastToucher )
+		{
+			PendingTouch = other.PendingTouch;
+			other.PendingTouch = self;
+			if ( (PlayerPawn(Other) != none) && (NetConnection(PlayerPawn(Other).Player) != none) )
+				ServerOwnedSound( Pawn(Other) );
+			else
+				ServerSound();
+		}
     }
 }
 
@@ -98,7 +102,12 @@ simulated event PostTouch(Actor other)
         return;
 //	if ( SiegePlayer(Other) != none )
 //		Log("PostTouch HERE");
-	DoBoost( Pawn(Other) );
+	if ( Other != LastToucher )
+	{
+		if ( Level.NetMode != NM_Client )
+			LastToucher = Pawn(Other);
+		DoBoost( Pawn(Other) );
+	}
 }
 
 simulated function DoBoost( Pawn Other)

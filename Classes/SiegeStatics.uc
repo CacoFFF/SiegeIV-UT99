@@ -280,7 +280,7 @@ static final function SavedMove FindMoveBeyond( PlayerPawn Other, float TimeStam
 //****************************************************
 //See if the NexGen actor is available for this player
 //****************************************************
-static function Info FindNexgenClient( PlayerPawn Player)
+static final function Info FindNexgenClient( PlayerPawn Player)
 {
 	local Info aInfo;
 	if ( Player == none )
@@ -293,7 +293,7 @@ static function Info FindNexgenClient( PlayerPawn Player)
 //***************************************
 //Find the sgPlayerData element of a pawn
 //***************************************
-static function sgPlayerData GetPlayerData( Pawn Other, optional bool bCreate)
+static final function sgPlayerData GetPlayerData( Pawn Other, optional bool bCreate)
 {
 	local sgPlayerData Result;
 	if ( Other == None )
@@ -312,7 +312,7 @@ static function sgPlayerData GetPlayerData( Pawn Other, optional bool bCreate)
 //**********************************************
 //Announce to all player and pseudo-player pawns
 //**********************************************
-static function AnnounceAll( Actor Broadcaster, string Msg)
+static final function AnnounceAll( Actor Broadcaster, string Msg)
 {
 	local PlayerReplicationInfo PRI;
 	local Pawn P;
@@ -330,10 +330,23 @@ static function AnnounceAll( Actor Broadcaster, string Msg)
 //************************************
 //Get detail value, 3 is max, 0 is min
 //************************************
-static function int GetDetailMode( LevelInfo Level)
+static final function int GetDetailMode( LevelInfo Level)
 {
 	return 2 + int(Level.bHighDetailMode)
 			- (int(Level.bDropDetail) + int(Level.bAggressiveLOD) + int(class'sgClient'.default.bHighPerformance));
+}
+
+
+//*****************************************
+//Find the local player********************
+//Cannot be overriden by XCGE (client func)
+//*****************************************
+static final function PlayerPawn FindLocalPlayer( Actor Other)
+{
+	local PlayerPawn P;
+	ForEach Other.AllActors ( class'PlayerPawn', P)
+		if ( ViewPort(P.Player) != None )
+			return P;
 }
 
 
@@ -349,6 +362,7 @@ function bool SuitProtects( sgBuilding Other)
 	ForEach Other.InventoryActors( class'sgSuit', sgS, true)
 		return sgS.bNoProtectors;
 }
+
 
 
 
