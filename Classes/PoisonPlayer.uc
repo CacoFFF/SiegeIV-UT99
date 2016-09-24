@@ -59,7 +59,7 @@ simulated function AffectMovement( float DeltaTime)
 	{
 		fSlowness = 1 / (Slowness*2);
 		PoisonedPlayer.GroundSpeed = fMax(PoisonedPlayer.GroundSpeed*2,(PoisonedPlayer.GroundSpeed + PoisonedPlayer.default.GroundSpeed)) * fSlowness;
-		PoisonedPlayer.AirSpeed = fMax(PoisonedPlayer.AirSpeed*2,(PoisonedPlayer.AirSpeed + PoisonedPlayer.default.AirSpeed/Slowness)) * fSlowness;
+		PoisonedPlayer.AirSpeed = fMax(PoisonedPlayer.AirSpeed*2,(PoisonedPlayer.AirSpeed + PoisonedPlayer.default.AirSpeed)) * fSlowness;
 	}
 
 	if ( (Slowness -= DeltaTime*RecoverRate) < 1 )
