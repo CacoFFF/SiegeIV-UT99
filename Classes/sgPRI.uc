@@ -18,8 +18,10 @@ var int		sgInfoKiller,
 		sgInfoSpreeCount;
 
 var string CountryPrefix;
+var Texture CachedFlag; //Client takes care of this
 
 var Actor IpToCountry;
+var float ResolveWait;
 var bool bIpToCountry;		
 
 var float           RU;
@@ -35,6 +37,7 @@ Var bool bReadyToPlay;
 var bool bGameStarted;
 var bool bHideIdentify;
 var bool bReplicateRU;		//Native c++ only
+var bool bFlagCached; //Flag cache already attempted
 
 //Spawn protection
 var float ProtectCount;
@@ -400,10 +403,12 @@ function Tick(float deltaTime)
 	{
 		if(CountryPrefix == "")
 		{       
-			CountryPrefix = "*2";  
+			CountryPrefix = "*2";
 			P=PlayerPawn(Owner);
+TRY_AGAIN:
 			if( (P != none) && (NetConnection(P.Player) != None) )
 			{
+				ResolveWait = Level.TimeSeconds + 15*Level.TimeDilation;
 				temp=P.GetPlayerNetworkAddress();
 				temp=IpToCountry.GetItemName(Left(temp, InStr(temp, ":")));
 				if(temp == "!Disabled") /* after this return, iptocountry won't resolve anything anyway */
@@ -417,6 +422,15 @@ function Tick(float deltaTime)
 			}
 			else
 				bIpToCountry=False;
+		}
+		else if ( CountryPrefix == "*2" )
+		{
+			if ( Level.TimeSeconds > ResolveWait )
+			{
+				CountryPrefix = "*3";
+				P=PlayerPawn(Owner);
+				Goto TRY_AGAIN;
+			}
 		}
 		else
 			bIpToCountry=False;
@@ -446,6 +460,21 @@ function ProtTimer( float DeltaTime)
 		WhosGun = none;
 		Pawn(Owner).ClientMessage("Siege spawn protection off");
 	}
+}
+
+simulated function CacheFlag()
+{
+	local Texture Tex;
+
+	if ( bFlagCached || (Asc(CountryPrefix) == 42) ) //* character
+		return;
+	
+	CachedFlag = Texture(DynamicLoadObject("CountryFlags2."$CountryPrefix, class'Texture', true));
+	if ( CachedFlag == None )
+		CachedFlag = Texture(DynamicLoadObject("CountryFlags5."$CountryPrefix, class'Texture', true));
+	if ( CachedFlag == None )
+		CachedFlag = Texture(DynamicLoadObject("CountryFlags3."$CountryPrefix, class'Texture', true));
+	bFlagCached = true;
 }
 
 static final function string SelElem(string Str, int Elem)

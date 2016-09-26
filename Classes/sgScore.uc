@@ -1,19 +1,15 @@
 // sgScore
 // by Sektor
+// Greatly optimized by Higor
 //=============================================================================
 class sgScore extends UnrealCTFScoreBoard;
 
-
-struct FlagData
-{
-	var string Prefix;
-	var texture Tex;
-};
-
-var FlagData FD[64];
 var sgPRI PRI[64];
+var byte Eff[64];
+var byte Show[64];
+
 var int iPRI;
-var int counter, tableWidth, tableHeaderHeight, cellHeight, countTeams, saveindex, TeamPlayers[4], 
+var int counter, tableWidth, tableHeaderHeight, cellHeight, CountTeams, saveindex, TeamPlayers[4], 
 		ShowMaxPlayer1, ShowMaxPlayer2, NotShownPlayers[4], LastSortTime, tableLine1,
 		tableLine2, paddingInfo, avgEff[4], avgPi[4], avgPl[4], avgY;
 var Color White, Pink, Orange, getHeaderColor[4], getTeamColor[4];
@@ -26,6 +22,8 @@ var sgClient ClientActor;
 
 var TeamInfo TInfo[4];
 var bool bAllowDraw;
+
+var int iC, iCC;
  
 function PostBeginPlay()
 {
@@ -74,25 +72,34 @@ event Timer()
 		SetTimer( 0.2 * Level.TimeDilation, false);
 }
 
+native (3559) static final function int AppCycles();
+final function int GetCycles()
+{
+	if ( (Level.NetMode != NM_Client) && class'SiegeStatics'.default.XCGE_Version >= 19 )
+		return AppCycles();
+}
+
+
 function ShowScores(Canvas Canvas)
 {
-	local int i, Time, eff, Lightness;
+	local int i, Time, iTeam[4];
 	local float X,Y, xLen,yLen, pnx,pny, paddingInfo, ruX;
 	local string s;
-	local int TeamExist[4];
 	local sgPRI aPRI;
+	local int Cycles;
 
 	if ( !bAllowDraw )
 		return;
+	Cycles = GetCycles();
+	
 
-	if ( ClientActor != none )
-		Lightness = 140 * ClientActor.ScoreboardBrightness;
-
-	if(Canvas.ClipX < 900){
+	if(Canvas.ClipX < 900)
+	{
 		tableWidth = 370;
 		paddingInfo = 160;
 	}
-	else{
+	else
+	{
 		tableWidth = Self.default.tableWidth;
 		paddingInfo = Self.default.paddingInfo;
 	}
@@ -123,35 +130,30 @@ function ShowScores(Canvas Canvas)
 	  LastSortTime = Level.TimeSeconds;
 	}
 
-	//I should handle this in Sort
-	For(i=0; i<4; i++)
-		if( (sgGRI.Cores[i] != None) && !sgGRI.Cores[i].bDeleteMe )
-			TeamExist[i] = 1;
-	For ( i = 0; i < iPRI; i++ )
-		TeamExist[PRI[i].Team] = 1;
-	
-	countTeams = 0;
-	for(i = 0; i < 4; i++ )
+	for( i=0; i<4; i++ )
 	{
-		TeamPlayers[i] = 0;
-		NotShownPlayers[i] = 0;
-
-		if( TeamExist[i] > 0)
+		if( (TeamPlayers[i] > 0) || (sgGRI.Cores[i] != None) )
 		{
-			X = getXHeader(Canvas.ClipX);
-			Y = getYHeader();
+			iTeam[0]++;
+			X = getXHeader( iTeam[0], Canvas.ClipX);
+			Y = getYHeader( iTeam[0]);
 			TeamX[i] = X;
 			TeamY[i] = Y; 
+			
+			ruX = TeamPlayers[i] - NotShownPlayers[i];
+			if( NotShownPlayers[i] > 0) //Not shown players need extra shade space (3/4 of player cell)
+				ruX += 0.75; //HACK
+			
 			
 			////////
 			//Header
 			////////
 			Canvas.bNoSmooth = False;
 			//Canvas.Style = ERenderStyle.STY_Translucent;
-			Canvas.DrawColor = Lighten(getHeaderColor[i], Lightness);
+			Canvas.DrawColor = getHeaderColor[i]; //Do we need this?
 			Canvas.Style = ERenderStyle.STY_Modulated;
 			Canvas.SetPos( X, Y );
-			Canvas.DrawRect( texture'shade2', tableWidth , tableHeaderHeight );
+			Canvas.DrawRect( texture'shade2', tableWidth , tableHeaderHeight + cellHeight * ruX );
 
 			Canvas.Style = ERenderStyle.STY_Translucent;
 			Canvas.SetPos( X, Y );
@@ -160,7 +162,7 @@ function ShowScores(Canvas Canvas)
 
 
 			//Header core icons
-			Canvas.DrawColor = Lighten(getTeamColor[i], Lightness);
+			Canvas.DrawColor = getTeamColor[i];
 
 			if ( (TInfo[i] != none) && (TInfo[i].TeamName != "") )
 				s = TInfo[i].TeamName;
@@ -210,30 +212,27 @@ function ShowScores(Canvas Canvas)
 			Canvas.SetPos( X+tableWidth-xLen-5, Y + 5);
 			Canvas.DrawText(s);
 			
-			avgEff[i] = 0;
-			avgPi[i] = 0;
-			avgPl[i] = 0;
-			
-			countTeams++;
 		}
 	}
+	iTeam[0] = 0;
 	
 	for ( i = 0; i < iPRI; i++)
 	{
 		aPRI = PRI[i];
 		if ( aPRI == none )
+		{
+			LastSortTime -= 0.5; //Force sort on next frame
 			continue;
-		if(countTeams>2 && TeamPlayers[aPRI.Team] >= ShowMaxPlayer2)
-			NotShownPlayers[aPRI.Team]++;
-		else if(countTeams<=2 && TeamPlayers[aPRI.Team] >= ShowMaxPlayer1)
-			NotShownPlayers[aPRI.Team]++;
-		else
+		}
+
+		if ( Show[i] > 0 )
 		{
 			X = TeamX[aPRI.Team]; 
-			Y = TeamY[aPRI.Team] + tableHeaderHeight + TeamPlayers[aPRI.Team] * cellHeight;
-			Canvas.Style = ERenderStyle.STY_Modulated;
+			Y = TeamY[aPRI.Team] + tableHeaderHeight + iTeam[aPRI.Team] * cellHeight;
+			iTeam[aPRI.Team]++;
+/*			Canvas.Style = ERenderStyle.STY_Modulated;
 			Canvas.SetPos( X,Y);  
-			Canvas.DrawRect( texture'shade2', tableWidth , cellHeight );		 
+			Canvas.DrawRect( texture'shade2', tableWidth , cellHeight );		*/ 
   
 			//face
 			Canvas.DrawColor = White;
@@ -251,7 +250,7 @@ function ShowScores(Canvas Canvas)
 			else if(aPRI.PlayerID == PlayerPawn(Owner).PlayerReplicationInfo.PlayerID)
 				Canvas.DrawColor = Pink;
 			else
-				Canvas.DrawColor = Lighten(getTeamColor[aPRI.Team], Lightness);
+				Canvas.DrawColor = getTeamColor[aPRI.Team];
 			Canvas.Style = ERenderStyle.STY_Normal;
 			Canvas.SetPos( X + 45, Y + 7);
 			Canvas.StrLen(aPRI.PlayerName,pnx,pny);
@@ -271,12 +270,15 @@ function ShowScores(Canvas Canvas)
 				{
 					Canvas.SetPos(X+xLen+90, Y + pny + 7);
 					Canvas.DrawColor = WhiteColor;
-					Canvas.DrawIcon(FD[GetFlagIndex(aPRI.CountryPrefix)].Tex, 1.0);
+					if ( aPRI.CachedFlag == None )
+						aPRI.CacheFlag();
+					else
+						Canvas.DrawIcon( aPRI.CachedFlag, 1.0);
 				}
 			}
 		  
 			// Draw Nukes
-	  		Canvas.DrawColor=Lighten(getTeamColor[3], Lightness);
+	  		Canvas.DrawColor=getTeamColor[3];
 			Canvas.SetPos(X+ paddingInfo+40, Y + 7);
 			Canvas.StrLen("Ping:     ", xLen, yLen);
 			Canvas.DrawText("Nukes:"@aPRI.sgInfoWarheadMaker, false);
@@ -289,22 +291,21 @@ function ShowScores(Canvas Canvas)
 		  
 		  
 			// Draw Nuke Takedowns
-	  		Canvas.DrawColor=Lighten(getTeamColor[1], Lightness);
+	  		Canvas.DrawColor=getTeamColor[1];
 			Canvas.SetPos(X+paddingInfo+40, Y + yLen + 9);
 			Canvas.StrLen("Ping:     ", xLen, yLen);
 			Canvas.DrawText("NkKls:"@aPRI.sgInfoWarheadKiller, false);
 	  	
 			// Deaths && Eff
-			eff = aPRI.GetEff();
 				
 			 // Draw Deaths
-			Canvas.DrawColor=Lighten(getTeamColor[0], Lightness);
+			Canvas.DrawColor=getTeamColor[0];
 			Canvas.SetPos(X+xLen+paddingInfo+40, Y + yLen + 9);
 			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
 			
 			
 	  		  // Draw Buildings
-	  		Canvas.DrawColor=Lighten(getTeamColor[2], Lightness);
+	  		Canvas.DrawColor=getTeamColor[2];
 			Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
 			Canvas.StrLen("Ping:     ", xLen, yLen);
 			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
@@ -312,11 +313,11 @@ function ShowScores(Canvas Canvas)
 			// Draw Effective
 			Canvas.DrawColor=Orange;
 			Canvas.SetPos(X+xLen+paddingInfo+40, Y + 2 * yLen + 11);
-			Canvas.DrawText("Eff:"@eff$"%", false);
+			Canvas.DrawText("Eff:"@Eff[i]$"%", false);
 	  	
 			// Kills && Points
 			Canvas.Font = PtsFont16;
-			Canvas.DrawColor = Lighten(getTeamColor[aPRI.Team], Lightness);
+			Canvas.DrawColor = getTeamColor[aPRI.Team];
 			Canvas.StrLen(""@aPRI.sgInfoKiller@"/"@int(aPRI.Score),xLen,yLen);
 			Canvas.SetPos(X+tableWidth-xLen-5, Y + 7);
 			Canvas.DrawText(""@aPRI.sgInfoKiller@"/"@int(aPRI.Score), false);
@@ -333,25 +334,25 @@ function ShowScores(Canvas Canvas)
 			}
 			
 		
-			if ( aPRI.Team < 4 )
+/*			if ( aPRI.Team < 4 )
 			{
 				TeamPlayers[aPRI.Team]++;
 				avgEff[aPRI.Team] += eff;
 				avgPi[aPRI.Team] += aPRI.Ping;
 				avgPl[aPRI.Team] += aPRI.PacketLoss;
-			}
+			}*/
 		}
 	}
 
 	for(i=0;i<4;i++)
 	{
-		avgEff[i] = avgEff[i] / TeamPlayers[i];
+/*		avgEff[i] = avgEff[i] / TeamPlayers[i];
 		avgPi[i] = avgPi[i] / TeamPlayers[i];
-		avgPl[i] = avgPl[i] / TeamPlayers[i];
+		avgPl[i] = avgPl[i] / TeamPlayers[i];*/
 		
 		if(NotShownPlayers[i]>0)
 		{
-			if(countTeams <= 2)
+			if( CountTeams <= 2)
 			{
 				X = TeamX[i];
 				Y = TeamY[i] + tableHeaderHeight + ShowMaxPlayer1 * cellHeight;				
@@ -362,11 +363,11 @@ function ShowScores(Canvas Canvas)
 				Y = TeamY[i] + tableHeaderHeight + ShowMaxPlayer2 * cellHeight; 
 			}
 			
-			Canvas.Style = ERenderStyle.STY_Modulated;
+/*			Canvas.Style = ERenderStyle.STY_Modulated;
 			Canvas.SetPos( X,Y);
-			Canvas.DrawRect( texture'shade2', tableWidth , cellHeight-10 );
+			Canvas.DrawRect( texture'shade2', tableWidth , cellHeight-10 );*/
 			
-			Canvas.DrawColor = Lighten(getTeamColor[i], Lightness);
+			Canvas.DrawColor = getTeamColor[i];
 			Canvas.Style = ERenderStyle.STY_Normal;
 			Canvas.Font = PtsFont16;
 			Canvas.SetPos( X+5,Y+5);
@@ -374,6 +375,13 @@ function ShowScores(Canvas Canvas)
 		}
 	}
 	DrawFooters(Canvas);
+	
+	Cycles = GetCycles() - Cycles;
+	if ( Cycles > 0 )
+	{
+		Canvas.SetPos( 5, 100);
+		Canvas.DrawText( "Render cycles: "$Cycles);
+	}
 }
 
 function DrawFooters( Canvas C )
@@ -456,20 +464,112 @@ function DrawFooters( Canvas C )
 
 function sortPRI()
 {
-	local int i,j, maxIndex;
+	local int i,j,k, maxIndex, sorted;
 	local int oPRI;
 	local sgPRI aPRI, maxValue;
+	local int TeamPlayersToShow;
 
+	For ( i=0 ; i<4 ; i++ )
+	{
+		avgEff[i] = 0;
+		avgPi[i] = 0;
+		avgPl[i] = 0;
+		TeamPlayers[i] = 0;
+		NotShownPlayers[i] = 0;
+	}
+	
 	oPRI = iPRI;
 	iPRI = 0;
+	CountTeams = 0;
+	//Cache significant stuff
 	foreach AllActors(class'sgPRI', aPRI)
-		if( (!aPRI.bIsSpectator || aPRI.bWaitingPlayer) && (aPRI.Team < 5) )
-			PRI[iPRI++] = aPRI;
+		if( (!aPRI.bIsSpectator || aPRI.bWaitingPlayer) && (aPRI.Team < 4) )
+		{
+			PRI[iPRI] = aPRI;
+			Eff[iPRI] = aPRI.GetEff();
+			avgEff[aPRI.Team] += Eff[iPRI];
+			avgPi[aPRI.Team] += aPRI.Ping;
+			avgPl[aPRI.Team] += aPRI.PacketLoss;
+			TeamPlayers[aPRI.Team]++;
+			iPRI++;
+		}
+
+	//Calculate averages
+	maxIndex = 0;
+	For ( i=0 ; i<4 ; i++ )
+	{
+		if ( TeamPlayers[i] > 0 )
+		{
+			avgEff[i] /= TeamPlayers[i];
+			avgPi[i] /= TeamPlayers[i];
+			avgPl[i] /= TeamPlayers[i];
+			maxIndex = i; //This team appears to be the last one with players
+			CountTeams++;
+		}
+		else if ( sgGRI.Cores[i] != None )
+			CountTeams++;
+	}
+
+	//How many can we show
+	if ( CountTeams > 2 )	TeamPlayersToShow = ShowMaxPlayer2;
+	else					TeamPlayersToShow = ShowMaxPlayer1;
+
+	For ( i=0 ; i<4 ; i++ )
+		if( TeamPlayers[i] > TeamPlayersToShow)
+			NotShownPlayers[i]++;
 
 	For ( i=iPRI ; i<oPRI ; i++ )
 		PRI[i] = none;
 
-	For ( i=0 ; i<iPRI; i++)
+	//Group team players
+//	sorted = 0;
+	For ( k=0 ; k<maxIndex ; k++ ) //No need to run a pass on the last team with players
+	{
+		i = sorted; //Start
+		sorted += TeamPlayers[k]; //End
+		while ( i<sorted )
+		{
+			if ( PRI[i].Team != k ) //Not in group
+			{
+				For ( j=i+1 ; j<iPRI ; j++ )
+					if ( PRI[j].Team == k ) //Swap
+					{
+						aPRI = PRI[i];
+						PRI[i] = PRI[j];
+						PRI[j] = aPRI;
+						break;
+					}
+			}
+			i++;
+		}
+	}
+	
+	//Now that team players are grouped, QSort each team block by score
+	sorted = 0; //Top index
+	j = 0; //Bottom index
+	For ( k=0 ; k<CountTeams ; k++ )
+	{
+		sorted += TeamPlayers[k];
+		Assert( sorted <= iPRI );
+		For ( i=j+1 ; i<sorted ; i++ )
+		{
+			aPRI = PRI[i-1];
+			if ( aPRI.Score < PRI[i].Score )
+			{
+				PRI[i-1] = PRI[i];
+				PRI[i] = aPRI;
+				if ( i > j+1 ) //If we just swapped, we may need to downswap again
+					i -= 2;
+			}
+		}
+		For ( i=j ; i<sorted ; i++ )
+			Show[i] = byte((i-j) < TeamPlayersToShow);
+		j = sorted;
+	}
+	
+		
+	//Use QSort system later, this is slow
+/*	For ( i=0 ; i<iPRI; i++)
 	{
 		maxIndex = i;
 		maxValue = PRI[i];
@@ -483,46 +583,34 @@ function sortPRI()
 		}
 		PRI[maxIndex] = PRI[i];
 		PRI[i] = maxValue;
-	}
+	}*/
+
+/*
+var int counter, tableWidth, tableHeaderHeight, cellHeight, countTeams, saveindex, TeamPlayers[4], 
+		ShowMaxPlayer1, ShowMaxPlayer2, NotShownPlayers[4], LastSortTime, tableLine1,
+		tableLine2, paddingInfo, avgEff[4], avgPi[4], avgPl[4];*/
+	
 }
 
-function float getXHeader(int screenWidth){
+function float getXHeader( int CurTeam, int screenWidth)
+{
 	local float x;
 	x = (screenWidth-2*tableWidth)/3; 
-	switch(countTeams){
-		case 0: 
-		case 2: return x;
+	switch(CurTeam)
+	{
 		case 1: 
-		case 3: return 2*x+tableWidth;
-		default: return 0;
-	}
-}
-
-function float getYHeader(){
-	
-	switch(countTeams){
-		case 0: 
-		case 1: return tableLine1;
+		case 3: return x;
 		case 2: 
-		case 3: return tableLine2;
+		case 4: return 2*x+tableWidth;
 		default: return 0;
 	}
 }
 
-
-
-
-function int GetFlagIndex(string Prefix)
+function float getYHeader( int CurTeam)
 {
-	local int i;
-	for(i=0;i<32;i++)
-		if(FD[i].Prefix == Prefix)
-			return i;
-	FD[saveindex].Prefix=Prefix;
-	FD[saveindex].Tex=texture(DynamicLoadObject("CountryFlags2."$Prefix, class'Texture'));
-	i=saveindex;
-	saveindex = (saveindex+1) % 256;
-	return i;
+	if ( CurTeam <= 2 )
+		return tableLine1;
+	return tableLine2;
 }
 
 function string GetTimeStr()
@@ -565,14 +653,6 @@ function string GetTimeStr()
   return Day @ PlayerPawn( Owner ).Level.Day @ Mon @ PlayerPawn( Owner ).Level.Year $ "," @ Hour $ ":" $Min;
 }
 
-final function Color Lighten( Color C, int Amount)
-{
-	C.R = Min(255, C.R + Amount);
-	C.G = Min(255, C.G + Amount);
-	C.B = Min(255, C.B + Amount);
-	return C;
-}
-
 defaultproperties
 {
 	 tableWidth=450
@@ -590,10 +670,10 @@ defaultproperties
 	 getHeaderColor(1)=(B=16)
 	 getHeaderColor(2)=(G=32)
 	 getHeaderColor(3)=(R=64,G=64)
-	 getTeamColor(0)=(R=255)
-	 getTeamColor(1)=(B=255)
-	 getTeamColor(2)=(G=255)
-	 getTeamColor(3)=(R=255,G=255)
+	 getTeamColor(0)=(R=255,G=50,B=50)
+	 getTeamColor(1)=(R=80,B=255,G=120)
+	 getTeamColor(2)=(R=20,G=255,B=20)
+	 getTeamColor(3)=(R=255,G=255,B=20)
 	 getIconTexture(0)=Texture'IconCoreRed'
 	 getIconTexture(1)=Texture'IconCoreBlue'
 	 getIconTexture(2)=Texture'IconCoreGreen'
