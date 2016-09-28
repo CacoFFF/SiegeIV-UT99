@@ -1291,7 +1291,6 @@ simulated function bool BuildingOwned( sgBuilding sgB)
 
 //=========================================
 //========================== DISPLAY PANEL
-
 simulated event RenderOverlays( canvas Canvas )
 {
 	local rotator NewRot;
@@ -1338,7 +1337,6 @@ simulated event RenderOverlays( canvas Canvas )
 		}
 */		TeamSet = Min( TeamSet, 4);
 	}
-	
 	if ( !bPlayerOwner || (PlayerOwner.Player == None) )
 		PawnOwner.WalkBob = vect(0,0,0);
 
@@ -1502,7 +1500,8 @@ simulated function PostRender( canvas Canvas)
 	local float XL, YL, Scale, X, YOffset;
 	local string aStr, aStr2;
 	local bool bRestricted;
-
+	local int Cycles;
+	
 	if ( MyFonts == none )
 	{
 		GetFonts();
@@ -1580,7 +1579,7 @@ simulated function PostRender( canvas Canvas)
 
 
 	}
-	
+
 	//Draw GUI
 }
 
@@ -1591,11 +1590,11 @@ simulated function DrawWheel( Canvas C)
 	if ( ClientActor == none )
 		return;
 
+	ClientActor.ConstructorWheel.HUDColor = HUDColor();
 	if ( !ClientActor.ConstructorWheel.bSetup )
 		ClientActor.ConstructorWheel.sgSetup( self);
 
 	ClientActor.ConstructorWheel.Scale = fMax( 0.5, int(fMin( C.ClipX, C.ClipY) / 768)); // quarter of screen is desired
-	ClientActor.ConstructorWheel.HUDColor = HUDColor();
 	ClientActor.ConstructorWheel.MasterRender( C);
 }
 
@@ -2152,7 +2151,7 @@ simulated function Tick(float DeltaTime)
 	local float Speed2D;
 	local name aState;
 	local Pawn P;
-
+	
 	P = Pawn(Owner);
 	if ( P == none )
 	{

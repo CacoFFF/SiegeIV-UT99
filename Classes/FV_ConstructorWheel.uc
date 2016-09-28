@@ -83,7 +83,9 @@ function Tick( float DeltaTime)
 			MPos = MPos * (140 / moveX);
 
 		//Select the button here
-		if ( moveX < 120 )
+		if ( moveX < 40 )
+			SelectedButton = 31;
+		else if ( moveX < 120 )
 			SelectedButton = iButtons;
 		else
 		{
@@ -156,15 +158,25 @@ function PointerHit( float X, float Y, optional byte Code)
 		return;
 	}
 
-	if ( bSelectingElement )
+	if ( bSelectingElement || (bSelectingCategory && WindupTimer > 0.9) )
 	{
 		bSelectingCategory = false;
+		bSelectingElement = true;
 		if ( (Code & 1) != 0 ) //Select the build!
 		{
 			if ( (SelectedButton >= 0) && (SelectedButton < iButtons) && (Buttons[SelectedButton] != none) )
 			{
 				if ( Buttons[SelectedButton].GUI_Code != "" )
+				{
 					LocalPlayer.ConsoleCommand( Buttons[SelectedButton].GUI_Code );
+					if ( bLastAltFire && !FV_ConstructorWheelButton(Buttons[SelectedButton]).bIsCategory )
+					{
+						Buttons[31].CopyButton( Buttons[SelectedButton] );
+						LocalPlayer.bAltFire = 0; //Avoid cycle after selecting
+						MPos = vect(0,0,0);
+						return;
+					}
+				}
 				if ( FV_ConstructorWheelButton(Buttons[0]).bIsCategory ) //Action pseudo category
 				{
 					if ( SelectedButton == 0 )
@@ -176,6 +188,13 @@ function PointerHit( float X, float Y, optional byte Code)
 					SetupSettings();
 				else
 					bSelectingElement = false;
+			}
+			else if ( SelectedButton == 31 ) //Favorite button!
+			{
+				if ( Buttons[SelectedButton].GUI_Code != "" )
+					LocalPlayer.ConsoleCommand( Buttons[SelectedButton].GUI_Code );
+				bSelectingElement = false;
+				LocalPlayer.bAltFire = 0; //Avoid cycling after selecting
 			}
 			else
 				bSelectingElement = false;
@@ -202,8 +221,9 @@ function PointerRelease( float X, float Y, optional byte Code)
 
 function PostRender( Canvas C)
 {
-	local float HalfOffset, CX, CY;
+	local float HalfOffset, CX, CY, XL, YL;
 	local float ProxyFactor;
+	local bool bNS;
 
 	//Scale is given by constructor, override here
 	Scale *= 0.5 + WindupTimer * 0.5;
@@ -223,21 +243,61 @@ function PostRender( Canvas C)
 	else
 		C.DrawColor = GrayColor;
 
-
-	ProxyFactor = fMin( 1, 0.4 + VSize(MPos) * 0.01); //0.4 to 1.0
-	ColorScale = ProxyFactor * WindupTimer;
-	
-	C.DrawColor.R = byte( float(C.DrawColor.R) * ColorScale);
-	C.DrawColor.G = byte( float(C.DrawColor.G) * ColorScale);
-	C.DrawColor.B = byte( float(C.DrawColor.B) * ColorScale);
-
-	C.SetPos( CX - HalfOffset, CY - HalfOffset);
 	C.Style = 3; //Trans
-	C.DrawIcon( Texture'GWheel_Main_T', Scale);
 
+	if ( WindupTimer > 0 )
+	{
+		ProxyFactor = fMin( 1, 0.4 + VSize(MPos) * 0.01); //0.4 to 1.0
+		ColorScale = ProxyFactor * WindupTimer;
+		
+		C.DrawColor.R = byte( float(C.DrawColor.R) * ColorScale);
+		C.DrawColor.G = byte( float(C.DrawColor.G) * ColorScale);
+		C.DrawColor.B = byte( float(C.DrawColor.B) * ColorScale);
+
+		C.SetPos( CX - HalfOffset, CY - HalfOffset);
+		C.DrawIcon( Texture'GWheel_Main_T', Scale);
+	}
+	
 	//CURSOR IS TO BE DRAWN AT HALF SIZE
 	if ( bSelectingCategory || bSelectingElement )
 	{
+		if ( bLastAltFire ) //Fav select mode
+		{
+			if ( LocalPlayer.Level.bHighDetailMode )
+			{
+				C.Style = 4; //Modu
+				C.SetPos( CX - 64*Scale, CY - 63.8*Scale);
+				C.DrawIcon( Texture'GUI_Border4_M', Scale);
+				C.DrawTile( Texture'GUI_Border4_M', 64*Scale, 64*Scale, 0, 0, -64, 64);
+				C.SetPos( CX - 64*Scale, CY);
+				C.DrawTile( Texture'GUI_Border4_M', 64*Scale, 64*Scale, 0, 0, 64, -64);
+				C.DrawTile( Texture'GUI_Border4_M', 64*Scale, 64*Scale, 0, 0, -64, -64);
+				C.Style = 3; //Trans
+			}
+			C.DrawColor = SwapBack( HUDColor );
+			C.SetPos( CX - 64*Scale, CY - 63.8*Scale);
+			C.DrawIcon( Texture'GUI_Border4_F', Scale);
+			C.DrawTile( Texture'GUI_Border4_F', 64*Scale, 64*Scale, 0, 0, -64, 64);
+			C.SetPos( CX - 64*Scale, CY);
+			C.DrawTile( Texture'GUI_Border4_F', 64*Scale, 64*Scale, 0, 0, 64, -64);
+			C.DrawTile( Texture'GUI_Border4_F', 64*Scale, 64*Scale, 0, 0, -64, -64);
+			
+			bNS = C.bCenter;
+			C.bCenter = true;
+			C.Style = 2; //Masked
+			C.SetPos( 0, CY - 6 * Scale);
+			C.DrawColor.R = 200.0 * ColorScale;
+			C.DrawColor.G = 200.0 * ColorScale;
+			C.DrawColor.B = 200.0 * ColorScale;
+			C.DrawText( "+ FAV +");
+			C.bCenter = bNS;
+		}
+		else if ( Buttons[31] != None )
+		{
+			FV_ConstructorWheelButton(Buttons[31]).bIsSelected = (SelectedButton==31);
+			Buttons[31].PostRender(C);
+		}
+			
 		C.SetPos( CX - (32 + MPos.X) * Scale, CY - (32 + MPos.Y) * Scale);
 		C.Style = 3; //Trans
 		C.DrawColor = DarkGrayColor;
@@ -255,22 +315,73 @@ function PostRender( Canvas C)
 				DefaultRenderButtons(C);
 			if ( SelectedButton >= 0 && SelectedButton < iButtons )
 			{
-				C.DrawColor = SwapColors( HUDColor );
+				if ( bLastAltFire )
+					C.DrawColor = SwapBack( HUDColor );
+				else
+					C.DrawColor = SwapColors( HUDColor );
 				C.Style = 3; //Trans
 				C.SetPos( Buttons[SelectedButton].XOffset - 16 * Scale, Buttons[SelectedButton].YOffset - 16 * Scale); //Extremely ugly
 				C.DrawIcon( Texture'GWeel_Rotator_a00', Scale * 0.75);
 			}
 		}
 	}
+	else
+	{
+		if ( ChallengeHUD(LocalPlayer.myHUD) != None )
+		{
+			C.DrawColor = ChallengeHUD(LocalPlayer.myHUD).CrosshairColor;
+			C.DrawColor.R *= 15; //Why can't I compile this operator?
+			C.DrawColor.G *= 15;
+			C.DrawColor.B *= 15;
+		}
+		else
+			C.DrawColor = HUDColor;
+		bNS = C.bNoSmooth;
+		C.bNoSmooth = false;
+		C.SetPos( CX + HalfOffset - 8*Scale, CY - 32*Scale);
+		if ( bLastAltFire )
+			C.DrawIcon( Texture'GUI_Arrow', Scale);
+		else if ( !bLastFire )
+			C.DrawIcon( Texture'GUI_Arrow_Hollow', Scale);
+
+		C.SetPos( CX - (HalfOffset + 56*Scale), CY - 32*Scale);
+		if ( bLastFire )
+			C.DrawTile( Texture'GUI_Arrow', 64*Scale, 64*Scale, 0, 0, -64, 64);
+		else
+		{
+			if ( bLastAltFire )
+				C.DrawColor = WhiteColor;
+			C.DrawTile( Texture'GUI_Arrow_Hollow', 64*Scale, 64*Scale, 0, 0, -64, 64);
+		}
+		C.bNoSmooth = bNS;
+	}
 
 }
 
 function sgSetup( sgConstructor C)
 {
-	local FV_GUI_Button aButton;
+	local Color IconColor;
 
 	assert( !bSetup );
 
+	//Create favorite button, setup upgrade
+	if ( Buttons[31] == None )
+	{
+		IconColor = SwapBack(HUDColor);
+		IconColor.R = IconColor.R + (255 - IconColor.R) / 2;
+		IconColor.G = IconColor.R + (255 - IconColor.G) / 2;
+		IconColor.B = IconColor.R + (255 - IconColor.B) / 2;
+
+		Buttons[31] = new(self,'ConstructorWheelFav') class'FV_ConstructorWheelButtonFav';
+		Buttons[31].InheritFrom( self);
+		
+		Buttons[31].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
+		Buttons[31].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
+		Buttons[31].RegisterTex( Texture'GUI_Circle', 2/*masked*/, IconColor, 0.375, 0.375);
+
+		Buttons[31].Setup( 64, 64, 0, 0, C.Functions[0],"", "setmode 0 0" );
+	}
+	
 /*	BasicCat = new(self,'BasicCategoryPanel') class'FV_sgBasicCategoryPanel';
 	RegisterElement( BasicCat);
 	BasicCat.sgSetup( C);
@@ -371,7 +482,7 @@ function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 	local class<sgBuilding> sgB;
 	
 	//Find out how many builds we have
-	NumBuilds = CatActor.CountCategoryBuilds( CatIndex);
+	NumBuilds = Min(CatActor.CountCategoryBuilds( CatIndex), 31);
 	BuildIndex = CatActor.FirstCatBuild( CatIndex);
 	sgB = CatActor.GetBuild( BuildIndex);
 	

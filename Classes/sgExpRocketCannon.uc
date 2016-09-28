@@ -22,4 +22,5 @@ defaultproperties
      SpriteGreenTeam=Texture'ContainerSpriteTeam2'
      SpriteYellowTeam=Texture'ContainerSpriteTeam3'
      BuildDistance=16
+     GUI_Icon=Texture'GUI_RocketCannon'
 }

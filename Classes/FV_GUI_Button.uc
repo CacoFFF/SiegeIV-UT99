@@ -44,6 +44,25 @@ function Setup( float sX, float sY, float oX, float oY, string aName, optional s
 		GUI_Code = ButtonCode;
 }
 
+function CopyButton( FV_GUI_Button Other)
+{
+	local int i;
+	For ( i=0 ; i<4 ; i++ )
+	{
+		Texture[i] = Other.Texture[i];
+		Style[i] = Other.Style[i];
+		Colors[i] = Other.Colors[i];
+		ScalePos[i] = Other.ScalePos[i];
+	}
+	SizeX = Other.SizeX;
+	SizeY = Other.SizeY;
+	ColorScale = Other.ColorScale;
+	iTex = Other.itex;
+	ButtonName = Other.ButtonName;
+	ButtonDescription = Other.ButtonDescription;
+	GUI_Code = Other.GUI_Code;
+}
+
 function RegisterTex( Texture aTex, byte aStyle, Color aColor, optional float ScaleX, optional float ScaleY)
 {
 	assert( aTex != none);

@@ -36,26 +36,29 @@ function PostRender( Canvas C)
 {
 	local int i;
 	local float Scale, XL, YL, XO, YO;
+	local string Text;
 	
 	Scale = FV_ConstructorWheel(Parent).Scale;
 	XOffset = C.ClipX * 0.5 + (CachedOffset.X - SizeX * 0.5) * Scale;
 	YOffset = C.ClipY * 0.5 + (CachedOffset.Y - SizeY * 0.5) * Scale;
 
-	ColorScale = FV_ConstructorWheel(Parent).ColorScale;
-	LOOP:
-	if ( !bIsSelected )
-		ColorScale *= 0.8;
-	if ( ColorScale < 1 && (Style[i] != 4) )
-		C.DrawColor = ScaleColor(Colors[i]);
-	else if ( bIsBuilding && !sgConstructor(LocalPlayer.Weapon).CatActor.RulesAllow( RuleSlot) )
-	{
-		C.DrawColor.R = 40; //Temporary
-		C.DrawColor.G = 0;
-		C.DrawColor.B = 20;
-	}
-	else
-		C.DrawColor = Colors[i];
+	if ( bIsSelected )	ColorScale = 1;
+	else				ColorScale = FV_ConstructorWheel(Parent).ColorScale * 0.8;
+LOOP:
+	C.DrawColor = Colors[i];
 	C.Style = Style[i];
+
+	if ( Style[i] != 4 )
+	{
+		if ( bIsBuilding && !sgConstructor(LocalPlayer.Weapon).CatActor.RulesAllow( RuleSlot) )
+		{
+			C.DrawColor.R = 80; //Temporary
+			C.DrawColor.G = 0;
+			C.DrawColor.B = 30;
+		}
+		else
+			C.DrawColor = ScaleColor(Colors[i]);
+	}
 	C.SetPos( XOffset, YOffset);
 	C.DrawTileClipped( Texture[i], SizeX * Scale * ScalePos[i].X, SizeY * Scale * ScalePos[i].Y, 0, 0, Texture[i].USize, Texture[i].VSize);
 	if ( ++i < iTex )
@@ -63,6 +66,11 @@ function PostRender( Canvas C)
 		
 	if ( Abbreviation != "" && (ColorScale >= 0.2) && (C.Font != None) )
 	{
+		if ( bIsSelected )
+		{
+			Text = Abbreviation;
+			Abbreviation = ButtonName;
+		}
 		C.StrLen( Abbreviation, XL, YL);
 		XO = C.ClipX * 0.5 + CachedOffset.X * Scale * 1.3;
 		YO = C.ClipY * 0.5 + CachedOffset.Y * Scale * 1.3 - YL * 0.5;
@@ -77,6 +85,8 @@ function PostRender( Canvas C)
 		C.SetPos( XO, YO);
 		C.DrawColor = FV_ConstructorWheel(Parent).WhiteColor;
 		C.DrawText( Abbreviation);
+		if ( bIsSelected )
+			Abbreviation = Text;
 	}
 }
 
