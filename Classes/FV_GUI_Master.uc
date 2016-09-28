@@ -38,3 +38,13 @@ final function InheritFrom( FV_GUI_Panel InParent)
 	Parent = InParent; //This should match outer GUI if possible
 	LocalPlayer = Parent.LocalPlayer;
 }
+
+static final function Color MakeColor( byte R, byte G, byte B, optional byte A)
+{
+	local Color C;
+	C.R = R;
+	C.G = G;
+	C.B = B;
+	C.A = A;
+	return C;
+}

@@ -182,9 +182,15 @@ simulated function ToggleBInterface()
 
 simulated function TogglePerformance()
 {
+	local string Msg;
 	bHighPerformance = !bHighPerformance;
 	default.bHighPerformance = bHighPerformance;
 	sgSet.bHighPerformance = bHighPerformance;
+	Msg = "Siege high performance mode";
+	if ( bHighPerformance )
+		LocalPlayer.ClientMessage( Msg@"enabled");
+	else
+		LocalPlayer.ClientMessage( Msg@"disabled");
 	EnforcePerformance();
 	SaveSettings();
 }

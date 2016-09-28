@@ -500,6 +500,7 @@ function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 			Buttons[i].FastReset();
 		}
 		FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = True;
+		FV_ConstructorWheelButton(Buttons[i]).RuleSlot = BuildIndex;
 		Buttons[i].Setup( 64, 64, i, NumBuilds, sgB.default.BuildingName,"", "setmode "$string(CatIndex+4)@string(i) );
 		Buttons[i].RegisterTex( Texture'Botpack.EnergyMark', 4/*modu*/, WhiteColor);
 		if ( (sgB != None) && (sgB.default.GUI_Icon != None) )
@@ -515,6 +516,29 @@ function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 
 function SetupSettings()
 {
+	local int i, NumSettings;
+	local Color C;
+	
+	//Buttons should already have been created here (4 actions in action fake category)
+	NumSettings = 2;
+
+	for ( i=0 ; i<NumSettings ; i++ )
+	{
+		FV_ConstructorWheelButton(Buttons[i]).bIsCategory = False;
+		FV_ConstructorWheelButton(Buttons[i]).bIsBuilding = False;
+		Buttons[i].FastReset();
+		Buttons[i].RegisterTex( Texture'GUI_Settings', 3/*trans*/, WhiteColor);
+	}
+	Buttons[0].Setup( 64, 64, 0, NumSettings, "Constructor Panel", "Toggles the constructor panel display", "ToggleSiegePanel");
+	Buttons[1].Setup( 64, 64, 1, NumSettings, "Performance mode", "Toggles Siege high performance mode", "ToggleSiegePerformance");
+	
+	if ( sgConstructor(LocalPlayer.Weapon).ClientActor.bHighPerformance )
+		Buttons[1].RegisterTex( Texture'GUI_Minus', 2/*masked*/, MakeColor(255,50,50), 0.375, 0.375);
+	else
+		Buttons[1].RegisterTex( Texture'GUI_Plus', 2/*masked*/, MakeColor(20,255,20), 0.375, 0.375);
+	
+	
+	iButtons = NumSettings;
 }
 
 
