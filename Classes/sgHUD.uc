@@ -1184,7 +1184,7 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 		}
 		else if ( (Building.iRULeech > 0) && (PlayerOwner.PlayerReplicationInfo != none) )
 		{
-			if ( (Spectator(Owner) != none) || (PlayerOwner.PlayerReplicationInfo.Team == Building.Team) )
+			if ( Spectator(Owner) != none )
 			{
 				YPos += 36*Scale;
 				Canvas.Font = BigFont;

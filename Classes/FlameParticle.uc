@@ -1,9 +1,8 @@
 //=============================================================================
 // FlameParticle
 //=============================================================================
-class FlameParticle extends SpriteBallChild;
-
-#exec OBJ LOAD File=AmbAncient.uax
+class FlameParticle extends SpriteBallChild
+	transient;
 
 function PostBeginPlay()
 {

@@ -35,10 +35,12 @@ simulated event Timer()
 
 	if ( class'sgClient'.default.bHighPerformance )
 		rate += 0.2;
-
-	particle = Spawn(class'JetParticle', Self,, Owner.Location + vect(0,0,0.3) * Owner.CollisionHeight - vector(Owner.Rotation) * 20 );
-	if ( particle != None )
-		particle.Velocity = vector(Owner.Rotation) * vect(-20,-20,0) - vect(0,0,40);
+	if ( Level.NetMode != NM_DedicatedServer )
+	{
+		particle = Spawn(class'JetParticle', Self,, Owner.Location + vect(0,0,0.3) * Owner.CollisionHeight - vector(Owner.Rotation) * 20 );
+		if ( particle != None )
+			particle.Velocity = vector(Owner.Rotation) * vect(-20,-20,0) - vect(0,0,40);
+	}
 
 	SetTimer(rate, false);
 }

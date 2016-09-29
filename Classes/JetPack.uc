@@ -187,12 +187,13 @@ simulated function JetStart()
 	if ( Role == ROLE_Authority )
 	{
 		bActive = true;
-
 		// Effects
-		inv = UT_Invisibility(Pawn(Owner).FindInventoryType(class'UT_Invisibility'));
 		if ( Trail == None )
+		{
+			inv = UT_Invisibility(Pawn(Owner).FindInventoryType(class'UT_Invisibility'));
 			if ( inv == None || inv.charge < 160)
 				Trail = Spawn(class'JetTrail', Owner);
+		}
 	}
 	if ( Level.NetMode == NM_Client )
 	{
