@@ -12,7 +12,7 @@ class sgBuilding extends StationaryPawn
 const BlockScanDist = 800.f;
 const SGS = class'SiegeStatics';
 
-var() string		sPlayerIP;
+var() string sPlayerIP;
 var float fRULeech; //RU given to enemy
 var int iRULeech;
 var int iCatTag; //Tag given to build if made from a category
@@ -21,6 +21,19 @@ var sgPRI OwnerPRI;
 var sgBuildingVolume MyVolume;
 var array<int> BlockedReachSpecs;
 var int iBlockPoll;
+var int TimerCount;
+var int PackedFlags;
+// Flags:
+// 0x00000003 = Team (2 bytes)
+// 0x00000004 = bDisabledByEMP
+// 0x00000008 = bSmokeStatus
+// 0x00000010 = bIsOnFire
+// 0x00000020 = bNoRemove
+// 0x00000040 = bOnlyOwnerRemove
+
+
+
+
 var NavigationPoint N;
 var EffectsPool EffectsPool;
 
@@ -89,9 +102,7 @@ var enum EAnnounceType{
 replication
 {
 	reliable if ( Role == ROLE_Authority )
-		MaxEnergy, Energy, SCount, Grade, Team, OwnerPRI, iRULeech, bSmokeStatus, bNoRemove, bOnlyOwnerRemove;
-	reliable if ( bReplicateEMP && Role == ROLE_Authority )
-		bDisabledByEMP;
+		MaxEnergy, Energy, SCount, Grade, OwnerPRI, iRULeech, PackedFlags;
 	reliable if ( bNetInitial && (Role == ROLE_Authority) )
 		UpgradeCost, bNoUpgrade, BuildTime, TotalSCount;
 	reliable if ( bNetInitial && bReplicateMFX && (Role == ROLE_Authority) )
@@ -240,6 +251,10 @@ simulated event Timer()
 	local sgParticle pt;
     local int i;
 
+	TimerCount++;
+	//Data unpack is best done before processing occurs
+	if ( Level.NetMode == NM_Client )
+		UnpackStatusFlags();
 	if ( !DoneBuilding )
 	{
 		if ( SCount > 0 )
@@ -297,6 +312,38 @@ simulated event Timer()
 
 	if ( MyVolume != none )
 		MyVolume.VolumeUpdate();
+
+	//Data pack is best done after processing occurs
+	if ( Level.NetMode != NM_Standalone && ((TimerCount & 1) != 0) )
+		PackStatusFlags();
+}
+
+//**************************************
+// Flags:
+// 0x00000003 = Team (2 bytes)
+// 0x00000004 = bDisabledByEMP
+// 0x00000008 = bSmokeStatus
+// 0x00000010 = bIsOnFire
+// 0x00000020 = bNoRemove
+// 0x00000040 = bOnlyOwnerRemove
+function PackStatusFlags()
+{
+	PackedFlags = (Team & 3)
+				|	(0x00000008 * int(bSmokeStatus))
+				|	(0x00000010 * int(bIsOnFire))
+				|	(0x00000020 * int(bNoRemove))
+				|	(0x00000040 * int(bOnlyOwnerRemove));
+	if ( bReplicateEMP && bDisabledByEMP )
+		PackedFlags += 4;
+}
+simulated function UnpackStatusFlags()
+{
+	Team = PackedFlags & 3;
+	bDisabledByEMP		= (PackedFlags & 0x00000004) != 0;
+	bSmokeStatus		= (PackedFlags & 0x00000008) != 0;
+	bIsOnFire			= (PackedFlags & 0x00000010) != 0;
+	bNoRemove			= (PackedFlags & 0x00000020) != 0;
+	bOnlyOwnerRemove	= (PackedFlags & 0x00000040) != 0;
 }
 
 event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )

@@ -27,26 +27,37 @@ var NukeClientSound ClientEffect;
 
 const SecsBeforeSpam = 5;
 
-replication
+//**************************************
+// Flags:
+// 0x00000100 = bAlreadySounding
+function PackStatusFlags()
 {
-	reliable if ( Role == ROLE_Authority )
-		bAlreadySounding;
+	Super.PackStatusFlags();
+	if ( bAlreadySounding )
+		PackedFlags += 0x00000100;
+}
+simulated function UnpackStatusFlags()
+{
+	Super.UnpackStatusFlags();
+	bAlreadySounding = (PackedFlags & 0x00000100) != 0;
 }
 
-simulated event Timer()
+//Get the local player
+simulated function FinishBuilding()
 {
-	if ( FRand() < 0.5 )
-		CheckForNukers();
-	Super.Timer();	
-
+    Super.FinishBuilding();
 	if ( Level.NetMode != NM_DedicatedServer )
-	{
-		if ( LocalPlayer == none )
-			LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer(self);
-		else if ( LocalPlayer.PlayerReplicationInfo != none )
-			ClientEffects();
-	}
+		LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer(self);
 }
+
+simulated function CompleteBuilding()
+{
+	if ( (Level.NetMode != NM_Client) && ((TimerCount & 1) != 0) ) //Every 2 frames
+		CheckForNukers();
+	if ( LocalPlayer != None && LocalPlayer.PlayerReplicationInfo != None )
+		ClientEffects();
+}
+
 
 //Visual and audible effects
 simulated function ClientEffects()

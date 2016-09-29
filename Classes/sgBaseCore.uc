@@ -15,7 +15,7 @@ var TeamInfo MyTeam;
 replication
 {
 	reliable if ( Role==ROLE_Authority )
-		RuMultiplier, StoredRU, bCoreDisabled;
+		RuMultiplier, StoredRU;
 }
 
 event PostBeginPlay()
@@ -192,6 +192,20 @@ simulated function Timer()
 		if ( VSize(myFX.Location - Location) > 50 )
 			myFX.SetLocation( Location);
 	}
+}
+//**************************************
+// Flags:
+// 0x00000100 = bCoreDisabled
+function PackStatusFlags()
+{
+	Super.PackStatusFlags();
+	if ( bCoreDisabled )
+		PackedFlags += 0x00000100;
+}
+simulated function UnpackStatusFlags()
+{
+	Super.UnpackStatusFlags();
+	bCoreDisabled = (PackedFlags & 0x00000100) != 0;
 }
 
 simulated function FinishBuilding()

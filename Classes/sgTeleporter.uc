@@ -34,8 +34,27 @@ var float LastFired;
 replication
 {
     reliable if( Role==ROLE_Authority )
-        bEnabled, URL1, bHasOtherTele, TargetLoc, TelenetLoc;
+        URL1, TargetLoc, TelenetLoc;
 }
+
+
+//**************************************
+// Flags:
+// 0x00000100 = bEnabled
+// 0x00000200 = bHasOtherTele
+function PackStatusFlags()
+{
+	Super.PackStatusFlags();
+	if ( bEnabled )			PackedFlags += 0x00000100;
+	if ( bHasOtherTele )	PackedFlags += 0x00000200;
+}
+simulated function UnpackStatusFlags()
+{
+	Super.UnpackStatusFlags();
+	bEnabled		= (PackedFlags & 0x00000100) != 0;
+	bHasOtherTele	= (PackedFlags & 0x00000200) != 0;
+}
+
 
 //First event in creation order
 event Spawned()
