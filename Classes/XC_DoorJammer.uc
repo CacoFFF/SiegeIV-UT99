@@ -14,14 +14,13 @@ replication
 
 event PostBeginPlay()
 {
-	local vector HitLocation, HitNormal, Dir;
+	local vector HitLocation, HitNormal, Dir, VStart;
 	local actor A, Nearest;
 	local Mover M;
 	local float Dist, NearestDist;
 	
 	Dir = vector(Rotation);
-	A = Trace( HitLocation, HitNormal, Location + vect(0,0,10) + Dir * 50, Location + vect(0,0,10), true, vect(1,1,1) );
-	
+	A = Trace( HitLocation, HitNormal, Location + vect(0,0,10) + Dir * 35, Location + vect(0,0,10), true, vect(1,1,1) );
 	if ( A != Level )
 	{
 		Destroy();
@@ -34,7 +33,7 @@ event PostBeginPlay()
 	{
 		if ( M.bTriggerOnceOnly )
 			continue;
-		if ( M.IsInState('StandOpenTimed') )//Lifts
+		if ( M.IsInState('StandOpenTimed') || M.IsInState('BumpOpenTimed') )//Lifts
 		{
 			Dist = VSize( M.Location - Location);
 			if ( Dist < 120 )
@@ -45,7 +44,7 @@ event PostBeginPlay()
 					Nearest = M;
 				}
 			}
-			else if ( Dist < 600 )
+			else if ( Dist < 800 )
 			{
 				Dist = TraceToMover( M);
 				if ( (Dist < 600) && (Dist < NearestDist) )
@@ -116,6 +115,12 @@ function CompleteBuilding()
 			TrackedMover.Attach( self);
 			bIsPlayer = false;
 		}
+		else if ( TrackedMover.IsInState('BumpOpenTimed') )
+		{
+			bIsPlayer = true;
+			TrackedMover.Bump( self);
+			bIsPlayer = false;
+		}
 		else
 		{
 			ForEach AllActors (class'Actor', A, TrackedMover.Tag)
@@ -172,12 +177,32 @@ simulated function FinishBuilding()
 
 function float TraceToMover( Mover M)
 {
-	local vector HitLocation, HitNormal;
+	local vector HitLocation, HitNormal, VStart, Dir;
 	local Actor A;
+	local int i, j, k;
 
-	ForEach TraceActors (class'Actor', A, HitLocation, HitNormal, M.Location)
+	//Up to 9 traces, this can be expensive
+	Dir = Normal( M.Location - Location) * 25;
+	for ( i=-1 ; i<=1 ; i++ )
+	{
+		VStart.X = 15 * i;
+		for ( j=-1 ; j<=1 ; j++ )
+		{
+			VStart.Y = 15 * j;
+			for ( k=-1 ; k<=1 ; k++ )
+			{
+				VStart.Z = 15 * k;
+				ForEach TraceActors (class'Actor', A, HitLocation, HitNormal, M.Location + VStart + Dir, Location + VStart)
+					if ( A == M )
+						return VSize(HitLocation - Location);
+			}
+		}
+	}
+	
+	
+/*	ForEach TraceActors (class'Actor', A, HitLocation, HitNormal, M.Location)
 		if ( A == M )
-			return VSize(HitLocation - Location);
+			return VSize(HitLocation - Location);*/
 	return 9999;
 }
 

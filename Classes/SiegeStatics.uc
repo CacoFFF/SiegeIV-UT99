@@ -350,6 +350,17 @@ static final function PlayerPawn FindLocalPlayer( Actor Other)
 }
 
 
+static final function Actor FindActorCN( Actor Other, class<Actor> ActorClass, name ActorName)
+{
+	local Actor A;
+	if ( ActorClass == None )
+		ActorClass = class'Actor';
+	ForEach Other.AllActors( ActorClass, A)
+		if ( ActorName == '' || ActorName == A.Name )
+			return A;
+}
+
+
 //*******************************************************
 //** XC_ENGINE - Function storage for other classes *****
 //** Stored here to reduce field count in said classes **

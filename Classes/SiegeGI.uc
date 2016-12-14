@@ -305,6 +305,8 @@ function InitGame(string options, out string error)
 		}
 	}
 
+	ModifyCores();
+	
     foreach AllActors( class'Inventory', SuperItem)
     {
 		if ( WarheadLauncher(SuperItem) != None )
@@ -406,6 +408,7 @@ function InsertRU()
 {
 	local vector vMin, vMax;
 	local PathNode P;
+	local Light L;
 	local NavigationPoint N, aS, aE;
 	local float cCount[4], aDist;
 	local float RUsLeft[4];
@@ -459,7 +462,7 @@ function InsertRU()
 					else if ( N.IsA('InventorySpot') && (FRand() > 0.7) )
 						N.HitActor = none;
 
-					if ( N.HitActor != none )
+					if ( N.HitActor != none || N.Region.ZoneNumber == 0 ) //Don't spawn RU in BSP walls
 						continue;
 					N.HitActor = Spawn(class'WRU50',,,N.Location);
 					RUsLeft[i] -= 1;
@@ -474,12 +477,33 @@ function InsertRU()
 		if ( RUsLeft[i] <= 0 )
 			continue;
 		ForEach Cores[i].RadiusActors (class'PathNode', P, aDist)
-			if ( P.HitActor == none )
+			if ( P.HitActor == none && P.Region.ZoneNumber != 0 )
 				cCount[i] += 1;
 		ForEach Cores[i].RadiusActors (class'PathNode', P, aDist)
-			if ( (P.HitActor == none) && (FRand()*(cCount[i]-=1) < RUsLeft[i] ) )
+			if ( (P.HitActor == none) && (P.Region.ZoneNumber != 0) && (FRand()*(cCount[i]-=1) < RUsLeft[i] ) )
 			{
 				P.HitActor = Spawn(class'WRU50',,,P.Location);
+				if ( (RUsLeft[i] -= 1) <= 0)
+					break;
+			}
+		//0027: Use lights!!!
+		cCount[i] = 0;
+		if ( RUsLeft[i] <= 0 )
+			continue;
+		ForEach Cores[i].RadiusActors (class'Light', L, aDist)
+			if ( L.Region.ZoneNumber != 0 )
+				cCount[i] += 1;
+		ForEach Cores[i].RadiusActors (class'Light', L, aDist)
+			if ( (L.Region.ZoneNumber != 0) && (FRand()*(cCount[i]-=1) < RUsLeft[i] ) )
+			{
+				if ( L.Region.Zone.bWaterZone && L.Region.Zone.DamagePerSec > 0 )
+					L.HitActor = Spawn(class'WRU50',,,L.Location );
+				else
+				{
+					if ( L.Trace( vMin, vMax, L.Location - vect(0,0,800) ) == None )
+						vMin = L.Location - vect(0,0,800);
+					L.HitActor = Spawn(class'WRU50',,,vMin + vect(0,0,35));
+				}
 				if ( (RUsLeft[i] -= 1) <= 0)
 					break;
 			}
@@ -596,6 +620,18 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 	}
 	else
 		return nCur;
+}
+
+function ModifyCores()
+{
+	local string LevelName;
+	LevelName = String(Outer.Name);
+	
+	if ( LevelName ~= "CTF-Kosov" )
+		Spawn(class'sgMapEditor').EditKosov();
+	else if ( LevelName ~= "CTF-DeNovo" )
+		Spawn(class'sgMapEditor').EditDeNovo();
+//	else if ( LevelName ~= "CTF-'uK-BraveHeart[REVISED]" )
 }
 
 function EndGame( string Reason)
