@@ -25,6 +25,7 @@ var bool bReplicateLoc;
 var bool bReplicateHealth;
 var bool bHudEnforceHealth;
 var bool bClientXCGEHash;
+var bool bForceMovement;
 
 var Engine ClientEngine;
 
@@ -76,7 +77,7 @@ state Server
 {
 	event Tick( float DeltaTime)
 	{
-		if ( (POwner != none) && (MA_List != none) )
+		if ( POwner != none)
 			AffectMovement( DeltaTime);
 	}
 Begin:
@@ -117,7 +118,7 @@ state Standalone
 	{
 		if ( POwner == none || POwner.bDeleteMe )
 			Destroy();
-		else if ( MA_List != none )
+		else
 			AffectMovement( DeltaTime);
 	}
 }
@@ -165,8 +166,7 @@ state OwnerClient
 	}
 	simulated event Tick( float DeltaTime)
 	{
-		if ( MA_List != none )
-			AffectMovement( DeltaTime);
+		AffectMovement( DeltaTime);
 	}
 }
 
@@ -266,21 +266,19 @@ simulated function AffectMovement( float DeltaTime)
 {
 	local XC_MovementAffector M, N;
 	
-	if ( MA_List == none )
-		return;
-	POwner.GroundSpeed = POwner.default.GroundSpeed;
-	POwner.WaterSpeed = POwner.default.WaterSpeed;
-	POwner.AirSpeed = POwner.default.AirSpeed;
-	POwner.AccelRate = POwner.default.AccelRate;
-	M = MA_List;
-//This loop allows affectors to self destruct during 'AffectMovement'
-LOOP_AGAIN:
-	N = M.NextAffector;
-	M.AffectMovement( DeltaTime);
-	if ( N != none )
+	if ( MA_List != None || bForceMovement )
 	{
-		M = N;
-		Goto LOOP_AGAIN;
+		bForceMovement = False;
+		POwner.GroundSpeed = POwner.default.GroundSpeed;
+		POwner.WaterSpeed = POwner.default.WaterSpeed;
+		POwner.AirSpeed = POwner.default.AirSpeed;
+		POwner.AccelRate = POwner.default.AccelRate;
+		//Loop allows self-destruction
+		For ( M=MA_List ; M!=None ; M=N )
+		{
+			N = M.NextAffector;
+			M.AffectMovement( DeltaTime);
+		}
 	}
 }
 

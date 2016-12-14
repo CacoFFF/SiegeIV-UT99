@@ -44,14 +44,19 @@ simulated function AffectMovement( float DeltaTime)
 {
 	local float fSlowness;
 	
-	if ( PoisonedPlayer == None || PoisonedPlayer.bDeleteMe || PoisonedPlayer.Health <= 0 )
+	if ( PoisonedPlayer == None || PoisonedPlayer.bDeleteMe || PoisonedPlayer.Health <= 0 || PoisonedPlayer.bHidden )
 	{
-		if ( Role == ROLE_Authority && LifeSpan > 0.01 )
+		if ( Role == ROLE_Authority )
 			Destroy();
 		return;
 	}
 	
 	fSlowness = Slowness;
+	if ( (Slowness -= DeltaTime*RecoverRate) < 1 )
+	{
+		Destroy();
+		return;
+	}
 	if ( PRI != none )
 		fSlowness -= float(PRI.Ping) * 0.001 * Level.TimeDilation * RecoverRate; //Compensate for lag
 
@@ -61,9 +66,6 @@ simulated function AffectMovement( float DeltaTime)
 		PoisonedPlayer.GroundSpeed = fMax(PoisonedPlayer.GroundSpeed*2,(PoisonedPlayer.GroundSpeed + PoisonedPlayer.default.GroundSpeed)) * fSlowness;
 		PoisonedPlayer.AirSpeed = fMax(PoisonedPlayer.AirSpeed*2,(PoisonedPlayer.AirSpeed + PoisonedPlayer.default.AirSpeed)) * fSlowness;
 	}
-
-	if ( (Slowness -= DeltaTime*RecoverRate) < 1 )
-		Destroy();
 }
 
 function Timer()

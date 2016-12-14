@@ -443,8 +443,8 @@ function sortPRI()
 	foreach AllActors(class'sgPRI', aPRI)
 		if( (!aPRI.bIsSpectator || aPRI.bWaitingPlayer) && (aPRI.Team < 4) )
 		{
+			Show[iPRI] = 1;
 			PRI[iPRI] = aPRI;
-			Eff[iPRI] = aPRI.GetEff();
 			avgEff[aPRI.Team] += Eff[iPRI];
 			avgPi[aPRI.Team] += aPRI.Ping;
 			avgPl[aPRI.Team] += aPRI.PacketLoss;
@@ -524,10 +524,14 @@ function sortPRI()
 					i -= 2;
 			}
 		}
-		For ( i=j ; i<sorted ; i++ )
-			Show[i] = byte((i-j) < (TeamPlayers[k]-NotShownPlayers[k]));
+		For ( i=j+(TeamPlayers[k]-NotShownPlayers[k]) ; i<sorted ; i++ )
+			Show[i] = 0;
 		j = sorted;
 	}
+	
+	//Bugfix
+	For ( i=0 ; i<iPRI ; i++ )
+		Eff[i] = PRI[i].GetEff();
 }
 
 function float getXHeader( int CurTeam, int screenWidth)

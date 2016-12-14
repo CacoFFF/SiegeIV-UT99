@@ -30,7 +30,7 @@ simulated event Destroyed()
 
 	if ( PlayerData == none )
 		return;
-
+	PlayerData.bForceMovement = True;
 	if ( PlayerData.MA_List == self )
 		PlayerData.MA_List = NextAffector;
 	else
