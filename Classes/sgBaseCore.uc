@@ -25,7 +25,10 @@ event PostBeginPlay()
 		Destroy();
 		return;
 	}
-	MaxEnergy = TeamGamePlus(Level.Game).GoalTeamScore*1000;
+	if ( (SiegeGI(Level.Game) == None) || (SiegeGI(Level.Game).GoalTeamScore <= 0) )
+		MaxEnergy = 20000;
+	else
+		MaxEnergy = TeamGamePlus(Level.Game).GoalTeamScore * 1000;
 	Super.PostBeginPlay();
 }
 
@@ -165,17 +168,6 @@ simulated function Timer()
 				bRemoveFromStore = true;
 
 			MaxedOut = AddRuToPlayers( SetRU * (1+2*int(bRemoveFromStore)), MaxRU);
-/*			ForEach AllActors(class'sgPRI', a)
-			{
-				if( a.Team == Team )
-				{
-					if ( a.RU >= MaxRU )
-						MaxedOut++;
-					else
-						a.AddRU( SetRU * (1+2*int(bRemoveFromStore)), true);
-				}
-			}
-*/
 			if ( MaxedOut > 0 )
 				StoredRU += SetRU * 0.5 * MaxedOut; //Those maxed out give half their RU to core
 			if ( bRemoveFromStore )
@@ -232,8 +224,7 @@ simulated function MonsterDamage(int Damage, Pawn instigatedBy)
 	}
 }
 
-simulated event TakeDamage(int Damage, Pawn instigatedBy, Vector hitLocation, 
-  Vector momentum, name damageType)
+simulated event TakeDamage(int Damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType)
 {
 	local int actualDamage;
 	local float tempScore;
@@ -321,13 +312,11 @@ function HandleDestruction( pawn instigatedBy)
 		bProjTarget = False;
 		class'SiegeStatics'.static.AnnounceAll( self, "BaseCore destroyed by "$ instigatedBy.PlayerReplicationInfo.PlayerName $"!!");
 		For ( i=0 ; i<4 ; i++ )
-		{
 			if ( (aGame.Cores[i] != none) && !aGame.Cores[i].bCoreDisabled )
 			{
 				j++;
 				Winner = aGame.Cores[i];
 			}
-		}
 		if ( j == 1 )
 			aGame.RoundEnded( Winner);
 		else //Disable this team from spawning, clear builds
@@ -341,7 +330,8 @@ function HandleDestruction( pawn instigatedBy)
 
 function UpdateScore()
 {
-	TeamGamePlus(Level.Game).Teams[Team].Score = (Energy/MaxEnergy)*100;
+	if ( SiegeGI(Level.Game) != None )
+		SiegeGI(Level.Game).Teams[Team].Score = (Energy/MaxEnergy)*100;
 }
 
 defaultproperties
