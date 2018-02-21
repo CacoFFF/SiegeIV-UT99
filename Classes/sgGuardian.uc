@@ -45,16 +45,19 @@ function Damage()
 function Upgraded()
 {
 	AmbientGlow=255/(6-Grade);
-	ShockSize = ((Grade)* 21)+120;
+	ShockSize = ((Grade)*24)+120;
 }
 
 function Effects SpawnParticles()
 {
+	local rotator R;
 	if ( FRand() < 0.15 ) 
 	{
 		PlaySound(sound'UnrealShare.Skrjshot',, 7.0);
-		if ( FRand() < 1.0 )
-			return Spawn(Class'UnrealShare.ParticleBurst', Owner,, Location, rotator(VRand()) );
+		R.Pitch = Rand(65536);
+		R.Yaw = Rand(65536);
+		R.Roll = Rand(65536);
+		return Spawn(Class'UnrealShare.ParticleBurst', Owner,, Location, R);
 	}
 }
 

@@ -1780,21 +1780,20 @@ function PlayTeleportEffect( actor Incoming, bool bOut, bool bSound)
 	}
 }
 
-function CoreDestroyed(sgBaseCore core)
+function CoreDestroyed( sgBaseCore Core)
 {
-    local int       remainingTeams,
-                    i;
-    local Pawn      defeated;
+	local int i, remainingTeams;
 
-    if ( cores[core.Team] != core )
-        return;
+	if ( Cores[Core.Team] != Core )
+		return;
 
-    cores[core.Team] = None;
-    Teams[core.Team].Score = 0;
-
-    for ( i = 0; i < 4; i++ )
-        if ( cores[i] != None )
-            remainingTeams++;
+	Cores[Core.Team] = None;
+	Teams[Core.Team].Score = 0;
+	sgGameReplicationInfo(GameReplicationInfo).Cores[Core.Team] = None;
+	
+	for ( i=0; i<4; i++ )
+		if ( Cores[i] != None )
+			remainingTeams++;
 
 	if ( remainingTeams <= 1 )
 	{
@@ -1802,7 +1801,7 @@ function CoreDestroyed(sgBaseCore core)
 		return;
 	}
 
-	BroadcastLocalizedMessage(class'sgDefeatedMsg', core.Team);
+	BroadcastLocalizedMessage(class'sgDefeatedMsg', Core.Team);
 	DefeatTeam( Core.Team);
 }
 

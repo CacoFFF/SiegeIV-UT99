@@ -25,19 +25,19 @@ var bool bAllowDraw;
  
 function PostBeginPlay()
 {
-  super.PostBeginPlay();
-  LastSortTime = -100;
+	Super.PostBeginPlay();
+	LastSortTime = -100;
+
+	sgGRI = sgGameReplicationInfo( PlayerPawn(Owner).GameReplicationInfo);
   
-  sgGRI = sgGameReplicationInfo( PlayerPawn(Owner).GameReplicationInfo);
-  
-  PtsFont26 = Font( DynamicLoadObject( "LadderFonts.UTLadder22", class'Font' ) );
-  PtsFont24 = Font( DynamicLoadObject( "LadderFonts.UTLadder22", class'Font' ) );
-  PtsFont22 = Font( DynamicLoadObject( "LadderFonts.UTLadder22", class'Font' ) );
-  PtsFont20 = Font( DynamicLoadObject( "LadderFonts.UTLadder20", class'Font' ) );
-  PtsFont18 = Font( DynamicLoadObject( "LadderFonts.UTLadder18", class'Font' ) );
-  PtsFont16 = Font( DynamicLoadObject( "LadderFonts.UTLadder16", class'Font' ) );
-  PtsFont14 = Font( DynamicLoadObject( "LadderFonts.UTLadder14", class'Font' ) );
-  PtsFont12 = Font( DynamicLoadObject( "LadderFonts.UTLadder12", class'Font' ) );
+	PtsFont26 = Font( DynamicLoadObject( "LadderFonts.UTLadder22", class'Font' ) );
+	PtsFont24 = Font( DynamicLoadObject( "LadderFonts.UTLadder22", class'Font' ) );
+	PtsFont22 = Font( DynamicLoadObject( "LadderFonts.UTLadder22", class'Font' ) );
+	PtsFont20 = Font( DynamicLoadObject( "LadderFonts.UTLadder20", class'Font' ) );
+	PtsFont18 = Font( DynamicLoadObject( "LadderFonts.UTLadder18", class'Font' ) );
+	PtsFont16 = Font( DynamicLoadObject( "LadderFonts.UTLadder16", class'Font' ) );
+	PtsFont14 = Font( DynamicLoadObject( "LadderFonts.UTLadder14", class'Font' ) );
+	PtsFont12 = Font( DynamicLoadObject( "LadderFonts.UTLadder12", class'Font' ) );
 	Timer();
 }
 
@@ -440,7 +440,7 @@ function sortPRI()
 	iPRI = 0;
 	CountTeams = 0;
 	//Cache significant stuff
-	foreach AllActors(class'sgPRI', aPRI)
+	ForEach AllActors(class'sgPRI', aPRI)
 		if( (!aPRI.bIsSpectator || aPRI.bWaitingPlayer) && (aPRI.Team < 4) )
 		{
 			Show[iPRI] = 1;
@@ -509,25 +509,26 @@ function sortPRI()
 	//Now that team players are grouped, QSort each team block by score
 	sorted = 0; //Top index
 	j = 0; //Bottom index
-	For ( k=0 ; k<CountTeams ; k++ )
-	{
-		sorted += TeamPlayers[k];
-		Assert( sorted <= iPRI );
-		For ( i=j+1 ; i<sorted ; i++ )
+	For ( k=0 ; k<4 ; k++ )
+		if ( TeamPlayers[k] > 0 )
 		{
-			aPRI = PRI[i-1];
-			if ( aPRI.Score < PRI[i].Score )
+			sorted += TeamPlayers[k];
+			Assert( sorted <= iPRI );
+			For ( i=j+1 ; i<sorted ; i++ )
 			{
-				PRI[i-1] = PRI[i];
-				PRI[i] = aPRI;
-				if ( i > j+1 ) //If we just swapped, we may need to downswap again
-					i -= 2;
+				aPRI = PRI[i-1];
+				if ( aPRI.Score < PRI[i].Score )
+				{
+					PRI[i-1] = PRI[i];
+					PRI[i] = aPRI;
+					if ( i > j+1 ) //If we just swapped, we may need to downswap again
+						i -= 2;
+				}
 			}
+			For ( i=j+(TeamPlayers[k]-NotShownPlayers[k]) ; i<sorted ; i++ )
+				Show[i] = 0;
+			j = sorted;
 		}
-		For ( i=j+(TeamPlayers[k]-NotShownPlayers[k]) ; i<sorted ; i++ )
-			Show[i] = 0;
-		j = sorted;
-	}
 	
 	//Bugfix
 	For ( i=0 ; i<iPRI ; i++ )
