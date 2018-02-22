@@ -123,7 +123,7 @@ function Tick( float DeltaTime)
 	if ( HoldAccumulator > 0 )
 		PointerHold( DeltaTime, HoldAccumulator);
 		
-
+	LocalPlayer.Weapon.bOwnsCrosshair = bSelectingCategory || bSelectingElement;
 	if ( bSelectingCategory || bSelectingElement )
 	{
 		WindupTimer = fMin( 1, WindupTimer + DeltaTime * 5);
@@ -221,7 +221,7 @@ function PointerRelease( float X, float Y, optional byte Code)
 
 function PostRender( Canvas C)
 {
-	local float HalfOffset, CX, CY, XL, YL;
+	local float HalfOffset, CX, CY, MidFactor;
 	local float ProxyFactor;
 	local bool bNS;
 
@@ -229,8 +229,14 @@ function PostRender( Canvas C)
 	Scale *= 0.5 + WindupTimer * 0.5;
 	
 	HalfOffset = 128.f * Scale;
-	CX = C.ClipX * 0.5;
-	CY = C.ClipY * 0.5;
+	if ( LocalPlayer.Handedness == -1 )
+		MidFactor = 0.504;
+	else if ( LocalPlayer.Handedness == 1 )
+		MidFactor = 0.497;
+	else
+		MidFactor = 0.5;
+	CX = float(int(C.ClipX * MidFactor));
+	CY = float(int(C.ClipY * MidFactor));
 	
 	if ( LocalPlayer.Level.bHighDetailMode )
 	{
@@ -327,6 +333,7 @@ function PostRender( Canvas C)
 	}
 	else
 	{
+	
 		if ( ChallengeHUD(LocalPlayer.myHUD) != None )
 		{
 			C.DrawColor = ChallengeHUD(LocalPlayer.myHUD).CrosshairColor;
@@ -465,12 +472,15 @@ function SetupActions()
 	Buttons[0].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
 	Buttons[0].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
 	Buttons[0].RegisterTex( Texture'GUI_Circle', 2/*masked*/, IconColor, 0.375, 0.375);
+	FV_ConstructorWheelButton(Buttons[0]).Abbreviation = "Up";
 	Buttons[1].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
 	Buttons[1].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
 	Buttons[1].RegisterTex( Texture'GUI_Plus', 2/*masked*/, IconColor, 0.375, 0.375);
+	FV_ConstructorWheelButton(Buttons[1]).Abbreviation = "Rep";
 	Buttons[2].RegisterTex( Texture'GUI_RemoveModu', 4/*modu*/, WhiteColor);
 	Buttons[2].RegisterTex( Texture'GUI_RemoveFront', 3/*trans*/, WhiteColor);
 	Buttons[2].RegisterTex( Texture'GUI_Minus', 2/*masked*/, IconColor, 0.375, 0.375);
+	FV_ConstructorWheelButton(Buttons[2]).Abbreviation = "Rem";
 
 	Buttons[3].RegisterTex( Texture'GUI_Settings', 3/*trans*/, IconColor);
 
@@ -530,8 +540,11 @@ function SetupSettings()
 		Buttons[i].RegisterTex( Texture'GUI_Settings', 3/*trans*/, WhiteColor);
 	}
 	Buttons[0].Setup( 64, 64, 0, NumSettings, "Constructor Panel", "Toggles the constructor panel display", "ToggleSiegePanel");
-	Buttons[1].Setup( 64, 64, 1, NumSettings, "Performance mode", "Toggles Siege high performance mode", "ToggleSiegePerformance");
+	Buttons[1].Setup( 64, 64, 1, NumSettings, "Performance Mode", "Toggles Siege high performance mode", "ToggleSiegePerformance");
 	
+	FV_ConstructorWheelButton(Buttons[0]).Abbreviation = "Panel";
+	FV_ConstructorWheelButton(Buttons[1]).Abbreviation = "Perf";
+
 	if ( sgConstructor(LocalPlayer.Weapon).ClientActor.bHighPerformance )
 		Buttons[1].RegisterTex( Texture'GUI_Minus', 2/*masked*/, MakeColor(255,50,50), 0.375, 0.375);
 	else

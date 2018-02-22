@@ -56,7 +56,7 @@ function CheckThis( Pawn Other)
 
 	CheckOn[iCheckOn++] = Other;
 
-	if ( FastTrace(Other.Location) )
+	if ( DoneBuilding && FastTrace(Other.Location) )
 		CompleteBuilding();
 }
 
@@ -208,7 +208,7 @@ function Damage()
 simulated function CompleteBuilding()
 {
 	local Pawn p;
-
+	
 	if ( Level.NetMode == NM_Client )
 		Assert( LocalPlayer != none );
 
@@ -240,7 +240,6 @@ simulated function FinishBuilding()
     local sgMeshFX newFX;
 	local PlayerPawn P;
 	local Rotator R;
-	
 	
 	Texture=Texture'Botpack.FLAKAMMOLEDbase';
 

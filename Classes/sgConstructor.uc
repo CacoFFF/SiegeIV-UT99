@@ -1498,8 +1498,8 @@ simulated final function Texture GetStatusIcon( Pawn Other)
 simulated function PostRender( canvas Canvas)
 {
 	local float XL, YL, Scale, X, YOffset;
-	local string aStr, aStr2;
-	local bool bRestricted;
+	local string aStr, aStr2, RuleString;
+	local byte DenyBuild;
 	local int Cycles;
 	
 	if ( MyFonts == none )
@@ -1523,7 +1523,7 @@ simulated function PostRender( canvas Canvas)
 	Canvas.Font = MyFonts.GetBigFont(Canvas.ClipX);
 	Canvas.TextSize("TEST", XL, YL);
 
-	if ( bHideWeapon )		YOffset = Canvas.ClipY - 24*Scale - YL*3;
+	if ( bHideWeapon )		YOffset = Canvas.ClipY - 64*Scale - YL*3;
 	else					YOffset = Canvas.ClipY - 96*Scale - YL*3; 
 
 	//If weapon is hidden, draw stats the old way
@@ -1547,7 +1547,7 @@ simulated function PostRender( canvas Canvas)
 				aStr2 = Default.CostText$": "$CatActor.CustomCost(SelectedIndex);
 			else
 				aStr2 = Default.CostText$": "$SelectedBuild.Default.BuildCost;
-			bRestricted = !CatActor.RulesAllow( SelectedIndex);
+			RuleString = CatActor.GetRuleString( SelectedIndex, DenyBuild);
 		}
 		else if ( Category < 16 )
 		{
@@ -1560,7 +1560,7 @@ simulated function PostRender( canvas Canvas)
 	    Canvas.Style = ERenderStyle.STY_Masked;
 		Canvas.bCenter = true;
 
-		if ( !bRestricted )
+		if ( DenyBuild == 0 )
 			Canvas.DrawColor = WhiteColor;
 		else
 			Canvas.DrawColor = Col(200,0,50);
@@ -1568,12 +1568,21 @@ simulated function PostRender( canvas Canvas)
 		Canvas.SetPos(X, YOffset);
 		Canvas.DrawText(""@aStr, false);
 
+		if ( RuleString != "" )
+		{
+			Canvas.TextSize(aStr, XL, YL);
+			Canvas.SetPos(X + XL/4, YOffset + YL*2);
+			Canvas.DrawText(RuleString, false);
+		}
+
 		if ( aStr2 != "" )
-		{	Canvas.DrawColor = Col(127,127,127);
+		{
+			Canvas.DrawColor = Col(127,127,127);
 			Canvas.TextSize(aStr2, XL, YL);
 			Canvas.SetPos(X + XL/4, YOffset + YL);
 			Canvas.DrawText(aStr2, false);
 		}
+
 		Canvas.bCenter = false;
  		Canvas.Style = ERenderStyle.STY_Translucent;
 
@@ -1585,12 +1594,11 @@ simulated function PostRender( canvas Canvas)
 
 simulated function DrawWheel( Canvas C)
 {
-	local float Scale;
-	
 	if ( ClientActor == none )
 		return;
 
 	ClientActor.ConstructorWheel.HUDColor = HUDColor();
+	C.Font = MyFonts.GetMediumFont((C.ClipX + C.ClipY)*0.5);
 	if ( !ClientActor.ConstructorWheel.bSetup )
 		ClientActor.ConstructorWheel.sgSetup( self);
 

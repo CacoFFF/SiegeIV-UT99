@@ -66,12 +66,11 @@ LOOP:
 		
 	if ( Abbreviation != "" && (ColorScale >= 0.2) && (C.Font != None) )
 	{
-		if ( bIsSelected )
-		{
+		if ( bIsSelected || bIsCategory )
+			Text = ButtonName;
+		else
 			Text = Abbreviation;
-			Abbreviation = ButtonName;
-		}
-		C.StrLen( Abbreviation, XL, YL);
+		C.StrLen( Text, XL, YL);
 		XO = C.ClipX * 0.5 + CachedOffset.X * Scale * 1.3;
 		YO = C.ClipY * 0.5 + CachedOffset.Y * Scale * 1.3 - YL * 0.5;
 		if ( CachedOffset.X < 0 )
@@ -81,12 +80,10 @@ LOOP:
 		C.SetPos( XO+1, YO+1);
 		C.Style = 2;
 		C.DrawColor = class'SiegeStatics'.default.BlackColor;
-		C.DrawText( Abbreviation);
+		C.DrawText( Text);
 		C.SetPos( XO, YO);
 		C.DrawColor = FV_ConstructorWheel(Parent).WhiteColor;
-		C.DrawText( Abbreviation);
-		if ( bIsSelected )
-			Abbreviation = Text;
+		C.DrawText( Text);
 	}
 }
 
@@ -119,7 +116,10 @@ function Setup( float sX, float sY, float mySlot, float numSlots, string aName, 
 	Abbreviation = "";
 	aStr = aName;
 CHOP_AGAIN_A:
-	Abbreviation = Abbreviation $ Left(aStr,1); //Get first letter
+	if ( Left(aStr,7) ~= "Jetpack" )
+		Abbreviation = Abbreviation $ "Jet";
+	else
+		Abbreviation = Abbreviation $ Left(aStr,1); //Get first letter
 	i = InStr( aStr, " ");
 	if ( i >= 0 )
 	{
