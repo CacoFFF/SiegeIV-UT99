@@ -22,10 +22,10 @@ var float TargetLevel;
 replication
 {
 	reliable if ( !bPersistantTimer && Role==ROLE_Authority )
-		TargetTimer, BuildCount, TargetCount;
-	reliable if ( bOvertime && Role==ROLE_Authority )
-		bOvertimeReached;
-	reliable if ( bNetinitial && Role==ROLE_Authority )
+		BuildCount, TargetCount;
+	reliable if ( Role==ROLE_Authority )
+		bOvertimeReached, TargetTimer;
+	reliable if ( bNetInitial && Role==ROLE_Authority )
 		BuildClass, bOnceOnly, bPersistantTimer, bOvertime;
 	reliable if ( bPersistantTimer && Role==ROLE_Authority )
 		MyTimer;
@@ -42,7 +42,7 @@ simulated function string GetRuleString( optional bool bNegative)
 	if ( bPersistantTimer ) //Cooldown mode
 	{
 		if ( MyTimer > 0 )
-			return "Wait:"@int(MyTimer)@"seconds";
+			return "Wait:"@int(TargetTimer-MyTimer)@"seconds";
 		return "Cooldown ready ("$int(TargetTimer)$")";
 	}
 	if ( BuildClass == none ) //Debug
@@ -50,11 +50,11 @@ simulated function string GetRuleString( optional bool bNegative)
 	if ( bNegative )
 	{
 		if ( TargetTimer > 0 )
-			return "Expires in"@int(MyTimer)@"seconds";
+			return "Expires in"@int(TargetTimer-MyTimer)@"seconds";
 		return "Limit:"@BuildClass.default.BuildingName@"("$BuildCount$"/"$TargetCount$")";
 	}
 	if ( TargetTimer > 0 )
-		return "Wait:"@int(MyTimer)@"seconds";
+		return "Wait:"@int(TargetTimer-MyTimer)@"seconds";
 	if ( bOnceOnly && (BuildCount >= TargetCount) )
 		return "";
 	Str = "Need:"@BuildClass.default.BuildingName;
@@ -179,5 +179,5 @@ defaultproperties
 {
     TargetCount=1
 	NetPriority=1.2
-	NetUpdateFrequency=4
+	NetUpdateFrequency=2
 }

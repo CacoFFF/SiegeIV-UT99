@@ -61,7 +61,7 @@ simulated function AffectMovement( float DeltaTime)
 {
 	local Pawn P;
 	local float TempFactor;
-	
+	local float DotProduct;
 	
 	P = Pawn(Owner);
 	if ( P == none )
@@ -98,8 +98,14 @@ simulated function AffectMovement( float DeltaTime)
 	else
 		TempFactor = Lerp( FullTimer / MaxFadeTimer, 0, 3);
 	CurFactor = TempFactor;
+	DotProduct = Normal(P.Acceleration) dot PushDir;
+	if ( DotProduct < 0 )
+		AngleFalloff = 0;
+	else
+		AngleFalloff = fMin( Square(DotProduct), AngleFalloff);
+	
 	//FullTimer just expired, excedent passed to FadeTimer
-	if ( ((FullTimer >= 0) && ((FullTimer -= DeltaTime) < 0)) || (Square(CurFactor) <= 0.001) ) 
+	if ( (FullTimer < 0) || (AngleFalloff <= 0) || (Square(CurFactor) <= 0.001) ) 
 	{
 		if ( Role == ROLE_Authority )
 			Destroy();
@@ -109,7 +115,6 @@ simulated function AffectMovement( float DeltaTime)
 		if ( bDeleteMe )
 			return;
 	}
-	AngleFalloff = fClamp( Square(Normal(P.Acceleration) dot PushDir), 0, AngleFalloff);
 	TempFactor *= AngleFalloff;
 	P.GroundSpeed += P.Default.GroundSpeed * TempFactor;
 	P.WaterSpeed += P.Default.WaterSpeed * TempFactor;
@@ -121,10 +126,11 @@ simulated function AffectMovement( float DeltaTime)
 	{
 		TempFactor = P.Velocity dot PushDir;
 		if ( TempFactor < P.GroundSpeed ) //Not fully boosted, boost!
-			P.Velocity += Pushdir * (P.GroundSpeed-TempFactor);
+			P.Velocity += Pushdir * (P.GroundSpeed/AngleFalloff-TempFactor);
 		P.Acceleration = PushDir * P.GroundSpeed;
 		CurFactor *= -1;
 	}
+	FullTimer -= DeltaTime;
 }
 
 simulated function PushPrevs()

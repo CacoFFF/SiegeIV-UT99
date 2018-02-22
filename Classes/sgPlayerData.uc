@@ -258,7 +258,7 @@ simulated function XC_MovementAffector FindMAffector( class<XC_MovementAffector>
 {
 	local XC_MovementAffector Aff;
 	For ( Aff=MA_List ; Aff!=None ; Aff=Aff.NextAffector )
-		if ( Aff.Class == AffectorClass )
+		if ( Aff.Class == AffectorClass && !Aff.bDeleteMe )
 			return Aff;
 }
 
