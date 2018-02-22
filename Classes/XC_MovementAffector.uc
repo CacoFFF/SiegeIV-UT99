@@ -45,6 +45,7 @@ simulated event Destroyed()
 }
 
 //Safe to self destruct here
+//If self-destructing, do it before applying any movement alteration and return!
 simulated function AffectMovement( float DeltaTime);
 
 simulated function XC_MovementAffector InsertSorted( XC_MovementAffector Other)

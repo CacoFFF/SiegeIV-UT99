@@ -277,7 +277,8 @@ simulated function AffectMovement( float DeltaTime)
 		For ( M=MA_List ; M!=None ; M=N )
 		{
 			N = M.NextAffector;
-			M.AffectMovement( DeltaTime);
+			if ( !M.bDeleteMe )
+				M.AffectMovement( DeltaTime);
 		}
 	}
 }

@@ -7,8 +7,8 @@ class sgBuildRuleCount expands sgBaseBuildRule;
 
 var bool bOnceOnly;
 var bool bStopCounter;
-var bool bOverTime;
-var bool bOverTimeReached;
+var bool bOvertime;
+var bool bOvertimeReached;
 var bool bOnlyFinished;
 var bool bExactMatch; //What to do with this?
 var bool bPersistantTimer;
@@ -22,18 +22,22 @@ var float TargetLevel;
 replication
 {
 	reliable if ( !bPersistantTimer && Role==ROLE_Authority )
-		TargetTimer, BuildCount, TargetCount, bOverTimeReached;
+		TargetTimer, BuildCount, TargetCount;
+	reliable if ( bOvertime && Role==ROLE_Authority )
+		bOvertimeReached;
 	reliable if ( bNetinitial && Role==ROLE_Authority )
-		BuildClass, bPersistantTimer, bOverTime;
+		BuildClass, bOnceOnly, bPersistantTimer, bOvertime;
 	reliable if ( bPersistantTimer && Role==ROLE_Authority )
 		MyTimer;
 }
 
 simulated function string GetRuleString( optional bool bNegative)
 {
-	if ( bOverTime && bNegative && bOverTimeReached )
+	local string Str;
+
+	if ( bOvertime && bNegative && bOvertimeReached )
 		return "Not available in overtime";
-	if ( bOverTime && !bOverTimeReached )
+	if ( bOvertime && !bOvertimeReached )
 		return "Wait: Overtime";
 	if ( bPersistantTimer ) //Cooldown mode
 	{
@@ -51,7 +55,14 @@ simulated function string GetRuleString( optional bool bNegative)
 	}
 	if ( TargetTimer > 0 )
 		return "Wait:"@int(MyTimer)@"seconds";
-	return "Need:"@BuildClass.default.BuildingName@"("$BuildCount$"/"$TargetCount$")";
+	if ( bOnceOnly && (BuildCount >= TargetCount) )
+		return "";
+	Str = "Need:"@BuildClass.default.BuildingName;
+	if ( TargetLevel > 0 )
+		Str = Str@"["$MinimizeFloat(TargetLevel)$"]";
+	if ( BuildCount > 1 || TargetCount > 1 )
+		Str = Str@"("$BuildCount$"/"$TargetCount$")";
+	return Str;
 }
 
 //Quick way to setup this
@@ -61,6 +72,17 @@ function AddRequiresLevel( float minLevel)
 	bOnlyFinished = true;
 	SetTimer( 0.9 + FRand() * 0.1, true);
 	TargetLevel = minLevel;
+}
+
+simulated final function string MinimizeFloat( float Value)
+{
+	local string Str;
+	Str = string(Value);
+	while ( Right(Str,1) == "0" )
+		Str = Left(Str,Len(Str)-1);
+	if ( Right(Str,1) == "." )
+		Str = Left(Str,Len(Str)-1);
+	return Str;
 }
 
 function NotifyIn( sgBuilding Other)
@@ -113,7 +135,7 @@ event Timer()
 
 simulated function bool IsEnabled()
 {
-	if ( bOverTime && !bOverTimeReached )
+	if ( bOvertime && !bOvertimeReached )
 		return false;
 	if ( bPersistantTimer ) //Cooldown mode
 		return (MyTimer <= 0);

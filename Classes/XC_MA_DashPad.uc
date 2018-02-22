@@ -97,6 +97,18 @@ simulated function AffectMovement( float DeltaTime)
 		TempFactor = 3;
 	else
 		TempFactor = Lerp( FullTimer / MaxFadeTimer, 0, 3);
+	CurFactor = TempFactor;
+	//FullTimer just expired, excedent passed to FadeTimer
+	if ( ((FullTimer >= 0) && ((FullTimer -= DeltaTime) < 0)) || (Square(CurFactor) <= 0.001) ) 
+	{
+		if ( Role == ROLE_Authority )
+			Destroy();
+		else if ( (iPrev == 0) || (PreviousMoves[iPrev-1].SpeedFactor == 0) )
+			Destroy(); //Simulated plat no longer needed
+			
+		if ( bDeleteMe )
+			return;
+	}
 	AngleFalloff = fClamp( Square(Normal(P.Acceleration) dot PushDir), 0, AngleFalloff);
 	TempFactor *= AngleFalloff;
 	P.GroundSpeed += P.Default.GroundSpeed * TempFactor;
@@ -104,7 +116,6 @@ simulated function AffectMovement( float DeltaTime)
 	P.AirSpeed += P.Default.AirSpeed * TempFactor;
 	P.AccelRate += P.Default.AccelRate * TempFactor;
 
-	CurFactor = TempFactor;
 	//Force velocity
 	if ( FullTimer + 0.3 > (default.FullTimer)*2 )
 	{
@@ -113,14 +124,6 @@ simulated function AffectMovement( float DeltaTime)
 			P.Velocity += Pushdir * (P.GroundSpeed-TempFactor);
 		P.Acceleration = PushDir * P.GroundSpeed;
 		CurFactor *= -1;
-	}
-
-	if ( ((FullTimer >= 0) && ((FullTimer -= DeltaTime) < 0)) || (Square(CurFactor) <= 0.001) ) //FullTimer just expired, excedent passed to FadeTimer
-	{
-		if ( Role == ROLE_Authority )
-			Destroy();
-		else if ( (iPrev == 0) || (PreviousMoves[iPrev-1].SpeedFactor == 0) )
-			Destroy(); //Simulated plat no longer needed
 	}
 }
 
