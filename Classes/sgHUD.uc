@@ -110,7 +110,7 @@ simulated final function FixInventoryChain( optional bool bOnlyBreak)
 	local float fTag;
 	
 	//Do not run this routine on authoritary session
-	if ( Level.NetMode != NM_Client )
+	if ( Level.NetMode != NM_Client || Pawn(Owner).Health <= 0 )
 		return;
 	
 	//Setup - owned
