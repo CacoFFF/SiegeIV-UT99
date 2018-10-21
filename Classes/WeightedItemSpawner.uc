@@ -24,6 +24,7 @@ var int iItems;
 var float WeightToExtraTimeScale;
 var float OvertimeTimeScale;
 var bool bRealTimer;
+var float fSecond;
 
 
 var class<Inventory> NextSpawn;
@@ -96,7 +97,7 @@ function SelectNext()
 			continue;
 		if ( ItemMaxWeight[i] != 0 && (ItemMaxWeight[i] <= WeightCap) )
 			continue;
-		if ( OvertimeOnly[i] == 1 && !SiegeGI(Level.Game).bOvertime )
+		if ( OvertimeOnly[i] != 0 && !SiegeGI(Level.Game).bOvertime )
 			continue;
 		if ( FRand() * (Decision += 1) <= 1 )
 			best = i;
@@ -121,12 +122,21 @@ Begin:
 
 state Spawning
 {
+	event Tick( float DeltaTime)
+	{
+		if ( fSecond > 0 )
+			fSecond -= DeltaTime;
+	}
 Begin:
 	SelectNext();
 	iCount = InitialSeconds;
 ReSpawn:
 	While ( iCount-- > 0 )
-		Sleep( Second() * OvertimeTimeScale );
+	{
+		fSecond += Second() * OvertimeScale();
+		While ( fSecond > 0 )
+			Sleep(0.0);
+	}
 Spawn:
 	if ( NextSpawn != none )
 	{
@@ -144,8 +154,15 @@ Spawn:
 function float Second()
 {
 	if ( bRealTimer )
-		return 0.998 * Level.TimeDilation;
-	return 0.998 * 1.1;
+		return Level.TimeDilation;
+	return 1.1;
+}
+
+final function float OvertimeScale()
+{
+	if ( Level.Game.bOvertime )
+		return OvertimeTimeScale;
+	return 1.0;
 }
 
 function LoadProfile();
