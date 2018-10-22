@@ -172,7 +172,7 @@ state ServerOp
 	}
 Begin:
 	Sleep(0.0);
-	Owner.Spawn(class'sgPlayerData',Owner);
+	PlayerData = Owner.Spawn(class'sgPlayerData',Owner);
 	if ( SiegeGI(Level.Game) != none )
 		RU = SiegeGI(Level.Game).StartingRU;
 	if ( PlayerPawn(Owner) == none )
@@ -460,6 +460,9 @@ function ProtTimer( float DeltaTime)
 		WhosGun = none;
 		Pawn(Owner).ClientMessage("Siege spawn protection off");
 	}
+	
+	if ( PlayerData != None )
+		PlayerData.bSpawnProtected = ProtectCount > 0;
 }
 
 simulated function CacheFlag()

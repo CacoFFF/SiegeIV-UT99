@@ -26,7 +26,9 @@ var bool bReplicateHealth;
 var bool bHudEnforceHealth;
 var bool bClientXCGEHash;
 var bool bForceMovement;
+var bool bSpawnProtected;
 
+var SpawnProtEffect SPEffect;
 var Engine ClientEngine;
 
 
@@ -37,7 +39,7 @@ replication
 	unreliable if ( !bNetOwner && bReplicateHealth && Role==ROLE_Authority )
 		RealHealth;
 	reliable if ( Role==ROLE_Authority )
-		OwnerID;
+		OwnerID, bSpawnProtected;
 
 	unreliable if ( Role==ROLE_Authority )
 		AdjustPlayerLocation;
@@ -72,34 +74,38 @@ simulated event PostNetBeginPlay()
 	GotoState('Client');
 }
 
+
+//========== Tick (authority) - begin ==========//
+//
+// Process tick on servers and standalone games
+// This is called before state code execution
+//
+event Tick( float DeltaTime)
+{
+	if ( POwner == None || POwner.bDeleteMe )
+	{
+		Destroy(); //This disables state code execution
+		return;
+	}
+	SpawnProtEffectStatus();
+	AffectMovement( DeltaTime);
+}
+//========== Tick (authority) - end ==========//
+
+
 // Run on Siege servers
 state Server
 {
-	event Tick( float DeltaTime)
-	{
-		if ( POwner != none)
-			AffectMovement( DeltaTime);
-	}
 Begin:
 	Sleep(0.0);
 	OwnerID = POwner.PlayerReplicationInfo.PlayerID;
 	SetPropertyText("bRelevantIfOwnerIs","1"); //XC_Engine future feature
 WaitForReady:
 	Sleep(0.0);
-	if ( POwner == none || POwner.bDeleteMe )
-	{
-		Destroy();
-		Stop;
-	}
 	if ( PPOwner != none && (NetConnection(PPOwner.Player) != none) && (PPOwner.CurrentTimeStamp == 0) ) //Network player not ready
 		Goto('WaitForReady');
 	RemoteRole = ROLE_SimulatedProxy; //Init replication
 CheckPlayer:
-	if ( POwner == none || POwner.bDeleteMe )
-	{
-		Destroy();
-		Stop;
-	}
 	BaseEyeHeight = POwner.BaseEyeHeight;
 	if ( POwner.bHidden )	NetUpdateFrequency = 1.5;
 	else					NetUpdateFrequency = POwner.NetUpdateFrequency * 0.5;
@@ -114,18 +120,15 @@ CheckPlayer:
 //Run on non-Siege/local games
 state Standalone
 {
-	event Tick( float DeltaTime)
-	{
-		if ( POwner == none || POwner.bDeleteMe )
-			Destroy();
-		else
-			AffectMovement( DeltaTime);
-	}
 }
 
 //Run on remote clients
 simulated state Client
 {
+	simulated event Tick( float DeltaTime)
+	{
+		SpawnProtEffectStatus();
+	}
 Begin:
 	//Find PRI
 	if ( !FindPRI() )
@@ -226,7 +229,7 @@ function ReplicateLoc()
 	LastRepLoc = POwner.Location;
 	LastRepLocTime = Level.TimeSeconds;
 	ForEach AllActors (class'sgPlayerData', sgP)
-		if ( sgP != self && sgP.bClientXCGEHash )
+		if ( (sgP != self) && sgP.bClientXCGEHash )
 			sgP.AdjustPlayerLocation( POwner, POwner.Location.X, POwner.Location.Y, POwner.Location.Z);
 }
 
@@ -262,6 +265,12 @@ simulated function XC_MovementAffector FindMAffector( class<XC_MovementAffector>
 			return Aff;
 }
 
+//========== AffectMovement - begin ==========//
+//
+// Alters a player's movement variables.
+// This is done in a way that various movement buffs/debuffs
+// can interact at the same time without breaking each other.
+//
 simulated function AffectMovement( float DeltaTime)
 {
 	local XC_MovementAffector M, N;
@@ -282,6 +291,38 @@ simulated function AffectMovement( float DeltaTime)
 		}
 	}
 }
+//========== AffectMovement - end ==========//
+
+
+//========== SpawnProtEffectStatus - begin ==========//
+//
+// Controls the visibility of spawn protection
+//
+simulated function SpawnProtEffectStatus()
+{
+	if ( Level.NetMode == NM_DedicatedServer )
+		return;
+		
+	if ( !bSpawnProtected || (POwner == None) || POwner.bDeleteMe || (POwner.Health <= 0) || POwner.bHidden )
+	{
+		if ( SPEffect != None )
+		{
+			SPEffect.GotoState('Expiring');
+			SPEffect = None;
+		}
+	}
+	else
+	{
+		if ( SPEffect == None ) //POwner guaranteed to exist
+		{
+			SPEffect = Spawn( class'SpawnProtEffect', POwner);
+			SPEffect.PlayerData = self;
+		}
+	}
+}
+//========== SpawnProtEffectStatus - end ==========//
+
+
 
 
 static final function vector ToVector( PreciseVector A)
