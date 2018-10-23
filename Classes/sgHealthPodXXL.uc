@@ -1,77 +1,62 @@
 //=============================================================================
 // sgSuperHealthPod.
+// * Rewritten by Higor
 //=============================================================================
-class sgHealthPodXXL extends sgEquipmentSupplier;
+class sgHealthPodXXL extends sgHealthPod;
 
 
-event PostBeginPlay()
+function PostBuild()
 {
-	local Pawn p;
-	local sgHealthPodXXL sgH;
-	local string sLocation;
+	local sgHealthPod sgH;
 	
-	if ( Pawn(Owner) != none )
-	{
-		if ( Pawn(owner).PlayerReplicationInfo.PlayerLocation != None )
-			sLocation = PlayerReplicationInfo.PlayerLocation.LocationName;
-		else if ( Pawn(owner).PlayerReplicationInfo.PlayerZone != None )
-			sLocation = Pawn(owner).PlayerReplicationInfo.PlayerZone.ZoneName;
-		if ( sLocation != "" && sLocation != " ")
-		    sLocation = "at"@sLocation;
-	}
-
-	Super.PostBeginPlay();
+	Super.PostBuild();
 
 	if ( (SiegeGI(Level.Game) != none) && SiegeGI(Level.Game).SupplierProtection)
 	{
 		bProtected = True;
-		ForEach AllActors( class'sgHealthPodXXL', sgH)
-			if ( sgH.bProtected && (sgH.Team == Team) && (sgH != self) )
+		ForEach AllActors( class'sgHealthPod', sgH)
+			if ( sgH.bProtected && (sgH.Team == Team) && (sgH != self) && (sgH.BuildCost >= BuildCost) )
 			{
 				bProtected = False;
 				break;
 			}
 	}
 	if ( bProtected && AnnounceImmunity)
-		AnnounceTeam("Your team has built a Super Health Pod"@sLocation, Team);
+		AnnounceConstruction();
 }
 
-function Pawn FindTarget()
+
+
+
+//Players heal up to this amount of health
+function int HealthLimit()
 {
-	local Pawn p;
-
-	foreach RadiusActors(class'Pawn', p, 72)
-		if ( p.bIsPlayer && (p.Health > 0) && (p.PlayerReplicationInfo != None) && (p.PlayerReplicationInfo.Team == Team) )
-			Supply(P);
-
-    return None;
+	return 75 + (Grade * 15.0);
 }
 
-function Supply(Pawn target)
+//Chance a player heals 1 point (values above 1 may yield more points)
+function float HealthRate()
 {
-	local Inventory inv;
-	local float Decision;
-	
-	inv = target.FindInventoryType(class'sgArmor');
-	if ( inv == None )
-		SpawnArmor(Target);
-	else if ( inv.Charge < 50 + Grade*20 )
-	{
-		inv.Charge = FMin(inv.Charge + 1, 50 + grade * 20 );
-		if ( FRand() < (Grade/7.5) )
-			inv.Charge = FMin(inv.Charge + 1, 50 + grade * 20 );
-	}
+	return 2.0;
+}
 
-	if ( Target.Health < 75 + (grade*15) )
-		Target.Health = Min(Target.Health + 2, 150);
-	
-	if ( FRand() < 0.5 )
-		Target.PlaySound(sound'sgMedia.sgStockUp', SLOT_Misc, Target.SoundDampening*2.5);
+//Armor is received up to this amount
+function int ArmorLimit()
+{
+	return 50 + (Grade * 20.0);
+} 
+
+//Chance a player gains 1 armor point (values above 1 may yield more points)
+function float ArmorRate()
+{
+	return Grade / 7.5;
 }
 
 
 defaultproperties
 {
+     bGlobalSupply=True
+	 SupplySoundFrequency=0.5
      SuppProtectTimeSecs=6000000
      BuildingName="Super Health Pod"
      BuildCost=1500
@@ -80,20 +65,10 @@ defaultproperties
 	 AnnounceImmunity=True
      MaxEnergy=30000.000000
      SpriteScale=0.480000
-     Model=LodMesh'Botpack.BigSprocket'
      SkinRedTeam=Texture'BoosterSkinTeam0'
      SkinBlueTeam=Texture'BoosterSkinTeam1'
-     SpriteRedTeam=Texture'HealthPodSkinT0'
-     SpriteBlueTeam=Texture'HealthPodSkinT1'
      SkinGreenTeam=Texture'BoosterSkinTeam2'
      SkinYellowTeam=Texture'BoosterSkinTeam3'
-     SpriteGreenTeam=Texture'HealthPodSkinT2'
-     SpriteYellowTeam=Texture'HealthPodSkinT3'
-     DSofMFX=1.250000
      MFXrotX=(Pitch=30000,Yaw=30000,Roll=30000)
-     MultiSkins(0)=Texture'HealthPodSkinT0'
-     MultiSkins(1)=Texture'HealthPodSkinT1'
-     MultiSkins(2)=Texture'HealthPodSkinT2'
-     MultiSkins(3)=Texture'HealthPodSkinT3'
      GUI_Icon=Texture'GUI_SHealthPod'
 }

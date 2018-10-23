@@ -6,24 +6,32 @@
 class sgEquipmentSupplier extends sgBuilding
     abstract;
 
-var() float         SupplyRadius;
+var() float SupplyRadius;
+var() float SupplySoundFrequency;
+var() float SupplyScale;
 
-var bool	bProtected;
+var bool bProtected;
 var bool AnnounceImmunity;
+var() bool bGlobalSupply;
 var config int SuppProtectTimeSecs;
 var int Count;
-var int SupplyLoops; //How many times do we call Supply()?
 var string ProtectionExpired;
 var float PenaltyFactor;
 
 var sgSupplierQueuer QueuerList;
-var float QueuerTimer;
-var float RotationTime;
+
+//Special operator that prevents skipping of B
+static final operator(32) bool  | ( bool A, bool B )
+{
+	return A || B;
+}
+
 
 simulated function CompleteBuilding()
 {
-	local pawn P;
-	local int i;
+	local int i, ExtraSupply;
+	local sgSupplierQueuer Q;
+	local float Scale;
 	
 	if ( Role != ROLE_Authority )
         return;
@@ -41,22 +49,47 @@ simulated function CompleteBuilding()
 	if ( bDisabledByEMP )
 		return;
 
-	P = FindTarget();
-	if ( P == none )
+		
+	FindTargets();
+	if ( QueuerList != None )
+		i = QueuerList.AccumulatorCount();
+	if ( i == 0 )
 		return;
-
-	//For simple suppliers, gain ability to multi-supply on a Timer
-	For ( i=0 ; i<SupplyLoops ; i++ )
-	{
-		Supply(P);
-		if ( QueuerList != none )
+		
+	Scale = SupplyScale;
+	if ( !bGlobalSupply )
+		Scale /= float(i);
+		
+	//Supply, first round (and only for global)
+	For ( Q=QueuerList ; Q!=None ; Q=Q.nextQueuer )
+		if ( !Supply( Q.POwner, Q, Scale) )
 		{
-			QueuerTimer -= 0.1;
-			if ( (QueuerList.nextQueuer != none) && (QueuerTimer <= 0) )
-				P = QueuerList.Push();
+			ExtraSupply++;
+			Q.bSupplyFull = true;
 		}
+		
+	if ( ExtraSupply >= i ) //None was supplied!
+		return;
+		
+	if ( FRand() < SupplySoundFrequency )
+        PlaySound( Sound'sgMedia.sgStockUp', SLOT_Misc, SoundDampening * 2.5);
+
+	//Needs to resupply what wasn't supplied
+	if ( !bGlobalSupply && (ExtraSupply > 0) ) 
+	{
+		Scale /= float(ExtraSupply);
+		For ( Q=QueuerList ; Q!=None ; Q=Q.nextQueuer )
+			if ( !Q.bSupplyFull )
+				Supply( Q.POwner, Q, Scale);
 	}
+
 }
+
+
+function int HealthLimit()    { return 0; } //Players heal up to this amount of health
+function float HealthRate()   { return 0; } //Chance a player heals 1 point (values above 1 may yield more points)
+function int ArmorLimit()     { return 0; } //Armor is received up to this amount
+function float ArmorRate()    { return 0; } //Chance a player gains 1 armor point (values above 1 may yield more points)
 
 function CalculatePenalty()
 {
@@ -66,17 +99,21 @@ function CalculatePenalty()
 	ForEach VisibleCollidingActors(class'sgBuilding', aBuild, 170)
 	{
 		if ( (sgEquipmentSupplier(aBuild) == none) && (aBuild.Team == Team) )
+		{
 			fTmp += 170 - VSize( location - aBuild.Location);
+			if ( class'SiegeStatics'.static.ActorsTouching( self, aBuild) )
+				aBuild.bOnlyOwnerRemove = false;
+		}
 	}
 	fTmp /= 170;
 	PenaltyFactor = fTmp;
 }
 
-function Pawn FindTarget()
+function FindTargets()
 {
 	local Pawn p;
 
-	foreach RadiusActors(class'Pawn', p, 60)
+	ForEach RadiusActors(class'Pawn', p, 60)
 		if ( p.bIsPlayer && p.Health > 0 &&
           p.PlayerReplicationInfo != None &&
           p.PlayerReplicationInfo.Team == Team)
@@ -84,10 +121,6 @@ function Pawn FindTarget()
 			if ( !InQueue(P) )
 				Spawn( class'sgSupplierQueuer',none).Setup(self,P);
 		}
-
-	if ( QueuerList == none )
-		return None;
-	return QueuerList.POwner;
 }
 
 function sgArmor SpawnArmor( Pawn Other)
@@ -106,16 +139,23 @@ function sgArmor SpawnArmor( Pawn Other)
 	return theArmor;
 }
 
-function Supply(Pawn Other)
+function bool Supply( Pawn Other, sgSupplierQueuer Accumulator, float SupplyFactor)
 {
-	if ( sgPRI(Other.PlayerReplicationInfo) != none )
+	local int Supplied;
+	local sgPRI PRI;
+
+	if ( bProtected && (sgPRI(Other.PlayerReplicationInfo) != none) )
 	{
-		if ( bProtected )
-			sgPRI( Other.PlayerReplicationInfo).bReachedSupplier = True;
-		if ( sgPRI( Other.PlayerReplicationInfo).ProtectCount > 0 )
-			sgPRI( Other.PlayerReplicationInfo).ProtTimer( 0.1);
+		PRI = sgPRI(Other.PlayerReplicationInfo);
+		PRI.bReachedSupplier = True;
+		if ( PRI.ProtectCount > 0 )
+			PRI.ProtTimer( 0.05);
 	}
+	
+	return Accumulator.AddHealth( HealthRate() * SupplyFactor, HealthLimit() )
+		| Accumulator.AddArmor( ArmorRate() * SupplyFactor, ArmorLimit() );
 }
+
 
 simulated event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, 
   Vector momentum, name damageType )
@@ -124,15 +164,6 @@ simulated event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation,
 		Super.TakeDamage(damage, instigatedBy, hitLocation, momentum, damageType);
 }
 
-function AnnounceTeam(string sMessage, int iTeam)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None && p.playerreplicationinfo.Team == iTeam )
-		    p.ClientMessage(sMessage);
-}
 
 function bool InQueue( pawn Other)
 {
@@ -148,9 +179,9 @@ function bool InQueue( pawn Other)
 defaultproperties
 {
      bOnlyOwnerRemove=True
+	 SupplySoundFrequency=0
      SupplyRadius=60.000000
      SkinRedTeam=None
      SkinBlueTeam=None
-     RotationTime=0.2
-	 SupplyLoops=1
+     SupplyScale=1
 }

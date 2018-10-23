@@ -397,6 +397,23 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 		Destruct( instigatedBy); 
 }
 
+
+function AnnounceConstruction()
+{
+	local string sLocation;
+	if ( Pawn(Owner) != none )
+	{
+		if ( Pawn(owner).PlayerReplicationInfo.PlayerLocation != None )
+			sLocation = PlayerReplicationInfo.PlayerLocation.LocationName;
+		else if ( Pawn(owner).PlayerReplicationInfo.PlayerZone != None )
+			sLocation = Pawn(owner).PlayerReplicationInfo.PlayerZone.ZoneName;
+		if ( sLocation != "" && sLocation != " ")
+		    sLocation = "at"@sLocation;
+	}
+	AnnounceTeam("Your team has built a"@BuildingName@sLocation, Team);
+}
+
+
 simulated function UpdateSmoke()
 {
 	if ( bSmokeStatus && (MyGen == none) )
@@ -723,6 +740,16 @@ event BroadcastLocalizedMessage( class<LocalMessage> Message, optional int Switc
 			} else
 				P.ReceiveLocalizedMessage( Message, Switch, RelatedPRI_1, RelatedPRI_2, OptionalObject );
 		}
+}
+
+function AnnounceTeam( string sMessage, int iTeam)
+{
+    local Pawn P;
+
+	for ( P=Level.PawnList; P!=None; P=P.nextPawn )
+		if ( (P.bIsPlayer || P.IsA('MessagingSpectator')) &&
+		P.PlayerReplicationInfo != None && p.playerreplicationinfo.Team == iTeam )
+			P.ClientMessage(sMessage);
 }
 
 simulated function bool SameTeamAs(int TeamNum)

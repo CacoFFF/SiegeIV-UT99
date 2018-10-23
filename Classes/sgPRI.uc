@@ -449,6 +449,8 @@ function ProtTimer( float DeltaTime)
 	{
 		ProtectCount -= 2;
 		WhosGun = P.Weapon;
+		if ( WhosGun != None && WhosGun.InventoryGroup > 2 && !WhosGun.IsA('sgConstructor') )
+			ProtectCount = 0;
 	}
 
 	ProtectCount -= DeltaTime;

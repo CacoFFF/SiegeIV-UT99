@@ -17,15 +17,6 @@ var bool StopSpamming;
 var bool EnemyIsStillPresent;
 var int AccSpam; //Accumulated spam, HIGOR: Accumulate 8 units and sound again, prevents exploits
 
-function AnnounceTeam(string sMessage, int iTeam)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None && p.playerreplicationinfo.Team == iTeam )
-		    p.ClientMessage(sMessage);
-}
 
 simulated event PostBeginPlay()
 {

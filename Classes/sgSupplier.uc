@@ -1,6 +1,7 @@
 //=============================================================================
 // sgSupplier.
 // * Revised by 7DS'Lust
+// * Revised by Higor
 //=============================================================================
 class sgSupplier extends sgEquipmentSupplier;
 
@@ -8,41 +9,41 @@ var() config string Weapons[9];
 var() config bool bUseSubclasses;
 var() bool            ClassesLoaded;
 var() class<Weapon> WeaponClasses[9];
-var() float         EquipRate;
+
 var int iWeaponClasses;
 
 
 event PostBuild()
 {
-	local Pawn p;
 	local sgSupplier sgS;
-	local string sLocation;
 	
 	Super.PostBuild();
 
-	if ( Pawn(Owner) != none )
-	{
-		if ( Pawn(owner).PlayerReplicationInfo.PlayerLocation != None )
-			sLocation = PlayerReplicationInfo.PlayerLocation.LocationName;
-		else if ( Pawn(owner).PlayerReplicationInfo.PlayerZone != None )
-			sLocation = Pawn(owner).PlayerReplicationInfo.PlayerZone.ZoneName;
-		if ( sLocation != "" && sLocation != " ")
-		    sLocation = "at"@sLocation;
-	}
-
-
-	if ( (SiegeGI(Level.Game) != none) && SiegeGI(Level.Game).SupplierProtection)
+	if ( (SiegeGI(Level.Game) != none) && SiegeGI(Level.Game).SupplierProtection )
 	{
 		bProtected = True;
 		ForEach AllActors( class'sgSupplier', sgS)
-			if ( sgS.bProtected && (sgS.Team == Team) && (sgS != self) )
+			if ( sgS.bProtected && (sgS.Team == Team) && (sgS != self) && (sgS.BuildCost >= BuildCost) )
 			{
 				bProtected = False;
 				break;
 			}
 	}
-	if ( bProtected && AnnounceImmunity)
-		AnnounceTeam("Your team has built a Supplier"@sLocation, Team);
+	if ( bProtected && AnnounceImmunity )
+		AnnounceConstruction();
+}
+
+function Upgraded()
+{
+	local sgSupplier sgS;
+
+	Super.Upgraded();
+	if ( Grade >= 5 )
+	{
+		ForEach RadiusActors( class'sgSupplier', sgS, 200)
+			if ( (sgS.Team == Team) && (sgS.BuildCost < BuildCost) ) //Never self
+				sgS.bOnlyOwnerRemove = false;
+	}
 }
 
 //Rate self on AI teams, using category variations
@@ -120,40 +121,42 @@ static function ClearWeaponClasses()
 	default.ClassesLoaded = false;
 }
 
-function Supply(Pawn target)
+function bool Supply(Pawn target, sgSupplierQueuer Accumulator, float SupplyFactor)
 {
-
 	local int numWeapons, i, j;
 	local Inventory inv;
-	local sgArmor theArmor;
+	local Weapon W;
+	local float AccumulatedAmmoBase;
+	local int AmmoAccBase, AmmoAccNew;
+	local int SuppliedCount;
 
     if ( !default.ClassesLoaded )
         LoadWeaponClasses();
 
-	Super.Supply(target);
-
     numWeapons = min(GetWeaponCount(), default.iWeaponClasses);
+	AccumulatedAmmoBase = Accumulator.AccumulatedAmmo;
+	Accumulator.AccumulatedAmmo += 0.1 * SupplyFactor / 20.0; //Takes 20 seconds to complete cycle
 	for ( inv=target.Inventory ; inv!=none ; inv=inv.Inventory )
 	{
-		if ( (Weapon(Inv) == none) || (Weapon(Inv).AmmoType == none) )
-		{
-			if ( sgArmor(Inv) != none )
-				theArmor = sgArmor(Inv);
+		W = Weapon(Inv);
+		if ( (W == none) || (W.AmmoType == none) )
 			continue;
-		}
 	
 		for ( i=0 ; i<numWeapons ; i++ )
 		{
-			if ( (!bUseSubclasses && Inv.class == default.WeaponClasses[i]) || (bUseSubclasses && ClassIsChildOf(Inv.class, default.WeaponClasses[i]) ) )
+			if ( (!bUseSubclasses && W.class == default.WeaponClasses[i]) || (bUseSubclasses && ClassIsChildOf(W.class, default.WeaponClasses[i]) ) )
 			{
 				j++;
-				if ( Weapon(inv).AmmoType.AmmoAmount < Weapon(inv).Default.PickupAmmoCount / 2 )
-	                Weapon(inv).AmmoType.AmmoAmount = Weapon(inv).Default.PickupAmmoCount / 2;
-	            else if ( FRand() < float(Weapon(inv).AmmoType.MaxAmmo) / 400 )
-					Weapon(inv).AmmoType.AmmoAmount = FMin(
-						Weapon(inv).AmmoType.AmmoAmount + 1 +
-						int(FRand()*Grade/2*EquipRate),
-						Weapon(inv).AmmoType.MaxAmmo);
+				if ( W.AmmoType.AmmoAmount < W.Default.PickupAmmoCount / 2 )
+	                W.AmmoType.AmmoAmount = W.Default.PickupAmmoCount / 2;
+				else if ( W.AmmoType.AmmoAmount < W.AmmoType.MaxAmmo )
+				{
+					SuppliedCount++;
+					AmmoAccBase = AccumulatedAmmoBase * W.AmmoType.MaxAmmo;
+					AmmoAccNew = Accumulator.AccumulatedAmmo * W.AmmoType.MaxAmmo;
+					if ( AmmoAccNew > AmmoAccBase )
+						W.AmmoType.AmmoAmount = Min( W.AmmoType.AmmoAmount + (AmmoAccNew-AmmoAccBase), W.AmmoType.MaxAmmo);
+				}
 				if ( j >= numWeapons )
 					Goto WEAPONS_READY;
 				break;
@@ -162,35 +165,27 @@ function Supply(Pawn target)
 	}
 
 	WEAPONS_READY:
-	if ( theArmor != none )
-		Goto UPGRADE_ARMOR;
-	
-	while ( inv != none )
-	{
-		if ( sgArmor(Inv) != none )
-		{
-			theArmor = sgArmor(Inv);
-			Goto UPGRADE_ARMOR;
-		}
-		inv = inv.Inventory;
-	}
-
-	theArmor = SpawnArmor( Target);
-	Goto PLAY_SOUND;
-
-	UPGRADE_ARMOR:
-	if ( FRand() < 0.1 + (Grade/15) && theArmor.Charge < 25 + Grade*25 )
-		++theArmor.Charge;
-
-	PLAY_SOUND:
-    if ( FRand() < 0.2 )
-        target.PlaySound(sound'sgMedia.sgStockUp', SLOT_Misc,
-          target.SoundDampening*2.5);
+	return Super.Supply(target,Accumulator,SupplyFactor) | (SuppliedCount > 0);
 }
+
+//Armor is received up to this amount
+function int ArmorLimit()
+{
+	return 25 + (Grade * 25.0);
+} 
+
+//Chance a player gains 1 armor point (values above 1 may yield more points)
+function float ArmorRate()
+{
+	return 0.1 + (Grade / 15.0);
+}
+
+
 
 defaultproperties
 {
      RuRewardScale=0.6
+	 SupplySoundFrequency=0.2
      ProtectionExpired="Your team Supplier immunity has expired."
      bOnlyOwnerRemove=True
      Weapons(0)="Botpack.Enforcer"
@@ -202,7 +197,6 @@ defaultproperties
      Weapons(6)="Botpack.UT_FlakCannon"
      Weapons(7)="Botpack.UT_Eightball"
      Weapons(8)="Botpack.SniperRifle"
-     EquipRate=1.750000
      AnnounceImmunity=True
      SuppProtectTimeSecs=6000000
      BuildingName="Supplier"

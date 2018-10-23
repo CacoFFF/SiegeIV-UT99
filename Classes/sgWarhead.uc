@@ -19,16 +19,6 @@ function bool RemovedBy( pawn Other, optional bool bWasLeech, optional float Che
 	}
 }
 
-function AnnounceTeam(string sMessage, int iTeam)
-{
-    local Pawn p;
-
-    for ( p = Level.PawnList; p != None; p = p.nextPawn )
-	    if ( (p.bIsPlayer || p.IsA('MessagingSpectator')) &&
-          p.PlayerReplicationInfo != None && p.playerreplicationinfo.Team == iTeam )
-		    p.ClientMessage(sMessage);
-}
-
 function PostBuild()
 {
 	local TournamentPlayer P;
