@@ -409,6 +409,7 @@ function InsertRU()
 	local vector vMin, vMax;
 	local PathNode P;
 	local Light L;
+	local WRU50 R;
 	local NavigationPoint N, aS, aE;
 	local float cCount[4], aDist;
 	local float RUsLeft[4];
@@ -444,28 +445,35 @@ function InsertRU()
 	//We will try to swarm as many RUs as we can using the c++ pathing
 	For ( i=0 ; i<arrayCount(RUsLeft) ; i++ ) //This is the TEAM iterator
 	{
-		while ( RUsLeft[i] > RUsPerTeam * 0.3 )
+		while ( (RUsLeft[i] > RUsPerTeam * 0.3) && (iCount < 1000) )
 		{
 			//Find candidates, add ru to surroundings
 			N = GetLinkedCandidate( NavigationPoint(Cores[i].HitActor),++iCount);
 			if ( N == none )
 				break;
-			For ( j=0 ; (N.Paths[j]>0) && (j<16) && (RUsLeft[i]>(RUsPerTeam * 0.3)); j++ )
+			if ( N.HitActor == none )
 			{
-				if ( N.HitActor == none )
-				{
-					N.HitActor = N;
-					if ( FRand() > VSize(N.Location - Cores[i].Location) / (aDist * 0.3)  )
-						continue;
-					if ( N.IsA('PathNode') && (FRand() > 0.1) )
-						N.HitActor = none;
-					else if ( N.IsA('InventorySpot') && (FRand() > 0.7) )
-						N.HitActor = none;
+				N.HitActor = N;
+				if ( FRand() > VSize(N.Location - Cores[i].Location) / (aDist * 0.3)  )
+					continue;
+					
+				if ( (N.IsA('PathNode') && (FRand() > 0.1))
+				|| (N.IsA('InventorySpot') && (FRand() > 0.8)) //Gets checked again in below condition
+				|| (!N.bSpecialCost && !N.bCollideActors && (N.ExtraCost <= 0) && !N.IsA('PlayerStart')&& (FRand() > 0.8))  )
+					N.HitActor = none;
 
-					if ( N.HitActor != none || N.Region.ZoneNumber == 0 ) //Don't spawn RU in BSP walls
-						continue;
-					N.HitActor = Spawn(class'WRU50',,,N.Location);
-					RUsLeft[i] -= 1;
+				if ( N.HitActor == none && N.Region.ZoneNumber != 0 ) //Don't spawn RU in BSP walls
+				{
+					ForEach N.RadiusActors( class'WRU50', R, 75)
+					{
+						N.HitActor = N;
+						break;
+					}
+					if ( N.HitActor == None )
+					{
+						N.HitActor = Spawn(class'WRU50',,,N.Location);
+						RUsLeft[i] -= 1;
+					}
 				}
 			}
 		}
@@ -547,79 +555,68 @@ function InsertRU()
 static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iCount) //iCount is our ID, to prevent endless loops
 {
 	local int i, j, h, k, n;
-	local NavigationPoint nCur, Cached[16];
+	local NavigationPoint nCur, nLast, Cached[16];
 	local actor nS, nE;
 	local bool bLog;
-
-	//First iteration
-	if ( Base.Cost == 0 )
-	{
-		Base.Cost = iCount;
-		return Base;
-	}
-
-	if ( false )
-	{
-		Log("Call number "$iCount);
-		bLog = true;
-	}
 
 	//Negative costed paths are out of choice!!!
 	nCur = Base;
 	CUR_AGAIN:
-	Cached[n++] = nCur;
-	if ( bLog )
-		Log("Caching "$ nCur.Name $" to "$n);
-	if ( nCur.Cost != 0 )
+	if ( nCur.bMeshCurvy ) //Base has become a dead end
+		return None;
+	else if ( nCur.Cost != 0 )
 	{
-		if ( nCur.Cost < 0 )
-			Goto SKIP_ZERO;
-
-		nCur.Cost = iCount;
-		//Find 0 costed path
-		For ( i=0 ; (i<16) && (nCur.Paths[i]>0) ; i++ )
+		//Find 0 costed path, randomize
+		if ( nCur.Cost > 0 ) //Negative means already checked
 		{
-			nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k); 
-			if ( NavigationPoint(nE).Cost == 0 )
+			n = 0;
+			nCur.Cost = iCount;
+			For ( i=0 ; (i<16) && (nCur.Paths[i]>=0) ; i++ )
 			{
-				NavigationPoint(nE).Cost = iCount;
-				if ( bLog )
-					Log("Found new 0 candidate "$ nE.Name);
-				return NavigationPoint(nE);
+				nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k); 
+				if ( NavigationPoint(nE).Cost == 0 )
+					Cached[n++] = NavigationPoint(nE);
+			}
+			if ( n > 0 )
+			{
+				nCur = Cached[Rand(n)];
+				nCur.Cost = iCount;
+				nCur.bMeshCurvy = nCur.Paths[0] < 0; //Pre-emptively mark as dead end
+				return nCur;
 			}
 		}
 
-		SKIP_ZERO:
 		//Find positive costed and iterate here, also, mark this path as negative CUR
+		n = 0;
 		nCur.Cost = -iCount; //Go negative for non-bounce back paths
-		if ( bLog )
-			Log("Using "$ nCur.Name $" as bridge to find candidate");
-		For ( i=0 ; (i<16) && (nCur.Paths[i]>0) ; i++ )
+		For ( i=0 ; (i<16) && (nCur.Paths[i]>=0) ; i++ )
 		{
 			nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k); 
-			if ( (nS != nE) && (abs(NavigationPoint(nE).Cost) != iCount) && !nE.bMeshCurvy )
-			{
-				nCur = NavigationPoint(nE);
-				if ( bLog )
-					Log("Switching to new path: "$ nCur.Name );
-				Goto CUR_AGAIN;
-			}
+			if ( (abs(NavigationPoint(nE).Cost) != iCount) && !nE.bMeshCurvy )
+				Cached[n++] = NavigationPoint(nE);
 		}
-		//Dead end?
-		if ( (nCur == Base) || (n > 15) )
+		if ( n > 0 )
 		{
-			if ( bLog )
-			{	For ( i=0 ; i<n ; i++ )
-					Log("Path "$i$" is: "$Cached[i].GetItemName(string(Cached[i]) ) );
-			}
-			return none; //Swarm ended
+			nLast = nCur; //Keep record of our last path
+			nCur = Cached[Rand(n)];
+			Goto CUR_AGAIN;
 		}
-		nCur.bMeshCurvy = true; //That's how we say, DEAD END
+		
+		//This is a dead end by extension
+		nCur.bMeshCurvy = true;
 		nCur = Base;
+		if ( nLast != None )
+		{
+			nCur = nLast;
+			nLast = None;
+		}
 		Goto CUR_AGAIN; //start over
 	}
 	else
+	{
+		nCur.Cost = iCount;
 		return nCur;
+	}
 }
 
 function ModifyCores()

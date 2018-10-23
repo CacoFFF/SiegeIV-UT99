@@ -15,13 +15,11 @@ var int counter, tableWidth, tableHeaderHeight, cellHeight, CountTeams, saveinde
 var Color White, Pink, Orange, getHeaderColor[4], getTeamColor[4];
 var Font PtsFont26,PtsFont24,PtsFont22, PtsFont20, PtsFont18, PtsFont16, PtsFont14, PtsFont12;
 var Texture getIconTexture[4], getTeamIcon[4], getHeaderTexture[4];
-var string teamNames[4];
+var string TeamNames[4];
 var float TeamX[4], TeamY[4];
 var sgGameReplicationInfo sgGRI;
 var sgClient ClientActor;
 
-var TeamInfo TInfo[4];
-var bool bAllowDraw;
  
 function PostBeginPlay()
 {
@@ -38,26 +36,6 @@ function PostBeginPlay()
 	PtsFont16 = Font( DynamicLoadObject( "LadderFonts.UTLadder16", class'Font' ) );
 	PtsFont14 = Font( DynamicLoadObject( "LadderFonts.UTLadder14", class'Font' ) );
 	PtsFont12 = Font( DynamicLoadObject( "LadderFonts.UTLadder12", class'Font' ) );
-	Timer();
-}
-
-event Timer()
-{
-	local TeamInfo T;
-	local int Count;
-	ForEach AllActors (class'TeamInfo', T)
-	{
-		if ( T.TeamIndex < 4 )
-		{
-			TInfo[ T.TeamIndex] = T;
-			Count++;
-		}
-	}
-	
-	if ( (Count >= 4) || (Level.TimeSeconds > 3 * Level.TimeDilation) )
-		bAllowDraw = true;
-	else
-		SetTimer( 0.2 * Level.TimeDilation, false);
 }
 
 //Disable on release build for now...
@@ -77,10 +55,14 @@ function ShowScores(Canvas Canvas)
 	local sgPRI aPRI;
 	local int Cycles;
 
-	if ( !bAllowDraw )
+	if ( sgGRI == None )
+	{
+		if ( PlayerPawn(Owner) != None )
+			sgGRI = sgGameReplicationInfo( PlayerPawn(Owner).GameReplicationInfo);
 		return;
+	}
+
 	Cycles = GetCycles();
-	
 
 	if(Canvas.ClipX < 900)
 	{
@@ -141,10 +123,10 @@ function ShowScores(Canvas Canvas)
 			//Header core icons
 			Canvas.DrawColor = getTeamColor[i];
 
-			if ( (TInfo[i] != none) && (TInfo[i].TeamName != "") )
-				s = TInfo[i].TeamName;
+			if ( (sgGRI.Teams[i] != none) && (sgGRI.Teams[i].TeamName != "") )
+				s = sgGRI.Teams[i].TeamName;
 			else
-				s = teamNames[i];
+				s = TeamNames[i];
 
 			Canvas.Font = PtsFont26;
 			Canvas.SetPos( X+5, Y+5 );

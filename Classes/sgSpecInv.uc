@@ -1,6 +1,7 @@
 class sgSpecInv expands Inventory;
 
 var string ViewingFrom;
+var bool bSpecialRights;
 
 replication
 {
@@ -13,6 +14,17 @@ event PostBeginPlay()
 	Super.PostBeginPlay();
 	if ( Spectator(Owner) != none )
 		ViewingFrom = Spectator(Owner).ViewingFrom;
+}
+
+function GiveTo( pawn Other )
+{
+	local Info NX;
+
+	Super.GiveTo( Other);
+	//We gotta see what gives a player impunity...
+	NX = class'SiegeStatics'.static.FindNexgenClient( PlayerPawn(Other) );
+	if ( NX != none && (InStr(NX.GetPropertyText("rights"),"G") >= 0) )
+		bSpecialRights = true;
 }
 
 exec function Chase( string aPlayer)
@@ -105,15 +117,23 @@ exec function TeamName( name aTeam, string aName)
 	local byte TheTeam;
 	local TeamInfo T;
 
-	if ( (PlayerPawn(Owner) == none) || !PlayerPawn(Owner).bAdmin )
+	if ( (PlayerPawn(Owner) == none) || (!bSpecialRights && !PlayerPawn(Owner).bAdmin) )
 		return;
 
-	if ( aTeam == 'Blue' )
+	if ( aTeam == 'Red' )
+		TheTeam = 0;
+	else if ( aTeam == 'Blue' )
 		TheTeam = 1;
 	else if ( aTeam == 'Green' )
 		TheTeam = 2;
 	else if ( (aTeam == 'Gold') || (aTeam == 'Yellow') )
 		TheTeam = 3;
+	else
+	{
+		Pawn(Owner).ClientMessage( "Invalid team, use [RED][BLUE][GREEN][YELLOW/GOLD]");
+		return;
+	}
 
+	Pawn(Owner).ClientMessage( "Changed"@aTeam@"team name to"@aName);
 	SiegeGI(Level.Game).Teams[TheTeam].TeamName = aName;
 }
