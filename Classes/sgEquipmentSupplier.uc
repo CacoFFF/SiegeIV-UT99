@@ -71,8 +71,7 @@ simulated function CompleteBuilding()
 	if ( ExtraSupply >= i ) //None was supplied!
 		return;
 		
-	if ( FRand() < SupplySoundFrequency )
-        PlaySound( Sound'sgMedia.sgStockUp', SLOT_Misc, SoundDampening * 2.5);
+	PlayStockSound( i-ExtraSupply);
 
 	//Needs to resupply what wasn't supplied
 	if ( !bGlobalSupply && (ExtraSupply > 0) ) 
@@ -83,6 +82,12 @@ simulated function CompleteBuilding()
 				Supply( Q.POwner, Q, Scale);
 	}
 
+}
+
+function PlayStockSound( int Players)
+{
+	if ( FRand() / Sqrt(Sqrt(Players)) < SupplySoundFrequency )
+		PlaySound( Sound'sgMedia.sgStockUp', SLOT_Misc, SoundDampening * 2.5);
 }
 
 
@@ -117,6 +122,19 @@ function FindTargets()
 		if ( p.bIsPlayer && p.Health > 0 &&
           p.PlayerReplicationInfo != None &&
           p.PlayerReplicationInfo.Team == Team)
+		{
+			if ( !InQueue(P) )
+				Spawn( class'sgSupplierQueuer',none).Setup(self,P);
+		}
+}
+
+function FindTargets_XC()
+{
+	local Pawn P;
+	
+	ForEach PawnActors( class'Pawn', P, 100, Location, true)
+		if ( P.bIsPlayer && (P.Health > 0) && (P.PlayerReplicationInfo.Team == Team) 
+			&& (VSize(Location-P.Location) < 60+P.CollisionRadius) )
 		{
 			if ( !InQueue(P) )
 				Spawn( class'sgSupplierQueuer',none).Setup(self,P);

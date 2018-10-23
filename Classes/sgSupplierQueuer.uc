@@ -19,23 +19,13 @@ function Setup( sgEquipmentSupplier aS, Pawn NewP)
 	POwner = NewP;
 	SupplierRadius = Master.SupplyRadius + POwner.CollisionRadius;
 
-	//Add to the end of the queuer list, this player just arrived to supplier
-	if ( Master.QueuerList == none )
-	{
-		Master.QueuerList = self;
-	}
-	else
-	{
-		aQ = Master.QueuerList;
-		While ( aQ.nextQueuer != none )
-			aQ = aQ.nextQueuer;
-		aQ.nextQueuer = self;
-	}	
+	nextQueuer = Master.QueuerList; //Attach to chain
+	Master.QueuerList = self;
 }
 
 event Tick( float DeltaTime)
 {
-	if ( (POwner == none) || POwner.bDeleteMe )
+	if ( (POwner == none) || POwner.bDeleteMe || POwner.Health <= 0 )
 		Destroy();
 	else if ( VSize(POwner.Location - Master.Location) > SupplierRadius )
 	{
@@ -97,21 +87,6 @@ function bool AddArmor( float ArmorAmount, int ArmorLimit)
 }
 
 
-//ONLY CALL THIS IF I AM THE MAIN QUEUER!!!!
-//IGNORING SANITY CHECKS DUE TO SPEED REASONS
-function Pawn Push()
-{
-	local sgSupplierQueuer aQ;
-	
-	Master.QueuerList = nextQueuer;
-	aQ = nextQueuer;
-	While( aQ.nextQueuer != none )
-		aQ = aQ.nextQueuer;
-	aQ.nextQueuer = self;
-	nextQueuer = none;
-	return Master.QueuerList.POwner; //Now gives us the next pawn to be supplied
-}
-
 event Destroyed()
 {
 	local sgSupplierQueuer aQ;
@@ -119,9 +94,7 @@ event Destroyed()
 		return;
 
 	if ( Master.QueuerList == self )
-	{
 		Master.QueuerList = nextQueuer;
-	}
 	else
 	{
 		For ( aQ=Master.QueuerList ; aQ.nextQueuer!=none ; aQ=aQ.nextQueuer )

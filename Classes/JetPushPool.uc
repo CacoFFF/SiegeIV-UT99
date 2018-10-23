@@ -86,8 +86,11 @@ event UnTouch( Actor Other)
 					if ( CurMove.TimeStamp >= PushDelta[CurAdj] )
 					{
 						PendingTouch = none; //Safety cleanup
-						PendingTouch = Player.Actor.PendingTouch; //Buffer touch list
-						Player.Actor.PendingTouch = self; //Add to first in list
+						if ( !IsInTouchChain(Player.Actor) )
+						{
+							PendingTouch = Player.Actor.PendingTouch; //Buffer touch list
+							Player.Actor.PendingTouch = self; //Add to first in list
+						}
 						CurAdj++;
 					}
 				}
@@ -130,12 +133,25 @@ event PostTouch( Actor Other)
 //	class'sg_TouchUtil'.static.SetTouch( Other, self);
 //	class'sg_TouchUtil'.static.SetTouch( self, Other);
 
-	//Allow multiple pendingtouch, since i'm not doing a physics alteration, i will manually call it here
+	//Allow multiple PendingTouch, since i'm not doing a physics alteration, i will manually call it here
 	if ( PendingTouch != none && PendingTouch != self )
 	{
 		Player.Actor.PendingTouch = PendingTouch;
-		PendingTouch.PostTouch( Player.Actor);
-		PendingTouch = none;
+		PendingTouch = none; //Break up any possible infinite loop
+		Player.Actor.PendingTouch.PostTouch( Player.Actor);
+	}
+}
+
+function bool IsInTouchChain( Actor Other)
+{
+	local Actor First;
+
+	For ( First=Other ; Other!=None ; Other=Other.PendingTouch )
+	{
+		if ( Other.PendingTouch == First )
+			Other.PendingTouch = None;
+		if ( Other == self )
+			return true;
 	}
 }
 

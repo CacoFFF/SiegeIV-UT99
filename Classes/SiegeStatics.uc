@@ -34,6 +34,7 @@ static function bool DetectXCGE( Actor Other)
 		ReplaceFunction( class'sgProtector', class'sgProtector', 'FindTeamTarget', 'XCGE_FindTeamTarget');
 		ReplaceFunction( class'sgProtector', class'SiegeStatics', 'SuitProtects', 'SuitProtects');
 		ReplaceFunction( class'sgBaseCore', class'sgBaseCore', 'AddRuToPlayers', 'AddRuToPlayers_XC');
+		ReplaceFunction( class'sgEquipmentSupplier', class'sgEquipmentSupplier', 'FindTargets', 'FindTargets_XC');
 	}
 	return default.bXCGE;
 }

@@ -15,13 +15,7 @@ event PostBeginPlay()
 	if ( Owner == None )
 		return;
 	
-	ForEach AllActors( class'PlayerPawn', P)
-		if ( ViewPort(P.Player) != None )
-		{
-			LocalPlayer = P;
-			break;
-		}
-
+	LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer(self);
 	Mesh = Owner.Mesh;
 
 	if ( (Pawn(Owner) != None) && (Pawn(Owner).PlayerReplicationInfo != None) )

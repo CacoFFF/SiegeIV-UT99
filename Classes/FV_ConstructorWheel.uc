@@ -240,11 +240,14 @@ function PostRender( Canvas C)
 	
 	if ( LocalPlayer.Level.bHighDetailMode )
 	{
-		C.DrawColor = WhiteColor;
-		C.Style = 4; //Modu
-		C.SetPos( CX - HalfOffset, CY - HalfOffset);
-		C.DrawIcon( Texture'GWheel_Main_M', Scale);
-		C.DrawColor = HUDColor;
+		if ( WindupTimer > 0 )
+		{
+			C.DrawColor = WhiteColor;
+			C.Style = 4; //Modu
+			C.SetPos( CX - HalfOffset, CY - HalfOffset);
+			C.DrawIcon( Texture'GWheel_Main_M', Scale);
+			C.DrawColor = HUDColor;
+		}
 	}
 	else
 		C.DrawColor = GrayColor;
