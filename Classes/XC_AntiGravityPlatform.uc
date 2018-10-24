@@ -216,6 +216,7 @@ function BackToNormal()
 defaultproperties
 {
      bAlwaysRelevant=True
+     bDragable=True
      bStandable=True
      bReplicateEMP=True
      bBlocksPath=True

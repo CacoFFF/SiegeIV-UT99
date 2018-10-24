@@ -55,7 +55,7 @@ simulated function FinishBuilding()
 	if ( (Level.NetMode != NM_Client) && (TCH == None) )
 	{
 		TCH=Spawn(class'sgBuildingCH',Self,'',Location,Rotation);
-		TCH.Setup( Self, 60, 15, vect(0,0,0), 1);
+		TCH.Setup( Self, 60, 15, vect(0,0,0));
 	}
 
 	BaseEnergy = MaxEnergy;
@@ -113,6 +113,7 @@ simulated event TakeDamage( int dam, Pawn instBy, Vector hitLoc, Vector mom, nam
 
 defaultproperties
 {
+     bDragable=true
      BuildingName="Platform"
      BuildCost=200
      UpgradeCost=20

@@ -11,12 +11,6 @@ var bool bLocalHull;
 var bool bTransmitDamage;
 var float TransmitScale;
 var sgBuilding MyBuild; //On clients, the build itself is responsible for setting this if replicated late
-var byte CorrectorType;
-var sgTouchCorrector MyCorrector;
-
-//Corrector indexes:
-// 0 = none
-// 1 = stand corrector for all players
 
 //No rotation support yet
 var private vector RelativePosition;
@@ -25,7 +19,7 @@ var private bool bHasStand;
 replication
 {
 	reliable if ( bNetInitial && (Role == ROLE_Authority) )
-		RelativePosition, MyBuild, CorrectorType;
+		RelativePosition, MyBuild;
 }
 
 // When mover enters gameplay.
@@ -42,28 +36,11 @@ event PostBeginPlay()
 		bLocalHull = True;
 }
 
-//Don't use on clients, crash ensued
-function AddCorrector()
-{
-	MyCorrector = Spawn(class'sgTouchCorrector');
-	MyCorrector.SetCollisionSize( CollisionRadius - 1, CollisionHeight - 1);
-	MyCorrector.StandBase = self;
-	if ( CorrectorType == 1 )
-	{
-		MyCorrector.CorrectType = CT_Player;
-		MyCorrector.CorrectMode = CM_StandAbove;
-	}
-}
 
-simulated event Destroyed()
-{
-	if ( MyCorrector != none )
-		MyCorrector.Destroy();
-}
 
 //This is a mandatory method to setup the hull
 //If called after spawn, it will happen before the fist tick, which is required
-function Setup( sgBuilding Other, float CRadius, float CHeight, optional vector RelativePos, optional byte CorrectorMode)
+function Setup( sgBuilding Other, float CRadius, float CHeight, optional vector RelativePos)
 {
 	MyBuild = Other;
 	SetCollisionSize( CRadius, CHeight);
@@ -72,9 +49,6 @@ function Setup( sgBuilding Other, float CRadius, float CHeight, optional vector 
 		RelativePosition = RelativePos;
 		SetLocation( Other.Location + RelativePos);
 	}
-	CorrectorType = CorrectorMode;
-	if ( CorrectorType > 0 )
-		AddCorrector();
 }
 
 simulated event Attach( actor Other)

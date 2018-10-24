@@ -206,7 +206,6 @@ function bool Accept( actor Incoming, Actor Source )
     local float mag;
     local vector oldDir;
     local pawn P;
-    local sgTouchCorrector sgT;
 
     // Move the actor here.
     Disable('Touch');
@@ -246,9 +245,6 @@ function bool Accept( actor Incoming, Actor Source )
 		Pawn(Incoming).MoveTimer = -1.0;
 		Pawn(Incoming).MoveTarget = self;
 		PlayTeleportEffect( Incoming, false);
-		ForEach RadiusActors (class'sgTouchCorrector', sgT, 400)
-			if ( class'SiegeStatics'.static.ActorsTouching(self,sgT) )
-				sgT.Touch( Incoming);
 		SetCollision(  true, false, false);
 	}
 	else

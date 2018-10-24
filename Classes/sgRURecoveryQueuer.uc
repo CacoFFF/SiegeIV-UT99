@@ -198,5 +198,6 @@ function GiveRUtoTeam( optional bool bForceAll)
 
 defaultproperties
 {
+    bAlwaysTick=True
     RemoteRole=ROLE_None
 }

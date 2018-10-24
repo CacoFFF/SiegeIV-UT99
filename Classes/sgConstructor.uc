@@ -1322,7 +1322,10 @@ function bool DragFunction() //10 times a sec
 		GoalPos = Dragging.InitialLocation + Normal( GoalPos-Dragging.InitialLocation) * MaxOffset;
 	MaxOffset = fMin( 1.0, VSize(GoalPos-Dragging.Location) );
 	OtherPos = Dragging.Location + Normal( GoalPos-Dragging.Location) * MaxOffset;
+	GoalPos = Dragging.Location; //Save GoalPos in case we need to revert
 	Dragging.SetLocation( OtherPos);
+	if ( Dragging.Region.ZoneNumber == 0 ) //Revert if out of the world
+		Dragging.SetLocation(GoalPos);
 	SpecialPause = 0.1;
 	return true;
 }

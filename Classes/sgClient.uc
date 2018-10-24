@@ -40,15 +40,9 @@ var sgClientSettings sgSet;
 //Fix erroneous settings and initialize fingerprint system
 simulated event PostBeginPlay()
 {
-	local PlayerPawn P;
 	local sgScore ScoreBoard;
 	
-	ForEach AllActors (class'PlayerPawn', P)
-		if ( ViewPort(P.Player) != none )
-		{
-			LocalPlayer = P;
-			break;
-		}
+	LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer( Self);
 	if ( LocalPlayer == none )
 	{
 		Destroy();
@@ -226,6 +220,17 @@ simulated event Tick( float DeltaTime)
 {
 	if ( LocalPlayer == none ) //WTF?, IS THIS A DEMO?
 		return;
+	
+	if ( Level.Pauser != "" )
+	{
+		//Hack to prevent client's timers from going bad after a pause
+		if ( (Level.NetMode == NM_Client) && (LocalPlayer.GameReplicationInfo != None) )
+			LocalPlayer.GameReplicationInfo.SecondCount += DeltaTime * 2;
+		//This is an owned actor and the engine has a bug when ticking stuff during pause!!!
+		//This actor will only tick half the times!!!
+		return;
+	}
+	
 	if ( LocalWeapon != LocalPlayer.Weapon )
 	{
 		if ( sgConstructor(LocalWeapon) != none )
@@ -322,6 +327,7 @@ defaultproperties
 {
      SirenVol=1
      bAlwaysRelevant=False
+     bAlwaysTick=True
      GuiSensitivity=0.4
      bNetTemporary=True
      RemoteRole=ROLE_SimulatedProxy

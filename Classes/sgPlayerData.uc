@@ -169,6 +169,7 @@ state OwnerClient
 	}
 	simulated event Tick( float DeltaTime)
 	{
+		SpawnProtEffectStatus();
 		AffectMovement( DeltaTime);
 	}
 }

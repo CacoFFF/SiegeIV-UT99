@@ -2,7 +2,6 @@
 //HIGOR: Now with queuers
 class sgRURecovery extends SiegeActor;
 
-var bool	bInitialized;
 var sgRURecoveryQueuer Active, Inactive;
 
 function RecoverRU( Pawn pp)
