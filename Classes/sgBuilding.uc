@@ -19,6 +19,7 @@ var int iCatTag; //Tag given to build if made from a category
 var float RUinvested;
 var sgPRI OwnerPRI;
 var sgBuildingVolume MyVolume;
+var vector InitialLocation;
 var array<int> BlockedReachSpecs;
 var int iBlockPoll;
 var int TimerCount;
@@ -69,6 +70,7 @@ var(BuildingAttributes) bool bOnlyOwnerRemove;
 var(BuildingAttributes) bool bNoRemove; //Cannot be removed
 var(BuildingAttributes) bool bStandable; //Used to prevent translocators from bouncing here
 var(BuildingAttributes) bool bBlocksPath; //Blocks pathing
+var(BuildingAttributes) bool bDragable;
 
 // Building's Apperance
 var(BuildingApperance) float SpriteScale;
@@ -577,6 +579,7 @@ function CompleteBuilding(); //Timer based, called after finishes building
 function PostBuild()
 {
 	SetTeam( Team);
+	InitialLocation = Location;
 	if ( !DoneBuilding )
 	{
 		Energy = MaxEnergy/5;

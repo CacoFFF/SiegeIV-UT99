@@ -228,7 +228,7 @@ simulated function CompleteBuilding()
 	if ( Role != ROLE_Authority )
 		return;
 
-	if ( VSize( Location - MyTrigger.Location) > 10)
+	if ( VSize( Location - MyTrigger.Location) > 5)
 		MyTrigger.SetLocation( Location - vect(0,0,1) );
 	if ( ShouldDetonate() && !bDisabledByEMP )
 		Damage();
@@ -303,6 +303,7 @@ function AlterNetRate()
 
 defaultproperties
 {
+     bDragable=true
      bOnlyOwnerRemove=True
      BurnPerSecond=5
      BuildingName="Mine"

@@ -30,6 +30,8 @@ function Upgraded()
 {	
 	local float Percent;
 
+	bDragable = false;
+	
 	//Adjust the forcefield properties
 	SetCollisionSize( 40+20*Grade, 40+20*Grade);
 	SpriteScale = 0.5 + 0.25*Grade;
@@ -65,6 +67,7 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 
 defaultproperties
 {
+     bDragable=true
      RuRewardScale=0.4
      MFXFatness=125
      BuildingName="Forcefield"

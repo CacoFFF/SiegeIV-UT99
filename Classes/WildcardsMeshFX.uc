@@ -22,9 +22,3 @@ function PostBeginPlay()
 		return; //HIGOR: ADD EXTRA CASE FOR SPECTATOR MOCK BUILDINGS
 }
 
-function Tick(float deltaTime)
-{
-	if ( sgBuilding(Owner) == None )
-        Destroy();
-}
-

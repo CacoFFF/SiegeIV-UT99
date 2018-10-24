@@ -31,7 +31,17 @@ function PostBeginPlay()
 function Tick(float deltaTime)
 {
 	if ( Owner == None )
-        Destroy();
+    {
+		Destroy();
+		return;
+	}
+	FixLocation();
+}
+
+function FixLocation()
+{
+	if ( Physics == PHYS_Rotating )
+		SetLocation( Owner.Location);
 }
 
 function Destroyed()

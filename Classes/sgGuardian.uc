@@ -63,6 +63,7 @@ function Effects SpawnParticles()
 
 defaultproperties
 {
+     bDragable=true
      ShockSize=120
      BuildingName="Guardian"
      BuildCost=400

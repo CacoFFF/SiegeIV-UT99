@@ -90,17 +90,21 @@ var(test) float SpecialPause; //0 = nothing, >0 full lock, <0 soft lock, >50 bui
 var(test) float ExtraTimer;
 var(test) float BindAgain;
 
+var sgBuilding Dragging;
+var vector DragCoords; //From view point to building
+var rotator DragViewStart; //Start view
+
 //RenderTexture
 var color OrangeColor;
 var color PurpleColor;
 var color WhiteColor;
 var color GrayColor;
-var Texture FunctionBkgs[3];
+var Texture FunctionBkgs[4];
 var Pawn HitPawn;
 var int CachedCategory, CachedCBuildCount;
 
 //Localized
-var(test) config string Functions[3], OrbTexts[3];
+var(test) config string Functions[4], OrbTexts[3];
 var(test) config string CostText, CategoryText, BuildMessage;
 var(test) config string GuiCats, GuiBuilds, GuiSettings;
 var(test) config string GuiSens, GuiLights, GuiModel, GuiLang, GuiSmall, GuiFingerPrint, GuiBInfo, GuiPerf;
@@ -133,7 +137,7 @@ var float LastFired;
 // 0 upgrade
 // 1 repair
 // 2 remove
-// 3 orb
+// 3 drag / orb?
 // 31 (client settings)
 
 var string TeamNames[5], TeamNumbers[5]; //For summon
@@ -143,7 +147,7 @@ replication
 	reliable if ( Role<ROLE_Authority )
 		ClientSetCat, ClientSetBuild, ClientSetMode, ClientBuildIt, GuiState, ClientOpenGui, ClientCloseGui, FreeBuild, ForceCorrect, GetConstructor, SummonB, AntiLeech, InstantSelect;
 	reliable if ( Role==ROLE_Authority )
-		CorrectStuff, bFreeBuild, bUseAmbient, bCanRemoveWithImpunity;
+		CorrectStuff, bFreeBuild, bUseAmbient, bCanRemoveWithImpunity, Dragging;
 }
 
 exec simulated function ToggleSiegePanel()
@@ -597,6 +601,7 @@ simulated function PrimaryFunc( optional float Code)
 		RemoveFunction();
 	else if ( Category == 3 ) //XC_Orb handling
 	{
+		SpecialPause = 1;
 		if ( Level.NetMode != NM_Client )
 		{
 			aOrb = sgPRI(Pawn(Owner).PlayerReplicationInfo).XC_Orb;
@@ -620,8 +625,9 @@ simulated function PrimaryFunc( optional float Code)
 			{
 				aOrb.DropAt();
 			}
+			else if ( Delta == 0.1 )
+				DragFunction();
 		}
-		SpecialPause = 1;
 	}
 	else
 	{
@@ -1052,6 +1058,42 @@ simulated function sgBuilding BestRemoveCandidate( byte Team)
 	return sgBest;
 }
 
+simulated function sgBuilding BestDragCandidate( byte Team)
+{
+	local vector HitLocation, HitNormal, Start, End;
+	local sgBuilding sgB, sgBest;
+	local float Priority, fPri;
+
+	Start = Owner.Location + vect(0,0,1) * Pawn(Owner).BaseEyeHeight;
+	End =  start + vector(Pawn(Owner).ViewRotation) * 90;
+
+	ForEach Owner.TraceActors ( class'sgBuilding', sgB, HitLocation, HitNormal, End, Start)
+	{
+		if ( !sgB.IsA('sgBuilding') ) //TraceActors has a bug!!! (level is last, therefore autobreak)
+		{
+			if ( sgB.bBlockActors ) //Solid
+				break;
+			continue; 
+		}
+		if ( !sgB.bDragable || (sgB.Team != Pawn(Owner).PlayerReplicationInfo.Team) )
+			continue;
+		
+		fPri = 1;
+		if ( !BuildingOwned(sgB) )
+		{
+			if ( !bCanRemoveWithImpunity )
+				continue;
+			fPri = 0.8;
+		}
+		fPri -= VSize( Normal(sgB.Location - start) - Normal(end-start) );
+		if ( fPri > Priority )
+		{
+			Priority = fPri;
+			sgBest = sgB;
+		}
+	}
+	return sgBest;
+}
 
 //Continuous repair, if SpecialPause is > 0, then delay next repair
 function bool RepairFunction( float DeltaRep)
@@ -1244,6 +1286,47 @@ function bool RemoveFunction()
 	}
 }
 
+function bool DragFunction() //10 times a sec
+{
+	local vector OtherPos, GoalPos;
+	local vector X, Y, Z;
+	local rotator View;
+	local float MaxOffset;
+	
+	View = Pawn(Owner).ViewRotation;
+	if ( Dragging == None || Dragging.bDeleteMe )
+	{
+		Dragging = BestDragCandidate( Pawn(Owner).PlayerReplicationInfo.Team);
+		if ( Dragging != None )
+		{
+			GetAxes( View, X, Y, Z);
+			GoalPos = Dragging.Location - (Pawn(Owner).Location + vect(0,0,1) * Pawn(Owner).BaseEyeHeight);
+			DragCoords.X = GoalPos dot X;
+			DragCoords.Y = GoalPos dot Y;
+			DragCoords.Z = GoalPos dot Z;
+			DragViewStart = View;
+		}
+		return Dragging != None;
+	}
+
+	MaxOffset = 5 + Dragging.CollisionRadius * 0.2;
+	if ( VSize(Dragging.Location - Dragging.InitialLocation) > (2+MaxOffset * 1.2) ) //External factors moved this build, do not drag
+		return false;
+
+	GetAxes( View, X, Y, Z);
+	GoalPos = Pawn(Owner).Location + vect(0,0,1) * Pawn(Owner).BaseEyeHeight;
+	GoalPos += X * DragCoords.X;
+	GoalPos += Y * DragCoords.Y;
+	GoalPos += Z * DragCoords.Z;
+	if ( VSize( GoalPos - Dragging.InitialLocation) > MaxOffset )
+		GoalPos = Dragging.InitialLocation + Normal( GoalPos-Dragging.InitialLocation) * MaxOffset;
+	MaxOffset = fMin( 1.0, VSize(GoalPos-Dragging.Location) );
+	OtherPos = Dragging.Location + Normal( GoalPos-Dragging.Location) * MaxOffset;
+	Dragging.SetLocation( OtherPos);
+	SpecialPause = 0.1;
+	return true;
+}
+
 simulated function sgBuilding OrbCandidate( byte aTeam)
 {
 	local vector HitLocation, HitNormal, start, end;
@@ -1403,15 +1486,15 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	
 	For ( i=3+CatActor.NumCats() ; i>=0 ; i-- )
 	{
-		if ( i == 3 ) //Don't draw the orb for now
-			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_D', false);
-		else if ( i == Category )
+		if ( i == Category )
 			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_A', false);
+		else if ( i == 3 ) //Pull mode is blacked out when not selected
+			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_D', false);
 		else
 			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_N', false);
 	}
 	
-	if ( Category < 3 )
+	if ( Category <= 3 )
 	{
 		Tex.DrawTile( 54, 75, 64, 64, 0, 0, 64, 64, Texture'GUI_Border4_F', false);
 		Tex.DrawTile( 118, 75, 64, 64, 63, 0, -64, 64, Texture'GUI_Border4_F', false);
@@ -1529,9 +1612,9 @@ simulated function PostRender( canvas Canvas)
 	//If weapon is hidden, draw stats the old way
 	if ( true )
 	{
-		if ( Category < 3 ) //Higor, localize these
+		if ( Category <= 3 ) //Higor, localize these
 			aStr = default.Functions[Category];
-		else if ( Category == 3 ) //Orb stuff
+		else if ( Category == 3 ) //Orb stuff //DISABLED UNTIL FURTHER NOTICE
 		{
 			if ( sgPRI(Pawn(Owner).PlayerReplicationInfo).XC_Orb == none )
 			{
@@ -2169,6 +2252,8 @@ simulated function Tick(float DeltaTime)
 	}
 
 	HandleTimers( DeltaTime, P);
+	if ( (Dragging != None) && ((Category != 3) || (P.bFire == 0)) )
+		Dragging = None;
 
 	if ( bCanOpenGui && P.bAltFire == 0 )
 		bCanOpenGui = False;
@@ -2213,6 +2298,13 @@ simulated function Tick(float DeltaTime)
 			HitPawn = BestRepairCandidate( Pawn(Owner).PlayerReplicationInfo.Team );
 		else if ( Category == 2 )
 			HitPawn = BestRemoveCandidate( Pawn(Owner).PlayerReplicationInfo.Team );
+		else if ( Category == 3 )
+		{
+			if ( Dragging != None )
+				HitPawn = Dragging;
+			else
+				HitPawn = BestDragCandidate( Pawn(Owner).PlayerReplicationInfo.Team );
+		}
 		else
 			HitPawn = none;
 //		if ( (GuiState > 0) && !bJustOpenedGUI )
@@ -2613,6 +2705,7 @@ defaultproperties
      Functions(0)="Upgrade"
      Functions(1)="Repair"
      Functions(2)="Remove"
+     Functions(3)="Drag"
      BuildMessage="Build Message"
      OrbTexts(0)="Retrieve Orb"
      OrbTexts(1)="Deliver Orb"

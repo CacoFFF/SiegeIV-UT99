@@ -8,13 +8,15 @@ function PostBeginPlay()
 
 function Tick(float deltaTime)
 {
-	Texture = Texture'BuildShader';
-	Skin = Texture'BuildShader';
-	Style = STY_Modulated;
-	bUnlit = True;
-	ScaleGlow = 1;
-	if ( sgBuilding(Owner) == None )
-        Destroy();
+	Super.Tick(DeltaTime);
+	if ( !bDeleteMe )
+	{
+		Texture = Texture'BuildShader';
+		Skin = Texture'BuildShader';
+		Style = STY_Modulated;
+		bUnlit = True;
+		ScaleGlow = 1;
+	}
 }
 
 

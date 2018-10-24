@@ -440,7 +440,7 @@ function SetupActions()
 	local int i, NumCats;
 	local Color IconColor;
 	
-	NumCats = 4; //Five actions... implement GUI AND DRAG!!!!
+	NumCats = 5; //Five actions... implement GUI AND DRAG!!!!
 
 	//See that all buttons are there and cleaned up...
 	//I could use an empty button
@@ -484,8 +484,12 @@ function SetupActions()
 	Buttons[2].RegisterTex( Texture'GUI_RemoveFront', 3/*trans*/, WhiteColor);
 	Buttons[2].RegisterTex( Texture'GUI_Minus', 2/*masked*/, IconColor, 0.375, 0.375);
 	FV_ConstructorWheelButton(Buttons[2]).Abbreviation = "Rem";
+	Buttons[3].RegisterTex( Texture'GUI_OrbModu', 4/*modu*/, WhiteColor);
+	Buttons[3].RegisterTex( Texture'GUI_OrbFront', 3/*trans*/, WhiteColor);
+	Buttons[3].RegisterTex( Texture'GUI_Drag', 2/*masked*/, IconColor, 0.375, 0.375);
+	FV_ConstructorWheelButton(Buttons[3]).Abbreviation = "Drag";
 
-	Buttons[3].RegisterTex( Texture'GUI_Settings', 3/*trans*/, IconColor);
+	Buttons[4].RegisterTex( Texture'GUI_Settings', 3/*trans*/, IconColor);
 
 }
 

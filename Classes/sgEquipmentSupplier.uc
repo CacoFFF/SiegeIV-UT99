@@ -196,6 +196,7 @@ function bool InQueue( pawn Other)
 
 defaultproperties
 {
+     bDragable=true
      bOnlyOwnerRemove=True
 	 SupplySoundFrequency=0
      SupplyRadius=60.000000

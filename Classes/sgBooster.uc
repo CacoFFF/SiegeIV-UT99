@@ -135,6 +135,7 @@ simulated function DoBoost( Pawn Other)
 
 defaultproperties
 {
+     bDragable=true
      BoostSound=Sound'UnrealI.Pickups.BootJmp'
      BuildingName="Booster"
      BuildCost=200

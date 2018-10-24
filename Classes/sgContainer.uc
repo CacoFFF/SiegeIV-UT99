@@ -173,6 +173,7 @@ static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int 
 
 defaultproperties
 {
+     bDragable=true
      StorageAmount=50
 	 HealAmount=0.95
      BuildingName="Container"

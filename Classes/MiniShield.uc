@@ -49,7 +49,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 
 	if ( VSize(Location - HitLocation) < CollisionRadius * 0.88)
 	{
-		HitLocation += Normal(TraceDir) * 3;
+		HitLocation += Normal(TraceDir) * 2;
 		return false;
 	}
 
@@ -60,7 +60,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 	if ( discr < 0 )
 	{
 		HitLocation += Location;
-		HitLocation += Normal(TraceDir) * 3; //This should help prevent infinite recursions
+		HitLocation += Normal(TraceDir) * 2; //This should help prevent infinite recursions
 		return false;
 	}
 
@@ -70,6 +70,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 
 defaultproperties
 {
+     bDragable=true
      bNoUpgrade=True
      RuRewardScale=0.75
      BuildingName="Mini Shield"
