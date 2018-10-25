@@ -37,10 +37,13 @@ function CheckAffector()
 			Affector.Destroy();
 		return;
 	}
-	PlayerData = class'SiegeStatics'.static.GetPlayerData( Pawn(Owner), true);
-	Affector = Spawn( class'XC_MA_sgSpeed', Owner);
-	Affector.Item = self;
-	PlayerData.AddMAffector( Affector);
+	PlayerData = class'SiegeStatics'.static.GetPlayerData( Pawn(Owner));
+	if ( PlayerData != None )
+	{
+		Affector = Spawn( class'XC_MA_sgSpeed', Owner);
+		Affector.Item = self;
+		PlayerData.AddMAffector( Affector);
+	}
 }
 
 /*--- Console Functions. ----------------------------------------------------*/

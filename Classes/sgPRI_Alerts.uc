@@ -6,6 +6,11 @@ class sgPRI_alerts expands sgPRI;
 
 var Mutator AdminAlert;
 
+event PostBeginPlay()
+{
+	Super(PlayerReplicationInfo).PostBeginPlay();
+}
+
 simulated event SetInitialState()
 {
 	bScriptInitialized = true;

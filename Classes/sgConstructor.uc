@@ -7,7 +7,7 @@
 class sgConstructor extends TournamentWeapon;
 
 
-#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0030.Constructor
+#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0031.Constructor
 
 //Pick up view mesh contributed by DeepakOV
 #exec mesh import mesh=ConstructorPick anivfile=Models\ConstructorPick_a.3d datafile=Models\ConstructorPick_d.3d x=0 y=0 z=0 mlod=0
@@ -2739,6 +2739,7 @@ defaultproperties
      FunctionBkgs(0)=Texture'GUI_OrbFront'
      FunctionBkgs(1)=Texture'GUI_Settings'
      FunctionBkgs(2)=Texture'GUI_RemoveFront'
+     FunctionBkgs(3)=Texture'GUI_OrbFront'
 
      PickupViewMesh=Mesh'ConstructorPick'
      PickupViewScale=0.300000

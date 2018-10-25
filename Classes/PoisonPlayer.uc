@@ -34,7 +34,7 @@ simulated function Register()
 	PoisonedPlayer = Pawn(Owner);
 	if ( Level.NetMode == NM_Client )
 		PRI = PoisonedPlayer.PlayerReplicationInfo;
-	PD = Class'SiegeStatics'.static.GetPlayerData( PoisonedPlayer, true);
+	PD = Class'SiegeStatics'.static.GetPlayerData( PoisonedPlayer);
 	if ( PD != none )
 		PD.AddMAffector( self);
 }

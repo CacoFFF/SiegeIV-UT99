@@ -80,6 +80,24 @@ replication
 		SendFingerPrint, RequestFPTime;
 }
 
+event PostBeginPlay()
+{
+	Super.PostBeginPlay();
+
+	if ( SiegeGI(Level.Game) != None )
+		RU = SiegeGI(Level.Game).StartingRU;
+	
+	//Bots	
+	if ( PlayerPawn(Owner) == none )
+		SendFingerPrint("ARTIFICIAL_"$PlayerName);
+	//Local Player
+	else if ( ViewPort(PlayerPawn(Owner).Player) != none ) 
+	{
+		PlayerFingerPrint = "LocalPlayer";
+		Owner.Spawn(class'sgClient');
+	}
+}
+
 simulated function ClientReceiveRU( float NewRU)
 {
 	local sgHUD HUD;
@@ -173,15 +191,6 @@ state ServerOp
 Begin:
 	Sleep(0.0);
 	PlayerData = Owner.Spawn(class'sgPlayerData',Owner);
-	if ( SiegeGI(Level.Game) != none )
-		RU = SiegeGI(Level.Game).StartingRU;
-	if ( PlayerPawn(Owner) == none )
-		SendFingerPrint("ARTIFICIAL_"$PlayerName);
-	else if ( ViewPort(PlayerPawn(Owner).Player) != none ) //Local player found
-	{
-		PlayerFingerPrint = "LocalPlayer";
-		Owner.Spawn(class'sgClient');
-	}
 	LocateIpToCountry();
 
 	//Pre-Game, maybe use other checks?
@@ -202,12 +211,7 @@ state ServerSpectatorOp
 {
 	ignores Tick;
 Begin:
-	Sleep(0.0);
-	if ( ViewPort(Spectator(Owner).Player) != none ) //Local player found
-	{
-		PlayerFingerPrint = "LocalPlayer";
-		Owner.Spawn(class'sgClient');
-	}
+	Stop;
 }
 
 
@@ -464,7 +468,7 @@ function ProtTimer( float DeltaTime)
 	}
 	
 	if ( PlayerData != None )
-		PlayerData.bSpawnProtected = ProtectCount > 0;
+		PlayerData.bSpawnProtected = ProtectCount > 0.1;
 }
 
 simulated function CacheFlag()

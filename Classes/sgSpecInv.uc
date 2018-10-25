@@ -1,6 +1,8 @@
 class sgSpecInv expands Inventory;
 
+var float GivenAt;
 var string ViewingFrom;
+var bool bCheckedRights;
 var bool bSpecialRights;
 
 replication
@@ -16,15 +18,32 @@ event PostBeginPlay()
 		ViewingFrom = Spectator(Owner).ViewingFrom;
 }
 
-function GiveTo( pawn Other )
+function GiveTo( Pawn Other )
+{
+	Super.GiveTo( Other);
+	GivenAt = Level.TimeSeconds; //Nexgen hasn't loaded yet!
+
+}
+
+function bool SpecialRights()
 {
 	local Info NX;
 
-	Super.GiveTo( Other);
-	//We gotta see what gives a player impunity...
-	NX = class'SiegeStatics'.static.FindNexgenClient( PlayerPawn(Other) );
-	if ( NX != none && (InStr(NX.GetPropertyText("rights"),"G") >= 0) )
+	if ( ViewPort(PlayerPawn(Owner).Player) != None )
+	{
 		bSpecialRights = true;
+		bCheckedRights = true;
+	}
+	
+	if ( !bCheckedRights && (Level.TimeSeconds - GivenAt > 10*Level.TimeDilation) )
+	{
+		bCheckedRights = true;
+		//We gotta see what gives a player impunity...
+		NX = class'SiegeStatics'.static.FindNexgenClient( PlayerPawn(Owner) );
+		if ( NX != none && ((InStr(NX.GetPropertyText("rights"),"G") >= 0) || (InStr(NX.GetPropertyText("rights"),"F") >= 0)) )
+			bSpecialRights = true;
+	}
+	return bSpecialRights;
 }
 
 exec function Chase( string aPlayer)
@@ -117,8 +136,12 @@ exec function TeamName( name aTeam, string aName)
 	local byte TheTeam;
 	local TeamInfo T;
 
-	if ( (PlayerPawn(Owner) == none) || (!bSpecialRights && !PlayerPawn(Owner).bAdmin) )
+	if ( (PlayerPawn(Owner) == none) || (!SpecialRights() && !PlayerPawn(Owner).bAdmin) )
+	{
+		if ( Pawn(Owner) != None )
+			Pawn(Owner).ClientMessage( "You're not allowed to use this command");
 		return;
+	}
 
 	if ( aTeam == 'Red' )
 		TheTeam = 0;
@@ -133,7 +156,6 @@ exec function TeamName( name aTeam, string aName)
 		Pawn(Owner).ClientMessage( "Invalid team, use [RED][BLUE][GREEN][YELLOW/GOLD]");
 		return;
 	}
-
-	Pawn(Owner).ClientMessage( "Changed"@aTeam@"team name to"@aName);
 	SiegeGI(Level.Game).Teams[TheTeam].TeamName = aName;
+	class'SiegeStatics'.static.AnnounceAll( Pawn(Owner), Pawn(Owner).PlayerReplicationInfo.PlayerName@"changed"@aTeam@"team name to"@aName);
 }

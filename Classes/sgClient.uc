@@ -21,7 +21,6 @@ var() float SirenVol; //0-1
 var() string FingerPrint;
 var() float ScoreboardBrightness;
 var() bool bFPnoReplace; //Never replace fingerprint
-var() bool bUseLC; //Lag compensation >>>> DEPRECATED
 var() bool bUseNewDeco;
 var() bool bBuildInfo; //Alternative build interface
 var() bool bClientIGDropFix;
@@ -302,7 +301,9 @@ simulated function ClientSetBind()
 	local string keyName, bind, bindCaps;
 	local PlayerPawn playerOwner;
 
-	LocalPlayer.ConsoleCommand("SET INPUT F3 SiegeStats");
+	bind = LocalPlayer.ConsoleCommand("KEYBINDING F3");
+	if ( InStr(Caps(Bind),"SIEGESTATS") < 0 )
+		LocalPlayer.ConsoleCommand("SET INPUT F3"@Bind$"|SiegeStats");
 	LocalPlayer.ConsoleCommand("SET INPUT F7 TeamRU");
 
 	for ( key = 1; key < 255; key++ )
@@ -332,7 +333,6 @@ defaultproperties
      bNetTemporary=True
      RemoteRole=ROLE_SimulatedProxy
      bNoConstructorScreen=True
-     bUseLC=True
      bUseNewDeco=True
      bClientIGDropFix=True
 }
