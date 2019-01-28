@@ -1,6 +1,7 @@
 // ************************************
 // sgTeleporter written by nOs*Badger
 // Optimized by Higor
+// * Revised by zaccyboy
 // ************************************
 
 
@@ -62,6 +63,7 @@ event Spawned()
 	local WildCardsSuperContainer SC;
 	local sgTeleporter aTele;
 	local Teleporter Tele;
+	local sgEquipmentSupplier ES;
 	local byte aTeam;
 	local float Dist;
 
@@ -84,6 +86,10 @@ event Spawned()
 			Destroy();
 			return;
 		}
+	ForEach RadiusActors (class'sgEquipmentSupplier', ES, CollisionRadius * 1.3){
+		Destroy();
+		return;
+	}
 	ForEach AllActors (class'Teleporter', Tele)
 		if ( (Tele.URL != "") && class'SiegeStatics'.static.ActorsTouchingExt(self,Tele, 2, 8) )
 		{
