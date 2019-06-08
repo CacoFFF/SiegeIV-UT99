@@ -26,6 +26,7 @@ var() config bool bDisableIDropFix;
 var() config bool bBotCanCheat;
 var() config bool bCore5AddsEnforcer;
 var() config bool bPlayersRelevant;
+var() config float CoreRepairMultiplier;
 
 // The Map Specific List
 var config vector RandomSpawnerLocation[32];
@@ -2384,6 +2385,7 @@ defaultproperties
      RoundRuScale=2
      bUseNukeDeco=False
      bCore5AddsEnforcer=True
+	 CoreRepairMultiplier=4.0
      BaseMotion=70
      TranslocBaseForce=800
      TranslocLevelForce=120
