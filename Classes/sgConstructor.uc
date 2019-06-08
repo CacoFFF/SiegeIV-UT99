@@ -1112,12 +1112,13 @@ function bool RepairFunction( float DeltaRep)
 	if ( sgBest != none )
 	{
 		
-		if(sgBaseCore(HitActor) != none){
-			// if base core, reduce delta rep to 1/4 normal amount.
-			fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, 15 * DeltaRep);
-		}else{
-			fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, 60 * DeltaRep);
+		// check if core. Set core repair multiplier amount to repair amount.
+		if(sgBaseCore(HitActor) != none
+		&& SiegeGI(Level.Game) != none){
+			DeltaRep = DeltaRep / SiegeGI.CoreRepairMultiplier;
 		}
+
+		fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, 60 * DeltaRep);
 
 		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 		{
