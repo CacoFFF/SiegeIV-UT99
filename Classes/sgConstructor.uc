@@ -2,6 +2,7 @@
 // sg_XC_Constructor.
 //
 // Experimental constructor, model and class made by Higor
+// Reduced amount of repair to core by zaccyboy
 //
 //=============================================================================
 class sgConstructor extends TournamentWeapon;
