@@ -8,7 +8,7 @@
 class sgConstructor extends TournamentWeapon;
 
 
-#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0031rep.Constructor
+#exec OBJ LOAD FILE="Graphics\ConstructorTex.utx" PACKAGE=SiegeIV_0031.Constructor
 
 //Pick up view mesh contributed by DeepakOV
 #exec mesh import mesh=ConstructorPick anivfile=Models\ConstructorPick_a.3d datafile=Models\ConstructorPick_d.3d x=0 y=0 z=0 mlod=0
@@ -1115,10 +1115,12 @@ function bool RepairFunction( float DeltaRep)
 		// check if core. Set core repair multiplier amount to repair amount.
 		if(sgBaseCore(HitActor) != none
 		&& SiegeGI(Level.Game) != none){
-			DeltaRep = DeltaRep / SiegeGI(Level.Game).CoreRepairMultiplier;
+			fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, (60/ SiegeGI(Level.Game).CoreRepairMultiplier) * DeltaRep);
+		} else {
+			fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, 60 * DeltaRep);
 		}
 
-		fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, 60 * DeltaRep);
+
 
 		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 		{
