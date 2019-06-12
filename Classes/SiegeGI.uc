@@ -2,6 +2,7 @@
 // * Revised by nOs*Badger
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
+// * Added CoreRepairMultiplier config var by nut_zac
 //=============================================================================
 class SiegeGI extends TeamGamePlus config(SiegeIV_0031);
 
