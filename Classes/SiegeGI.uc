@@ -3,6 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 // * Added CoreRepairMultiplier config var by nut_zac
+// * Added bool value to show builds by nut_zac
 //=============================================================================
 class SiegeGI extends TeamGamePlus config(SiegeIV_0031);
 
@@ -28,6 +29,7 @@ var() config bool bBotCanCheat;
 var() config bool bCore5AddsEnforcer;
 var() config bool bPlayersRelevant;
 var() config float CoreRepairMultiplier;
+var() config bool bShowBuilds;
 
 // The Map Specific List
 var config vector RandomSpawnerLocation[32];
