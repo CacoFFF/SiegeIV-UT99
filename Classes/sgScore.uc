@@ -261,10 +261,19 @@ function ShowScores(Canvas Canvas)
 			Canvas.SetPos(X+xLen+paddingInfo+40, Y + yLen + 9);
 			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
 			
-	  		  // Draw Buildings
-	  		Canvas.DrawColor=getTeamColor[2];
-			Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
-			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+
+			// Draw Buildings
+			if(SiegeGI(Level.Game).bShowBuilds){
+				Canvas.DrawColor=getTeamColor[2];
+				Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
+				Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+			}
+			else if(aPRI.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+			{
+				Canvas.DrawColor=getTeamColor[2];
+				Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
+				Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+			}
 		  
 			// Draw Effective
 			Canvas.DrawColor=Orange;
