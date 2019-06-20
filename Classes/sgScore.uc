@@ -268,7 +268,7 @@ function ShowScores(Canvas Canvas)
 				Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
 				Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
 			}
-			else if(aPRI.Team == Pawn(Owner).PlayerReplicationInfo.Team)
+			else if(aPRI.Team == Pawn(Owner).PlayerReplicationInfo.Team || aPRI.bIsSpectator)
 			{
 				Canvas.DrawColor=getTeamColor[2];
 				Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
