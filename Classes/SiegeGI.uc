@@ -5,7 +5,7 @@
 // * Added CoreRepairMultiplier config var by nut_zac
 // * Added bool value to show builds by nut_zac
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0031);
+class SiegeGI extends TeamGamePlus config(SiegeIV_0031b);
 
 var class<Object> GCBind; //SiegeNative plugin ref to prevent GC cleaning
 
