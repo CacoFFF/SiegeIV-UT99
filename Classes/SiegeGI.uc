@@ -2389,6 +2389,7 @@ defaultproperties
      bUseNukeDeco=False
      bCore5AddsEnforcer=True
 	 CoreRepairMultiplier=4.0
+	 bShowBulds=True
      BaseMotion=70
      TranslocBaseForce=800
      TranslocLevelForce=120
