@@ -12,6 +12,7 @@ var bool bXCGE_Octree;
 var int XCGE_Version;
 var Color BlackColor;
 
+var name TeamBuildingTags[5];
 
 
 native(3571) static final function float XCGE_HSize( vector A);
@@ -375,6 +376,17 @@ function bool SuitProtects( sgBuilding Other)
 }
 
 
+//*************************************
+//Get this team's tag******************
+//Used to boost building iterator speed
+//*************************************
+
+static final function Name TeamTag( int Team)
+{
+	if ( Team >= 0 && Team <= 3 )
+		return default.TeamBuildingTags[Team];
+	return default.TeamBuildingTags[4];
+}
 
 
 
@@ -384,4 +396,9 @@ defaultproperties
 	bTrue=True
 	XCGE_Version=-1
 	BlackColor=(R=0,G=0,B=0)
+	TeamBuildingTags(0)=RedBuilding
+	TeamBuildingTags(1)=BlueBuilding
+	TeamBuildingTags(2)=GreenBuilding
+	TeamBuildingTags(3)=YellowBuilding
+	TeamBuildingTags(4)=OtherBuilding
 }

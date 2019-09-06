@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0031);
+class SiegeGI extends TeamGamePlus config(SiegeIV_0032);
 
 var class<Object> GCBind; //SiegeNative plugin ref to prevent GC cleaning
 
@@ -75,6 +75,7 @@ var int RoundRestart;
 var float RoundRuScale;
 var sgCategoryInfo CategoryInfo[4];
 var Weapon theWeapon; //We keep this pointer during Weapon mutation
+var sgPRI LastMidSpawnToucher;
 
 var sgBuildingMap BuildingMaps[4];
 var Name BuildingMapNames[4];
@@ -1120,17 +1121,13 @@ function AddDefaultInventory(Pawn playerPawn)
 function bool PickupQuery( Pawn Other, Inventory item )
 {
 	local bool Result;
+	local bool bIsMidSpawn;
 
-	Result = Super.PickupQuery( Other, Item);
-	//Item was spawned in mid
-	if ( Item.LightEffect == LE_Rotor
-	 && Item.LightType == LT_Steady
-	 && Item.LightHue == 85
-	 && Other != none 
-	 && sgPRI(Other.PlayerReplicationInfo) != none )
-	{
-		sgPRI(Other.PlayerReplicationInfo).sgInfoSpreeCount += 10;
-	}
+	bIsMidSpawn = Item.LightEffect == LE_Rotor && Item.LightType == LT_Steady && Item.LightHue == 85;
+	Result = Super.PickupQuery( Other, Item); //This may destroy the item!
+	if ( Result && bIsMidSpawn && (Other != None) )
+		LastMidSpawnToucher = sgPRI( Other.PlayerReplicationInfo);
+
 	return Result;
 }
 

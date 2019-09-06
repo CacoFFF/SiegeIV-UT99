@@ -13,7 +13,8 @@ var bool bUseBotz;
 var NavigationPoint BotzNavig;
 var sgTeleporter OtherTele;
 var PlayerPawn LocalPlayer;
-var Pawn Accepted;
+var Pawn Accepted[16];
+var int AcceptedCount;
 
 // Teleporter flags
 var() bool    bEnabled;         // Teleporter is turned on;
@@ -69,7 +70,7 @@ event Spawned()
 
 	Super.Spawned();
 
-	if (Pawn(Owner) == none)
+	if ( Pawn(Owner) == none )
 		aTeam = 0;
 	else
 		aTeam = Pawn(Owner).PlayerReplicationInfo.Team;
@@ -86,7 +87,8 @@ event Spawned()
 			Destroy();
 			return;
 		}
-	ForEach RadiusActors (class'sgEquipmentSupplier', ES, CollisionRadius * 1.3){
+	ForEach RadiusActors (class'sgEquipmentSupplier', ES, CollisionRadius * 1.3)
+	{
 		Destroy();
 		return;
 	}
@@ -132,15 +134,10 @@ simulated event Timer()
 	if ( SCount > 0 || Role != ROLE_Authority )
         	return;
 
-	if ( Accepted != none )
-	{
-		if ( Accepted.bDeleteMe || !Class'SiegeStatics'.static.ActorsTouching(Accepted, self) )
-		{
-			Accepted = none;
-			if ( BotzNavig != none )
-				BotzNavig.taken = false;
-		}
-	}
+	UpdateAccepted();
+		
+	if ( BotzNavig != None )
+		BotzNavig.taken = AcceptedCount > 0;
 	
 	if ( OtherTele != none )
 		TargetLoc = OtherTele.Location;
@@ -152,20 +149,31 @@ simulated event Timer()
 	}
 }
 
+function UpdateAccepted()
+{
+	local int i;
+	
+	For ( i=AcceptedCount-1 ; i>=0 ; i-- )
+		if ( Accepted[i].bDeleteMe || !Accepted[i].bCollideActors || !SGS.static.ActorsTouching(Accepted[i], self) )
+		{
+			Accepted[i] = Accepted[--AcceptedCount];
+			Accepted[AcceptedCount] = None;
+		}
+}
+
 simulated function string GetTeleporterName()
 {
 	return sPlayerIP@string(Team);
 }
 
-simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, 
-  Vector momentum, name damageType)
+simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType)
 {
 	local sgTeleporter teleDest;
-	if (damageType != 'sgTeleporter')  
+	if ( damageType != 'sgTeleporter')  
 	{
 		teleDest=FindOther();
-    		if (teleDest!=None)
-		teleDest.TakeDamage(Damage/2 , instigatedBy, teleDest.Location, momentum, 'sgTeleporter');	
+    	if ( teleDest != None )
+			teleDest.TakeDamage( Damage/2 , instigatedBy, teleDest.Location, momentum, 'sgTeleporter');	
 	}
 	Super.TakeDamage(Damage , instigatedBy, hitLocation, momentum, damageType);
 }
@@ -175,14 +183,8 @@ simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation,
 simulated function FinishBuilding()
 {
 	Super.FinishBuilding();
-	bEnabled=true;
-	
-	if ( Team == 0 )		Tag = 'sgTeleRed';
-	else if ( Team == 1 )		Tag = 'sgTeleGlue';
-	else if ( Team == 2 )		Tag = 'sgTeleGreen';
-	else if ( Team == 3 )		Tag = 'sgTeleGold';
-	else		Tag = 'sgTeleExtra';
 
+	bEnabled=true;
 	if ( Level.NetMode == NM_Client )
 		return;
 
@@ -205,18 +207,16 @@ simulated function FinishBuilding()
 
 
 // Accept an actor that has teleported in.
-function bool Accept( actor Incoming, Actor Source )
+function bool Accept( Actor Incoming, Actor Source )
 {
-    local rotator newRot, oldRot;
-    local int oldYaw;
-    local float mag;
-    local vector oldDir;
-    local pawn P;
+	local rotator newRot, oldRot;
+	local Pawn P;
+	local int i;
+	local bool bTeleported;
 
     // Move the actor here.
     Disable('Touch');
     //log("Move Actor here "$tag);
-	newRot = Incoming.Rotation;
 
     if ( Pawn(Incoming) != None )
     {
@@ -231,45 +231,38 @@ function bool Accept( actor Incoming, Actor Source )
                 P = P.nextPawn;
             }
         }
-		SetCollision(  false, false, false);
-		if ( !Pawn(Incoming).SetLocation(Location) )
+		UpdateAccepted();
+		SetCollision(false);
+		For ( i=0 ; i<AcceptedCount ; i++ ) Accepted[i].SetCollision(false);
+		bTeleported = Pawn(Incoming).SetLocation(Location);
+		For ( i=0 ; i<AcceptedCount ; i++ ) Accepted[i].SetCollision(true);
+		SetCollision(true);
+		if ( bTeleported )
 		{
-			SetCollision(  true, false, false);
-			Enable('Touch');
-			return false;
-		}
-		if ( !FastTrace( Location + vector(newRot) * CollisionRadius * 2) )
-			newRot.Yaw += 32768;
-		if ( (Role == ROLE_Authority) || (Level.TimeSeconds - LastFired > 0.5) )
-		{
-			Pawn(Incoming).SetRotation(newRot);
+			newRot = Incoming.Rotation;
+			if ( !FastTrace( Location + vector(newRot) * CollisionRadius * 2) )
+				newRot.Yaw += 32768;
+			Pawn(Incoming).SetRotation( newRot);
 			Pawn(Incoming).ViewRotation = newRot;
-			LastFired = Level.TimeSeconds;
 			if ( !Incoming.Region.Zone.bWaterZone )
 				Incoming.SetPhysics(PHYS_Falling);
+			Pawn(Incoming).MoveTimer = -1.0;
+			Pawn(Incoming).MoveTarget = self;
+			PlayTeleportEffect( Incoming, false);
+			LastFired = Level.TimeSeconds;
+
+			if ( AcceptedCount < ArrayCount(Accepted) )
+				Accepted[AcceptedCount++] = Pawn(Incoming);
 		}
-		Pawn(Incoming).MoveTimer = -1.0;
-		Pawn(Incoming).MoveTarget = self;
-		PlayTeleportEffect( Incoming, false);
-		SetCollision(  true, false, false);
 	}
 	else
-	{
-		if ( !Incoming.SetLocation(Location) )
-		{
-			Enable('Touch');
-			return false;
-		}
-	}
+		bTeleported = Incoming.SetLocation( Location);
 
 	Enable('Touch');
-	Incoming.Velocity = vect(0,0,-1);
+	if ( bTeleported )
+		Incoming.Velocity = vect(0,0,-1);
 
-    // Play teleport-in effect.
-	Accepted = Pawn(Incoming);
-	if ( BotzNavig != none )
-		BotzNavig.taken = true;
-    return true;
+	return bTeleported;
 }
     
 function PlayTeleportEffect(actor Incoming, bool bOut)
@@ -296,20 +289,22 @@ function Trigger( actor Other, pawn EventInstigator )
 }
 
 
-simulated function Touch( actor Other )
+simulated function Touch( Actor Other )
 {
 	local sgTeleporter teleDest;
 	local Pawn P;
 	local vector TLoc;
-
+	local int i;
+	
 	P = Pawn(Other);
-	if ( !bEnabled || !Other.bCanTeleport || bDisabledByEMP || (P == none) || (P.PlayerReplicationInfo == none) || (P.PlayerReplicationInfo.Team != Team) || (Other == Accepted) )
+	if ( !bEnabled || !Other.bCanTeleport || bDisabledByEMP || (P == none) || (P.PlayerReplicationInfo == none) || (P.PlayerReplicationInfo.Team != Team) )
 		return;
-
+		
 	if ( Level.NetMode == NM_Client )
 	{
-		if ( !bHasOtherTele )
+		if ( !bHasOtherTele || ((PlayerPawn(Other) != None) && PlayerPawn(Other).bUpdating) )
 			return;
+
 		if ( P.FindInventoryType(class'sgTeleNetwork') != none )	TLoc = TeleNetLoc;
 		else														TLoc = TargetLoc;
 		
@@ -326,9 +321,12 @@ simulated function Touch( actor Other )
 		return;
 	}
 
-	teleDest=FindOther(P);
+	for ( i=0 ; i<AcceptedCount ; i++ )
+		if ( Other == Accepted[i] )
+			return;
 
-	if( teleDest != None && teleDest.bEnabled)
+	teleDest = FindOther(P);
+	if( teleDest != None && teleDest.bEnabled )
 	{
 		// Teleport the actor into the other teleporter.
 		PlayTeleportEffect( P, false);
@@ -339,11 +337,11 @@ simulated function Touch( actor Other )
 
 }
 
-function sgTeleporter FindOther(optional Pawn instigator)
+function sgTeleporter FindOther( optional Pawn Seeker)
 {
 	local sgTeleporter sgTele;
 
-	if ( (instigator != none) && (instigator.FindInventoryType(class'sgTeleNetwork') != None) )
+	if ( (Seeker != none) && (Seeker.FindInventoryType(class'sgTeleNetwork') != None) )
 		return FindNetworkOther();
 
 	if ( OtherTele != none )

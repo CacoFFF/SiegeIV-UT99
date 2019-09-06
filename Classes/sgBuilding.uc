@@ -124,7 +124,7 @@ simulated event BeginPlay()
 //	class'SiegeStatics'.static.DetectXCGE( self);
 	if ( Level.NetMode != NM_DedicatedServer )
 	{
-		ForEach AllActors (class'EffectsPool', EffectsPool)
+		ForEach AllActors( class'EffectsPool', EffectsPool)
 			break;
 	}
 }
@@ -176,6 +176,7 @@ function SetTeam( int aTeam)
 	else if ( aTeam == 3 )
 		Texture = SpriteYellowTeam;
 	//ELSE: MOCK SPECTATOR BUILDS
+	Tag = SGS.static.TeamTag( Team);
 }
 
 //WARNING: ALL SUBCLASSES THAT IMPLEMENT DESTROYED() MUST CALL SUPER.DESTROYED()!!!!
@@ -257,6 +258,7 @@ simulated event Timer()
 	//Data unpack is best done before processing occurs
 	if ( Level.NetMode == NM_Client )
 		UnpackStatusFlags();
+	Tag = SGS.static.TeamTag( Team);
 	if ( !DoneBuilding )
 	{
 		if ( SCount > 0 )

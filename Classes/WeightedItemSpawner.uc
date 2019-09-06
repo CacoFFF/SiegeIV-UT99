@@ -143,6 +143,7 @@ Spawn:
 		SpawnItem( NextSpawn);
 		While ( ItemActive() )
 			Sleep(0.1);
+		NotifyPickup();
 		ResetItemLight();
 		MyItem = none;
 	}
@@ -177,7 +178,7 @@ function bool ItemActive()
 
 function ResetItemLight()
 {
-	if ( MyItem == none )
+	if ( MyItem == none || MyItem.bDeleteMe )
 		return;
 	MyItem.LightEffect = MyItem.default.LightEffect;
 	MyItem.LightBrightness = MyItem.default.LightBrightness;
@@ -185,6 +186,12 @@ function ResetItemLight()
 	MyItem.LightRadius = MyItem.default.LightRadius;
 	MyItem.LightSaturation = MyItem.default.LightSaturation;
 	MyItem.LightType = MyItem.default.LightType;
+}
+
+function NotifyPickup()
+{
+	if ( SiegeGI(Level.Game).LastMidSpawnToucher != None )
+		SiegeGI(Level.Game).LastMidSpawnToucher.sgInfoSpreeCount += 10;
 }
 
 defaultproperties
