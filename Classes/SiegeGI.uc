@@ -76,6 +76,7 @@ var float RoundRuScale;
 var sgCategoryInfo CategoryInfo[4];
 var Weapon theWeapon; //We keep this pointer during Weapon mutation
 var sgPRI LastMidSpawnToucher;
+var string LastMidSpawnItemName;
 
 var sgBuildingMap BuildingMaps[4];
 var Name BuildingMapNames[4];
@@ -183,7 +184,7 @@ function InitGame(string options, out string error)
 	MaxFutureRUs[1] = StartingMaxRU;
 	MaxFutureRUs[2] = StartingMaxRU;
 	MaxFutureRUs[3] = StartingMaxRU;
-	
+
 	MaxTeams = 2;
 	MaxSiegeTeams = Clamp(MaxSiegeTeams, 0, 4);
 
@@ -307,7 +308,7 @@ function InitGame(string options, out string error)
 	}
 
 	ModifyCores();
-	
+
     foreach AllActors( class'Inventory', SuperItem)
     {
 		if ( WarheadLauncher(SuperItem) != None )
@@ -435,7 +436,7 @@ function InsertRU()
 	}
 
 	aDist = VSize(vMax - vMin) * 0.2; //25% the total map
-	
+
 	For ( i=0 ; i<arrayCount(Cores) ; i++ )
 		if ( Cores[i] != none )
 			RUsLeft[i] = RUsPerTeam;
@@ -457,7 +458,7 @@ function InsertRU()
 				N.HitActor = N;
 				if ( FRand() > VSize(N.Location - Cores[i].Location) / (aDist * 0.3)  )
 					continue;
-					
+
 				if ( (N.IsA('PathNode') && (FRand() > 0.1))
 				|| (N.IsA('InventorySpot') && (FRand() > 0.8)) //Gets checked again in below condition
 				|| (!N.bSpecialCost && !N.bCollideActors && (N.ExtraCost <= 0) && !N.IsA('PlayerStart')&& (FRand() > 0.8))  )
@@ -517,7 +518,7 @@ function InsertRU()
 					break;
 			}
 	}
-	
+
 	aDist = 0;
 	For ( i=0 ; i<arrayCount(RUsLeft) ; i++ ) //Last step, disregard teams
 		aDist += RUsLeft[i];
@@ -574,7 +575,7 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 			nCur.Cost = iCount;
 			For ( i=0 ; (i<16) && (nCur.Paths[i]>=0) ; i++ )
 			{
-				nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k); 
+				nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k);
 				if ( NavigationPoint(nE).Cost == 0 )
 					Cached[n++] = NavigationPoint(nE);
 			}
@@ -592,7 +593,7 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 		nCur.Cost = -iCount; //Go negative for non-bounce back paths
 		For ( i=0 ; (i<16) && (nCur.Paths[i]>=0) ; i++ )
 		{
-			nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k); 
+			nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k);
 			if ( (abs(NavigationPoint(nE).Cost) != iCount) && !nE.bMeshCurvy )
 				Cached[n++] = NavigationPoint(nE);
 		}
@@ -602,7 +603,7 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 			nCur = Cached[Rand(n)];
 			Goto CUR_AGAIN;
 		}
-		
+
 		//This is a dead end by extension
 		nCur.bMeshCurvy = true;
 		nCur = Base;
@@ -624,7 +625,7 @@ function ModifyCores()
 {
 	local string LevelName;
 	LevelName = String(Outer.Name);
-	
+
 	if ( LevelName ~= "CTF-Kosov" )
 		Spawn(class'sgMapEditor').EditKosov();
 	else if ( LevelName ~= "CTF-DeNovo" )
@@ -637,7 +638,7 @@ function EndGame( string Reason)
 	local bool bOldOverTime;
 	local int i;
 	local sgBuildRuleCount RuleCounts;
-	
+
 	bOldOverTime = bOverTime;
 	Super.EndGame( Reason);
 	if ( !bOldOverTime && bOverTime )
@@ -648,7 +649,7 @@ function EndGame( string Reason)
 		ForEach AllActors (class'sgBuildRuleCount', RuleCounts )
 			if ( RuleCounts.bOverTime )
 				RuleCounts.bOverTimeReached = true;
-	}		
+	}
 }
 
 //Startmatch implementation to allow round based game
@@ -817,7 +818,7 @@ function RoundEnded( sgBaseCore Winner)
 		For ( i=0 ; i<4 ; i++ ) //Eliminate teams that aren't tied
 			if ( (Cores[i] != none) && (sgGRI.TeamRounds[i] != sgGRI.TeamRounds[best]) )
 				Cores[i].Destruct();
-			
+
 	}
 	//Tiebreaker, winning team should always be the one to survive
 	else
@@ -846,7 +847,7 @@ function RoundEnded( sgBaseCore Winner)
 	ForEach AllActors(class'Actor', A, 'RoundEnd')
 		A.Trigger(self,none);
 	RoundRestart = 10;
-	BroadcastMessage( Teams[Winner.Team].TeamName$" wins the round", true, 'CriticalEvent'); // Broadcast message to all 
+	BroadcastMessage( Teams[Winner.Team].TeamName$" wins the round", true, 'CriticalEvent'); // Broadcast message to all
 	sgGRI.RoundGame++;
 }
 
@@ -885,7 +886,7 @@ event PostBeginPlay()
 
     for ( i = 0; i < 4; i++ )
         Teams[i].Score = GoalTeamScore;
-		
+
 	if ( bUseRemoveGuardian )
 		Spawn(class'MSpec_Alerts');
 }
@@ -903,7 +904,7 @@ function bool AddBot()
 
 event PlayerPawn Login(string portal, string options, out string error,
   class<PlayerPawn> spawnClass)
-{ 	
+{
 	local PlayerPawn newPlayer;
     local class<PlayerReplicationInfo> priClass;
 
@@ -927,7 +928,7 @@ function ChangePRI( pawn Other)
 
 	if ( sgPRI(Other.PlayerReplicationInfo) != none )
 		return;
-	
+
 	aPRI = Spawn( class'sgPRI', Other);
 	aPRI.PlayerName = Other.PlayerReplicationInfo.PlayerName;
 	aPRI.PlayerID = Other.PlayerReplicationInfo.PlayerID;
@@ -959,7 +960,7 @@ simulated exec function SiegeSpecHelp()
 }
 
 simulated exec function SiegeSpecAdd(string sIP)
-{	
+{
 	local int i;
 
 	if (len(sIP)<10)
@@ -986,7 +987,7 @@ simulated exec function SiegeSpecAdd(string sIP)
 }
 
 simulated exec function SiegeSpecDel(string sName)
-{	
+{
 	local int i,j;
 
 	if (len(sName)<1)
@@ -1006,7 +1007,7 @@ simulated exec function SiegeSpecDel(string sName)
 			AnnounceAdmin("Siege Spectator List: IP removed from Spectator list.");
  			return;
 		}
-	}	
+	}
 	AnnounceAdmin("__________________");
 	AnnounceAdmin("Siege Spectator List");
 	AnnounceAdmin("-----------------------");
@@ -1014,7 +1015,7 @@ simulated exec function SiegeSpecDel(string sName)
 }
 
 simulated exec function SiegeSpecList()
-{	
+{
 	local int i;
 	AnnounceAdmin("__________________");
 	AnnounceAdmin("Siege Spectator List");
@@ -1047,7 +1048,7 @@ function bool CheckSpecIPPolicy(string Address)
     local int i, j;
     local string Mask;
     local bool bAcceptAddress;
-    
+
     // strip port number
     Address = GetIP(Address);
 
@@ -1083,7 +1084,7 @@ function bool CheckSpecIPPolicy(string Address)
 function PostLogin(playerpawn NewPlayer)
 {
 	local sgSpecInv SpecInv;
-	
+
 	Super.PostLogin(NewPlayer);
 	if (NewPlayer.IsA('Spectator'))
 	{
@@ -1125,8 +1126,14 @@ function bool PickupQuery( Pawn Other, Inventory item )
 
 	bIsMidSpawn = Item.LightEffect == LE_Rotor && Item.LightType == LT_Steady && Item.LightHue == 85;
 	Result = Super.PickupQuery( Other, Item); //This may destroy the item!
-	if ( Result && bIsMidSpawn && (Other != None) )
+	if ( bIsMidSpawn && (Other != None) ) {
 		LastMidSpawnToucher = sgPRI( Other.PlayerReplicationInfo);
+		if(Item.ItemName == "")
+			LastMidSpawnItemName = Item.default.ItemName;
+		else
+			LastMidSpawnItemName = Item.ItemName;
+	}
+
 
 	return Result;
 }
@@ -1217,7 +1224,7 @@ function ScoreKill(Pawn killer, Pawn other)
 
 	if ( bRoundMode )		RuMult = RoundRuScale;
 	else					RuMult = 1;
-	
+
 	if ( Other != none )	aVictim = sgPRI(other.PlayerReplicationInfo);
 	if ( Killer != none )	aKiller = sgPRI(killer.PlayerReplicationInfo);
 
@@ -1279,7 +1286,7 @@ function ScoreKill(Pawn killer, Pawn other)
         if ( aVictim != None )
             aVictim.AddRU(-10 * RuMult);
 	}
-	
+
     Nuke = sgNukeLauncher(other.FindInventoryType(class'sgNukeLauncher'));
 	if( (aVictim != none) && (Nuke != None) )
 	{
@@ -1294,7 +1301,7 @@ function ScoreKill(Pawn killer, Pawn other)
 			}
 			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying a WARHEAD!!!" );
 		}
-         
+
 		if (NukeAmmo > 1)
 		{
 			if (killer != None && (aKiller != None) && killer != other)
@@ -1392,7 +1399,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
 	local byte      team;
     local bool      spawnNearBase;
 
-	if ( bStartMatch && Player != None && Player.IsA('TournamentPlayer') 
+	if ( bStartMatch && Player != None && Player.IsA('TournamentPlayer')
 	  && Level.NetMode == NM_Standalone
       && TournamentPlayer(Player).StartSpot != None )
 		return TournamentPlayer(Player).StartSpot;
@@ -1409,8 +1416,8 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
 
 	if ( team == 255 )
 		team = 0;
-				
-	//choose candidates	
+
+	//choose candidates
 	for ( N = Level.NavigationPointList; N != None; N = N.nextNavigationPoint )
 	{
 		dest = PlayerStart(N);
@@ -1427,7 +1434,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
 
 	if ( num == 0 )
 	{
-		log("Didn't find any player starts in list for team"@Team@"!!!"); 
+		log("Didn't find any player starts in list for team"@Team@"!!!");
 		foreach AllActors( class'PlayerStart', dest )
 		{
 			if ( num < 16 )
@@ -1442,7 +1449,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
 
 	if ( num > 16 )
 		num = 16;
-	
+
 	//assess candidates
 	for ( i = 0; i < num; i++ )
 	{
@@ -1454,7 +1461,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
 
     if ( FRand() <= 0.85 )
         spawnNearBase = true;
-	
+
 	for ( otherPlayer = Level.PawnList; otherPlayer != None;
       otherPlayer = otherPlayer.NextPawn)
     {
@@ -1462,7 +1469,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
           !otherPlayer.IsA('Spectator') )
         {
             for ( i = 0; i < num; i++ )
-				if ( otherPlayer.Region.Zone == candidate[i].Region.Zone ) 
+				if ( otherPlayer.Region.Zone == candidate[i].Region.Zone )
 				{
 					score[i] -= 1500;
 					nextDist = VSize(otherPlayer.Location -
@@ -1477,7 +1484,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
         }
         else if ( spawnNearBase &&
           (sgEquipmentSupplier(otherPlayer) != None ||
-          sgBaseCore(otherPlayer) != None || 
+          sgBaseCore(otherPlayer) != None ||
           sgProtector(otherPlayer) != None) &&
           sgBuilding(otherPlayer).Team == team )
         {
@@ -1501,7 +1508,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
             }
         }
     }
-	
+
 	bestScore = score[0];
 	best = candidate[0];
 	for ( i = 1; i < num; i++)
@@ -1511,7 +1518,7 @@ function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
 			best = candidate[i];
 		}
 	LastStartSpot = best;
-				
+
 	return best;
 }
 
@@ -1547,7 +1554,7 @@ function int PickTeam(Pawn defeated)
                 numSmall = 1;
             }
         }
-    
+
     i = int(FRand() * (numSmall-1));
 
     return i;
@@ -1591,7 +1598,7 @@ function bool RestartPlayer(Pawn p)
 		SetHulls( true);
 	    if ( startSpot == None )
 		    return false;
-		
+
 	    foundStart = p.SetLocation(startSpot.Location);
 	    if ( foundStart )
 	    {
@@ -1706,7 +1713,7 @@ function bool ChangeTeam(Pawn other, int newTeam)
 			for ( p = Level.PawnList; p != None; p = p.NextPawn )
 				if ( p.IsA('Bot') )
 					break;
-			
+
 			if ( p != None && p.PlayerReplicationInfo != None &&
               p.PlayerReplicationInfo.Team != 255 &&
               Teams[p.PlayerReplicationInfo.Team].Size ==
@@ -1784,7 +1791,7 @@ function CoreDestroyed( sgBaseCore Core)
 	Cores[Core.Team] = None;
 	Teams[Core.Team].Score = 0;
 	sgGameReplicationInfo(GameReplicationInfo).Cores[Core.Team] = None;
-	
+
 	for ( i=0; i<4; i++ )
 		if ( Cores[i] != None )
 			remainingTeams++;
@@ -1850,7 +1857,7 @@ function CheckRandomSpawner()
 		if ( GetURLMap() ~= RandomSpawnerMap[i] )
 		{
 			DebugShout("Found a map location in the INI!");
-			
+
 			MapIsInList = true;
 			OverideLocation = SpawnedRandomItemSpawner;
 			break;
@@ -1936,7 +1943,7 @@ simulated Event Timer()
 		//Handle round tie by putting cores at 5% health
 		if ( bTied )
 		{
-			For ( i=0 ; i<4 ; i++ )			
+			For ( i=0 ; i<4 ; i++ )
 			{
 				if ( (Cores[i] == none) || Cores[i].bCoreDisabled )
 					continue;
@@ -1949,7 +1956,7 @@ simulated Event Timer()
 			RoundEnded( Cores[BestCore]);
 		RemainingTime--;
 	}
-	
+
 	Super.Timer();
 	if ( !CheckedRandomSpawner )
 		CheckRandomSpawner();
@@ -1971,7 +1978,7 @@ function Logout( pawn Exiting )
 {
 	local bool bMessage;
 	local PlayerPawn P;
-	
+
 	bMessage = true;
 	if ( Exiting.IsA('PlayerPawn') )
 	{
@@ -1994,7 +2001,7 @@ function Logout( pawn Exiting )
 
 	if ( Exiting.PlayerReplicationInfo != none )
 		CleanupProjectiles( Exiting);
-	
+
 	if ( LocalLog != None )
 		LocalLog.LogPlayerDisconnect(Exiting);
 	if ( WorldLog != None )
@@ -2031,7 +2038,7 @@ function BuildingCreated( sgBuilding sgNew)
 {
 	local sgBuilding sgB;
 	local sgPRI aPRI;
-	
+
 	if ( sgNew.Owner != none )
 		ForEach AllActors (class'sgPRI', aPRI)
 			if ( aPRI.bAdmin || (aPRI.Team == Pawn(sgNew.Owner).PlayerReplicationInfo.Team) )
@@ -2048,7 +2055,7 @@ function BuildingCreated( sgBuilding sgNew)
 		if ( sgB.bNotifyCreated && (sgB != sgNew) )
 			sgB.BuildingCreated( sgNew);
 	}
-	
+
 	if ( (sgEditBuilding(sgNew) == none) && (BuildMarkers[sgNew.Team] != none) )
 		BuildMarkers[sgNew.Team].BuildNotify( sgNew);
 }
@@ -2057,7 +2064,7 @@ function BuildingCreated( sgBuilding sgNew)
 function BuildingDestroyed( sgBuilding sgOld)
 {
 	local sgBuilding sgB;
-	
+
 	if ( (CategoryInfo[sgOld.Team] != none) && (CategoryInfo[sgOld.Team].RuleList != none) )
 		CategoryInfo[sgOld.Team].RuleList.NotifyOut( sgOld);
 
@@ -2073,10 +2080,10 @@ function BuildingRemoved( sgBuilding sgRem, pawn Remover, optional bool bWasLeec
 {
 	local sgPRI aPRI;
 	local string LeechString;
-	
+
 	if ( bWasLeech )
 		LeechString = " leech";
-	
+
 	ForEach AllActors (class'sgPRI', aPRI)
 		if ( aPRI.bIsSpectator || (aPRI.Team == Remover.PlayerReplicationInfo.Team) )
 		{
@@ -2089,10 +2096,22 @@ function BuildingRemoved( sgBuilding sgRem, pawn Remover, optional bool bWasLeec
 		}
 }
 
+// Log internal F3 stats when a mid item is picked
+function MidItemPicked(sgPRI Owner, string ItemName) {
+	local sgPRI aPRI;
+	local string MidItemPickedUpString;
+
+	MidItemPickedUpString = " picked up";
+	ForEach AllActors (class'sgPRI', aPRI) {
+		if(aPRI.bIsSpectator || (aPRI.Team == Owner.Team))
+			aPRI.ReceiveMessage( "[MID SPAWN] "@Owner.PlayerName $MidItemPickedUpString @ItemName, Owner.Team, false);
+	}
+}
+
 function byte AssessBotAttitude(Bot aBot, Pawn Other)
 {
 	local sgBuilding sgB;
-	
+
 	sgB = sgBuilding(Other);
 	if ( sgB != none )
 	{
@@ -2167,7 +2186,7 @@ function MutateWeapons()
 	local Weapon aWeapon;
 
 //Let's create our main list
-		
+
 	//Mirror SiegeGI!!!
 	//I assume the supplier's weapon class group is included into the SiegeGI weapon class group
 	For ( i=0 ; i<ArrayCount(WeaponClasses) ; i++ )
@@ -2180,7 +2199,7 @@ function MutateWeapons()
 //	if ( SpawnedRandomItemSpawner )
 //		ForEach AllActors (class'WeightedItemSpawner', RND )
 //			break;
-	
+
 //	if ( RND != none )
 //	{
 //		For ( i=0 ; i<16 ; i++ )
@@ -2198,7 +2217,7 @@ function MutateWeapons()
 //	}
 
 	//I should check for individual sgItems, but i'll skip that for now.
-	
+
 	//Now mutate the weapons
 	bMutatingWeapons = True;
 	For ( i=0 ; i<j ; i++ )
@@ -2314,7 +2333,7 @@ function PenalizeTeamForKill( Pawn Killed, byte aTeam)
 	local sgPRI aPRI;
 	local sgEquipmentSupplier sS;
 	local float penalty;
-	
+
 	ForEach Killed.RadiusActors( class'sgEquipmentSupplier', sS, 100)
 	{
 		if ( sS.bProtected && (sS.Team == Killed.PlayerReplicationInfo.Team) )
@@ -2332,7 +2351,7 @@ function PenalizeTeamForKill( Pawn Killed, byte aTeam)
 function float KillRUReward( sgPRI Victim, bool bNegative)
 {
 	local float Factor, Eff2;
-	
+
 	if ( bNegative )
 		Factor = -1;
 	else
@@ -2361,7 +2380,7 @@ function SharedReward( sgPRI Awarded, byte Team, float Award, optional float Was
 			Awarded.AddRU( MaxRUs[Team] - Awarded.RU);
 		}
 	}
-	
+
 	if ( Award > 0 )
 		Cores[Team].StoredRU += Award * (1-Waste);
 }

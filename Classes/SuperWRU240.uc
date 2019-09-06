@@ -13,6 +13,7 @@ simulated function FixDefaults()
 defaultproperties
 {
      RU=2400
+     ItemName="2400 RU (Rainbow Diamond)"
      PickupMessage="YOU HAVE FOUND THE 2400 RU MEGA RESOURCE!!"
      PickupViewScale=3.000000
      CollisionRadius=90.000000
