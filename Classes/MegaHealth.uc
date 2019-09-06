@@ -7,6 +7,7 @@ defaultproperties
 {
      HealingAmount=400
      bSuperHeal=True
+     ItemName="Mega Health (400 HP)"
      PickupMessage="You found the Mega Health! +"
      RespawnTime=0.000000
      PickupViewMesh=LodMesh'Botpack.hbox'

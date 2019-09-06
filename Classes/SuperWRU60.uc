@@ -12,6 +12,7 @@ simulated function FixDefaults()
 defaultproperties
 {
      RU=600
+     ItemName="600 RU (Blue Diamond)"
      PickupMessage="YOU HAVE FOUND THE 600 RU MEGA RESOURCE!!"
      PlayerViewScale=3.000000
      PickupViewScale=3.000000

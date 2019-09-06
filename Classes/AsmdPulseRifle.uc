@@ -141,7 +141,7 @@ simulated function PlayFiring()
 
 simulated function PlayAltFiring()
 {
-	
+
 	FlashCount++;
 	AmbientSound = AltFireSound;
 	SoundVolume = Pawn(Owner).SoundDampening*255;
@@ -174,7 +174,7 @@ simulated event RenderTexture(ScriptedTexture Tex)
 
 	if ( AmmoType == none )
 		return;
-	
+
 	Temp = String(AmmoType.AmmoAmount);
 	while(Len(Temp) < 3) Temp = "0"$Temp;
 
@@ -184,7 +184,7 @@ simulated event RenderTexture(ScriptedTexture Tex)
 	{
 		C.R = 255;
 		C.G = 0;
-		C.B = 0;	
+		C.B = 0;
 	}
 	else
 	{
@@ -193,7 +193,7 @@ simulated event RenderTexture(ScriptedTexture Tex)
 		C.B = 255;
 	}
 
-	Tex.DrawColoredText( 56, 14, Temp, Font'LEDFont', C );	
+	Tex.DrawColoredText( 56, 14, Temp, Font'LEDFont', C );
 }
 
 
@@ -208,16 +208,16 @@ state NormalFire
 
 		Owner.MakeNoise(Pawn(Owner).SoundDampening);
 		GetAxes(Pawn(owner).ViewRotation,X,Y,Z);
-		Start = Owner.Location + CalcDrawOffset() + FireOffset.X * X + FireOffset.Y * Y + FireOffset.Z * Z; 
-		AdjustedAim = pawn(owner).AdjustAim(ProjSpeed, Start, AimError, True, bWarn);	
+		Start = Owner.Location + CalcDrawOffset() + FireOffset.X * X + FireOffset.Y * Y + FireOffset.Z * Z;
+		AdjustedAim = pawn(owner).AdjustAim(ProjSpeed, Start, AimError, True, bWarn);
 		Start = Start - Sin(Angle)*Y*4 + (Cos(Angle)*4 - 10.78)*Z;
 		Angle += 1.8;
-		return Spawn(ProjClass,,, Start,AdjustedAim);	
+		return Spawn(ProjClass,,, Start,AdjustedAim);
 	}
 
 	function Tick( float DeltaTime )
 	{
-		if (Owner==None) 
+		if (Owner==None)
 			GotoState('Pickup');
 	}
 
@@ -232,8 +232,8 @@ state NormalFire
 	{
 		PlaySpinDown();
 		AmbientSound = None;
-		AmbientGlow = 0;	
-		OldFlashCount = FlashCount;	
+		AmbientGlow = 0;
+		OldFlashCount = FlashCount;
 		Super.EndState();
 	}
 
@@ -249,7 +249,7 @@ simulated function PlaySpinDown()
 		PlayAnim('Spindown', 1.0, 0.0);
 		Owner.PlayOwnedSound(DownSound, SLOT_None,1.0*Pawn(Owner).SoundDampening);
 	}
-}	
+}
 
 simulated state ClientFiring
 {
@@ -334,16 +334,16 @@ state AltFiring
 
 		Owner.MakeNoise(Pawn(Owner).SoundDampening);
 		GetAxes(Pawn(owner).ViewRotation,X,Y,Z);
-		Start = Owner.Location + CalcDrawOffset() + FireOffset.X * X + FireOffset.Y * Y + FireOffset.Z * Z; 
-		AdjustedAim = pawn(owner).AdjustAim(ProjSpeed, Start, AimError, True, bWarn);	
+		Start = Owner.Location + CalcDrawOffset() + FireOffset.X * X + FireOffset.Y * Y + FireOffset.Z * Z;
+		AdjustedAim = pawn(owner).AdjustAim(ProjSpeed, Start, AimError, True, bWarn);
 		Start = Start - Sin(Angle)*Y*4 + (Cos(Angle)*4 - 10.78)*Z;
 		Angle += 1.8;
-		return Spawn(ProjClass,,, Start,AdjustedAim);	
+		return Spawn(ProjClass,,, Start,AdjustedAim);
 	}
 
 	function Tick( float DeltaTime )
 	{
-		if (Owner==None) 
+		if (Owner==None)
 			GotoState('Pickup');
 	}
 
@@ -358,8 +358,8 @@ state AltFiring
 	{
 		PlaySpinDown();
 		AmbientSound = None;
-		AmbientGlow = 0;	
-		OldFlashCount = FlashCount;	
+		AmbientGlow = 0;
+		OldFlashCount = FlashCount;
 		Super.EndState();
 	}
 
@@ -372,10 +372,10 @@ state Idle
 {
 Begin:
 	bPointing=False;
-	if ( (AmmoType != None) && (AmmoType.AmmoAmount<=0) ) 
+	if ( (AmmoType != None) && (AmmoType.AmmoAmount<=0) )
 		Pawn(Owner).SwitchToBestWeapon();  //Goto Weapon that has Ammo
 	if ( Pawn(Owner).bFire!=0 ) Fire(0.0);
-	if ( Pawn(Owner).bAltFire!=0 ) AltFire(0.0);	
+	if ( Pawn(Owner).bAltFire!=0 ) AltFire(0.0);
 
 	Disable('AnimEnd');
 	PlayIdleAnim();
@@ -388,7 +388,7 @@ simulated function PlayIdleAnim()
 		return;
 
 	if ( (AnimSequence == 'BoltLoop') || (AnimSequence == 'BoltStart') )
-		PlayAnim('BoltEnd');		
+		PlayAnim('BoltEnd');
 	else if ( AnimSequence != 'SpinDown' )
 		TweenAnim('Idle', 0.1);
 }
@@ -418,14 +418,14 @@ function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNormal, Vect
 	SpawnEffect(HitLocation, Owner.Location + CalcDrawOffset() + (FireOffset.X + 20) * X + FireOffset.Y * Y + FireOffset.Z * Z);
 
 	if ( ShockProj(Other)!=None )
-	{ 
+	{
 		AmmoType.UseAmmo(2);
 		ShockProj(Other).SuperExplosion();
 	}
 	else
 		Spawn(class'ut_RingExplosion5',,, HitLocation+HitNormal*8,rotator(HitNormal));
 
-	if ( (Other != self) && (Other != Owner) && (Other != None) ) 
+	if ( (Other != self) && (Other != Owner) && (Other != None) )
 		Other.TakeDamage(HitDamage, Pawn(Owner), HitLocation, 60000.0*X, MyDamageType);
 }
 
@@ -442,10 +442,10 @@ simulated function SpawnEffect(vector HitLocation, vector SmokeLocation)
 		return;
 	SmokeRotation = rotator(DVector);
 	SmokeRotation.roll = Rand(65535);
-	
+
 	Smoke = Spawn(class'ShockBeam',,,SmokeLocation,SmokeRotation);
 	Smoke.MoveAmount = DVector/NumPoints;
-	Smoke.NumPuffs = NumPoints - 1;	
+	Smoke.NumPuffs = NumPoints - 1;
 }
 
 defaultproperties
@@ -477,7 +477,7 @@ defaultproperties
      AutoSwitchPriority=5
      InventoryGroup=5
      PickupMessage="You got the ASMD Pulse Rifle"
-     ItemName="Pulse Gun"
+     ItemName="ASMD Pulse Gun (Blue Gun)"
      PlayerViewOffset=(X=1.500000,Z=-2.000000)
      PlayerViewMesh=LodMesh'Botpack.PulseGunR'
      PickupViewMesh=LodMesh'Botpack.PulsePickup'

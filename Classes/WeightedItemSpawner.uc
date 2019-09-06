@@ -190,8 +190,20 @@ function ResetItemLight()
 
 function NotifyPickup()
 {
-	if ( SiegeGI(Level.Game).LastMidSpawnToucher != None )
+	local sgPRI Toucher;
+	local string ItemName;
+
+	Toucher = SiegeGI(Level.Game).LastMidSpawnToucher;
+	if(MyItem.ItemName == "")
+		ItemName = SiegeGI(Level.Game).LastMidSpawnItemName;
+	else
+		ItemName = MyItem.ItemName;
+
+	if ( SiegeGI(Level.Game).LastMidSpawnToucher != None ) {
+		SiegeGI(Level.Game).MidItemPicked(Toucher, ItemName);
 		SiegeGI(Level.Game).LastMidSpawnToucher.sgInfoSpreeCount += 10;
+	}
+
 }
 
 defaultproperties
