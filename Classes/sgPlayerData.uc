@@ -12,7 +12,6 @@ struct PreciseVector
 };
 
 var Pawn POwner;
-var PlayerPawn PPOwner;
 var float BaseEyeHeight;
 var int OwnerID;
 var sgPRI OwnerPRI;
@@ -50,29 +49,29 @@ replication
 event PostBeginPlay()
 {
 	POwner = Pawn(Owner);
-	PPOwner = PlayerPawn(Owner);
 	if ( Owner.IsA('bbPlayer') )
 		bReplicateHealth = true;
 	OwnerPRI = sgPRI(POwner.PlayerReplicationInfo);
 	bReplicateLoc = true;
 }
 
+simulated event PostNetBeginPlay()
+{
+	FindPRI();
+}
+
 simulated event SetInitialState()
 {
 	bScriptInitialized = true;
-	if ( Level.NetMode != NM_Client )
-	{
-		if ( OwnerPRI == None || Level.NetMode == NM_Standalone || SiegeGI(Level.Game) == none )
-			GotoState('Standalone');
-		else
-			GotoState('Server');
-	}
+
+	if ( Level.NetMode == NM_Client )
+		GotoState('Client');
+	else if ( OwnerPRI == None || Level.NetMode == NM_Standalone || SiegeGI(Level.Game) == none )
+		GotoState('Standalone');
+	else
+		GotoState('Server');
 }
 
-simulated event PostNetBeginPlay()
-{
-	GotoState('Client');
-}
 
 
 //========== Tick (authority) - begin ==========//
@@ -96,19 +95,32 @@ event Tick( float DeltaTime)
 // Run on Siege servers
 state Server
 {
+	function bool IsPlayerReady()
+	{
+		local PlayerPawn P;
+		
+		if ( (POwner != None) && !POwner.bCollideActors && POwner.bHidden )
+			return false;
+			
+		P = PlayerPawn(POwner);
+		return (P == None) || (P.CurrentTimeStamp != 0); //Bot or active player
+	}
+	
 Begin:
 	Sleep(0.0);
 	OwnerID = POwner.PlayerReplicationInfo.PlayerID;
 	SetPropertyText("bRelevantIfOwnerIs","1"); //XC_Engine future feature
 WaitForReady:
 	Sleep(0.0);
-	if ( PPOwner != none && (NetConnection(PPOwner.Player) != none) && (PPOwner.CurrentTimeStamp == 0) ) //Network player not ready
+	if ( !IsPlayerReady() )
 		Goto('WaitForReady');
 	RemoteRole = ROLE_SimulatedProxy; //Init replication
 CheckPlayer:
 	BaseEyeHeight = POwner.BaseEyeHeight;
-	if ( POwner.bHidden )	NetUpdateFrequency = 1.5;
-	else					NetUpdateFrequency = POwner.NetUpdateFrequency * 0.5;
+	if ( POwner.bHidden )
+		NetUpdateFrequency = 1.5;
+	else
+		NetUpdateFrequency = POwner.NetUpdateFrequency * 0.5;
 	if ( ShouldReplicateLoc() )
 		ReplicateLoc();
 	if ( bReplicateHealth )
@@ -141,8 +153,7 @@ FindPawn:
 	if ( POwner != none )
 	{
 		SetOwner( POwner);
-		PPOwner = PlayerPawn(POwner);
-		if ( (PPOwner != none) && ViewPort(PPOwner.Player) != none )
+		if ( POwner.Role == ROLE_AutonomousProxy ) //DemoManager doesn't like this
 		{
 			GotoState('OwnerClient');
 			Stop;
@@ -212,7 +223,7 @@ simulated function bool FindPRI()
 			PRI.PlayerData = self;
 			return true;
 		}
-	//No return equals False
+	return false;
 }
 
 function bool ShouldReplicateLoc()

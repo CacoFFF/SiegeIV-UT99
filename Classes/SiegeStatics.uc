@@ -40,6 +40,18 @@ static function bool DetectXCGE( Actor Other)
 	return default.bXCGE;
 }
 
+//**********************************
+//Invalid floating point number test
+//**********************************
+static final function bool BadFloat( float F)
+{
+	local string S;
+	
+	S = Caps(string(F));
+	return InStr(S,"#") != -1 || InStr(S,"NAN") != -1 || InStr(S,"IND") != -1 || InStr(S,"INF") != -1;
+}
+
+
 //*****************
 //Swap two integers
 //*****************
