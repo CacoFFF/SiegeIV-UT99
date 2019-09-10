@@ -1221,6 +1221,8 @@ function ScoreKill(Pawn killer, Pawn other)
 	local sgPRI aVictim, aKiller;
 	local sgNukeLauncher Nuke;
 	local vector TStart;
+	local sgEquipmentSupplier Supplier;
+	local int SupplierTicks;
 
 	if ( bRoundMode )		RuMult = RoundRuScale;
 	else					RuMult = 1;
@@ -1243,19 +1245,27 @@ function ScoreKill(Pawn killer, Pawn other)
 		if( aKiller != None )
 			aKiller.sgInfoKiller++;
 		killer.KillCount++;
-		if ( killer.bIsPlayer && other.bIsPlayer )
+		if ( killer.bIsPlayer && other.bIsPlayer && (aKiller != None) && (aVictim != None) )
    		{
 			if ( aKiller.Team != aVictim.Team )
 			{
 				aKiller.Score += 1;
+				if ( killer.BaseEyeHeight < killer.default.BaseEyeHeight )
+					aKiller.sgInfoSpreeCount += 1;
+					
+				ForEach RadiusActors( class'sgEquipmentSupplier', Supplier, 250, Other.Location)
+					if ( Supplier.Team == aVictim.Team )
+						SupplierTicks += 1 + int(Supplier.bProtected);
+					
 				if ( (aKiller != none) && (aVictim != none) && aVictim.bReachedSupplier && (aVictim.SupplierTimer > 0) )
 				{
-					aKiller.sgInfoSpreeCount += 5;
+					aKiller.sgInfoSpreeCount += 10;
 					aKiller.AddRU( KillRUReward(none, true) * RuMult);
 					Cores[aKiller.Team].StoredRU -= aVictim.SupplierTimer + Teams[aKiller.Team].Size * 5 * Cores[aKiller.Team].Grade;
 					PenalizeTeamForKill( Other, aKiller.Team);
 					aVictim.AddRU(10 * RuMult);
 					aVictim.sgInfoSpreeCount = 0;
+					SupplierTicks += 10 + int(aVictim.SupplierTimer);
 				}
 				else if ( aKiller != None )
 				{
@@ -1268,9 +1278,13 @@ function ScoreKill(Pawn killer, Pawn other)
 						TStart = Killer.Location;
 						TStart.Z += Killer.BaseEyeHeight - Killer.CollisionHeight * 0.5;
 						if ( !FastTrace( Other.Location, TStart) && !FastTrace( Other.Location-vect(0,0,20), TStart) && !FastTrace( Other.Location+vect(0,0,20), TStart) )
-							aKiller.sgInfoSpreeCount += 1;
+							aKiller.sgInfoSpreeCount += 2;
 					}
 				}
+				
+				if ( SupplierTicks > 0 )
+					ForEach AllActors( class'sgEquipmentSupplier', Supplier, class'SiegeStatics'.static.TeamTag(aVictim.Team) )
+						Supplier.MultiSupplyTicks += SupplierTicks;
 			}
 			else
 			{

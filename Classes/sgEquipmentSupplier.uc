@@ -17,6 +17,7 @@ var config int SuppProtectTimeSecs;
 var int Count;
 var string ProtectionExpired;
 var float PenaltyFactor;
+var int MultiSupplyTicks;
 
 var sgSupplierQueuer QueuerList;
 
@@ -32,12 +33,13 @@ simulated function CompleteBuilding()
 	local int i, ExtraSupply;
 	local sgSupplierQueuer Q;
 	local float Scale;
+	local int OldMultiSupplyTicks;
 	
 	if ( Role != ROLE_Authority )
         return;
 
 	count++;
-	if (count>=(SuppProtectTimeSecs*10) && bProtected)
+	if (count>=(SuppProtectTimeSecs*10) && bProtected )
 	{	
 		bProtected = false;
 		if (AnnounceImmunity)
@@ -60,6 +62,14 @@ simulated function CompleteBuilding()
 	if ( !bGlobalSupply )
 		Scale /= float(i);
 		
+	//Apply handicap post-supplier spam
+	if ( MultiSupplyTicks > 0 )
+	{
+		OldMultiSupplyTicks = MultiSupplyTicks;
+		Scale *= (1.0 + float(MultiSupplyTicks) * 0.1);
+		MultiSupplyTicks = Max( 0, MultiSupplyTicks-i);
+	}	
+	
 	//Supply, first round (and only for global)
 	For ( Q=QueuerList ; Q!=None ; Q=Q.nextQueuer )
 		if ( !Supply( Q.POwner, Q, Scale) )
@@ -67,6 +77,9 @@ simulated function CompleteBuilding()
 			ExtraSupply++;
 			Q.bSupplyFull = true;
 		}
+		
+	if ( OldMultiSupplyTicks > 0 )
+		MultiSupplyTicks += ExtraSupply;
 		
 	if ( ExtraSupply >= i ) //None was supplied!
 		return;
@@ -99,26 +112,22 @@ function float ArmorRate()    { return 0; } //Chance a player gains 1 armor poin
 function CalculatePenalty()
 {
 	local sgBuilding aBuild;
-	local float fTmp;
 
-	ForEach VisibleCollidingActors(class'sgBuilding', aBuild, 170)
-	{
+	PenaltyFactor = 1;
+	ForEach VisibleCollidingActors( class'sgBuilding', aBuild, 170)
 		if ( (sgEquipmentSupplier(aBuild) == none) && (aBuild.Team == Team) )
 		{
-			fTmp += 170 - VSize( location - aBuild.Location);
-			if ( class'SiegeStatics'.static.ActorsTouching( self, aBuild) )
+			PenaltyFactor *= VSize( Location - aBuild.Location) / 170;
+			if ( class'SiegeStatics'.static.ActorsTouchingExt( self, aBuild, 10, 10) )
 				aBuild.bOnlyOwnerRemove = false;
 		}
-	}
-	fTmp /= 170;
-	PenaltyFactor = fTmp;
 }
 
 function FindTargets()
 {
 	local Pawn p;
 
-	ForEach RadiusActors(class'Pawn', p, 60)
+	ForEach RadiusActors( class'Pawn', p, 60)
 		if ( p.bIsPlayer && p.Health > 0 &&
           p.PlayerReplicationInfo != None &&
           p.PlayerReplicationInfo.Team == Team)
@@ -167,7 +176,11 @@ function bool Supply( Pawn Other, sgSupplierQueuer Accumulator, float SupplyFact
 		PRI = sgPRI(Other.PlayerReplicationInfo);
 		PRI.bReachedSupplier = True;
 		if ( PRI.ProtectCount > 0 )
+		{
 			PRI.ProtTimer( 0.05);
+			if ( PRI.SupplierTimer > 0 )
+				PRI.SupplierTimer += 0.025;
+		}
 	}
 	
 	return Accumulator.AddHealth( HealthRate() * SupplyFactor, HealthLimit() )
@@ -175,8 +188,7 @@ function bool Supply( Pawn Other, sgSupplierQueuer Accumulator, float SupplyFact
 }
 
 
-simulated event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, 
-  Vector momentum, name damageType )
+simulated event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
 {
 	if (!bProtected)
 		Super.TakeDamage(damage, instigatedBy, hitLocation, momentum, damageType);
