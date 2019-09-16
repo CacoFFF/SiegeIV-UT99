@@ -45,11 +45,12 @@ simulated event TakeDamage( int damage, Pawn instigatedBy, Vector HitLocation,
 
 simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
 {
-	local float hitDist, discr;
+	local float OffsetDist, discr;
 
+	OffsetDist = 2 + CollisionRadius * 0.1;
 	if ( VSize(Location - HitLocation) < CollisionRadius * 0.88)
 	{
-		HitLocation += Normal(TraceDir) * 2;
+		HitLocation += Normal(TraceDir) * OffsetDist;
 		return false;
 	}
 
@@ -60,7 +61,7 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 	if ( discr < 0 )
 	{
 		HitLocation += Location;
-		HitLocation += Normal(TraceDir) * 2; //This should help prevent infinite recursions
+		HitLocation += Normal(TraceDir) * OffsetDist; //This should help prevent infinite recursions
 		return false;
 	}
 

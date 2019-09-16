@@ -40,15 +40,26 @@ var sgClientSettings sgSet;
 simulated event PostBeginPlay()
 {
 	local sgScore ScoreBoard;
-	
-	LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer( Self);
+	local PlayerPawn P;
+
+	P = PlayerPawn(Owner);
+	if ( P != None )
+	{	//This handles ListenServer, Standalone, Client and DemoPlay in both attached and detached mode.
+		if ( (Viewport(P.Player) != None) || (Level.NetMode == NM_Client && P.Role == ROLE_AutonomousProxy) )
+			LocalPlayer = P;
+	}
+
 	if ( LocalPlayer == none )
 	{
-		Destroy();
-		return;
+		LocalPlayer = class'SiegeStatics'.static.FindLocalPlayer( Self);
+		if ( LocalPlayer == None )
+		{
+			Destroy();
+			return;
+		}
+		SetOwner( LocalPlayer);
 	}
-	if ( Owner == none )
-		SetOwner(LocalPlayer);
+		
 	bSendFingerPrint = true;
 	iChance = 2;
 	SetTimer(2.5 * Level.TimeDilation, false);

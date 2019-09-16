@@ -83,19 +83,8 @@ replication
 event PostBeginPlay()
 {
 	Super.PostBeginPlay();
-
 	if ( SiegeGI(Level.Game) != None )
 		RU = SiegeGI(Level.Game).StartingRU;
-	
-	//Bots	
-	if ( PlayerPawn(Owner) == none )
-		SendFingerPrint("ARTIFICIAL_"$PlayerName);
-	//Local Player
-	else if ( ViewPort(PlayerPawn(Owner).Player) != none ) 
-	{
-		PlayerFingerPrint = "LocalPlayer";
-		Owner.Spawn(class'sgClient');
-	}
 }
 
 simulated function ClientReceiveRU( float NewRU)
@@ -171,11 +160,11 @@ simulated state ClientOp
 		ForEach AllActors (class'sgClient', aClient)
 			break;
 		if ( aClient == none )
-			Spawn(class'sgClient');
+			Spawn( class'sgClient', Owner);
 	}
 Begin:
 	Sleep(0.1);
-	if ( (PlayerPawn(Owner) != none) && (ViewPort(PlayerPawn(Owner).Player) != none) )
+	if ( (PlayerPawn(Owner) != none) && (Owner.RemoteRole == ROLE_AutonomousProxy) )
 		sgClientSetup();
 }
 
@@ -188,8 +177,23 @@ state ServerOp
 			break;
 		bIpToCountry = IpToCountry != none;
 	}
+	
+	function LocalInit()
+	{
+		//Bots	
+		if ( PlayerPawn(Owner) == none )
+			SendFingerPrint("ARTIFICIAL_"$PlayerName);
+		//Local Player
+		else if ( ViewPort(PlayerPawn(Owner).Player) != None ) 
+		{
+			PlayerFingerPrint = "LocalPlayer_"$PlayerID;
+			Owner.Spawn(class'sgClient');
+		}
+	}
+	
 Begin:
 	Sleep(0.0);
+	LocalInit();
 	PlayerData = Owner.Spawn(class'sgPlayerData',Owner);
 	LocateIpToCountry();
 

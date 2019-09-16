@@ -107,7 +107,9 @@ simulated function string KillMessage( name damageType, pawn Other )
     local string sWarhead;
     local pawn p;
     local sgPRI aPRI;
-
+	local SiegeGI Game;
+	local byte VictimTeam;
+	
 	p = Pawn(Owner);
 	if ( (p != none) && p.PlayerReplicationInfo != none )
 	{
@@ -124,8 +126,19 @@ simulated function string KillMessage( name damageType, pawn Other )
 			sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying a WARHEAD!!!";
 		else
 			sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying TWO WARHEADS!!!";
-		if ( SiegeGI(Level.Game) != none )
-			SiegeGI(Level.Game).SharedReward( aPRI, Team, 500 * Min(2, sgNuke.AmmoType.AmmoAmount) );
+		Game = SiegeGI(Level.Game);
+		if ( Game != none )
+		{
+			Game.SharedReward( aPRI, Team, 500 * Min(2, sgNuke.AmmoType.AmmoAmount) );
+			VictimTeam = class'SiegeStatics'.static.GetTeam( Other);
+			if ( Team < 4 && VictimTeam < 4 )
+			{
+				if ( Game.NetworthStat[Team] != None )
+					Game.NetworthStat[Team].AddEvent( 1);
+				if ( Game.NetworthStat[VictimTeam] != None )
+					Game.NetworthStat[VictimTeam].AddEvent( 2 + Team);
+			}
+		}
 		if ( aPRI != none )
 		{
 			aPRI.sgInfoWarheadKiller += Min(2, sgNuke.AmmoType.AmmoAmount);

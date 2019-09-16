@@ -74,6 +74,8 @@ var int RoundGames;
 var int RoundRestart;
 var float RoundRuScale;
 var sgCategoryInfo CategoryInfo[4];
+var sgTeamNetworth NetworthStat[4];
+var int NetworthTimer;
 var Weapon theWeapon; //We keep this pointer during Weapon mutation
 var sgPRI LastMidSpawnToucher;
 var string LastMidSpawnItemName;
@@ -345,6 +347,8 @@ function InitGame(string options, out string error)
 			continue;
 		CategoryInfo[i] = Spawn( class'sgCategoryInfo');
 		CategoryInfo[i].Team = i;
+		NetworthStat[i] = Spawn( class'sgTeamNetworth');
+		NetworthStat[i].SetTeam( i);
 	}
 
 	//Load custom weapons, no package means load straight from this SiegeIV file
@@ -1221,6 +1225,8 @@ function ScoreKill(Pawn killer, Pawn other)
 	local sgPRI aVictim, aKiller;
 	local sgNukeLauncher Nuke;
 	local vector TStart;
+	local sgEquipmentSupplier Supplier;
+	local int SupplierTicks;
 
 	if ( bRoundMode )		RuMult = RoundRuScale;
 	else					RuMult = 1;
@@ -1243,19 +1249,27 @@ function ScoreKill(Pawn killer, Pawn other)
 		if( aKiller != None )
 			aKiller.sgInfoKiller++;
 		killer.KillCount++;
-		if ( killer.bIsPlayer && other.bIsPlayer )
+		if ( killer.bIsPlayer && other.bIsPlayer && (aKiller != None) && (aVictim != None) )
    		{
 			if ( aKiller.Team != aVictim.Team )
 			{
 				aKiller.Score += 1;
+				if ( killer.BaseEyeHeight < killer.default.BaseEyeHeight )
+					aKiller.sgInfoSpreeCount += 1;
+					
+				ForEach RadiusActors( class'sgEquipmentSupplier', Supplier, 250, Other.Location)
+					if ( Supplier.Team == aVictim.Team )
+						SupplierTicks += 1 + int(Supplier.bProtected);
+					
 				if ( (aKiller != none) && (aVictim != none) && aVictim.bReachedSupplier && (aVictim.SupplierTimer > 0) )
 				{
-					aKiller.sgInfoSpreeCount += 5;
+					aKiller.sgInfoSpreeCount += 10;
 					aKiller.AddRU( KillRUReward(none, true) * RuMult);
 					Cores[aKiller.Team].StoredRU -= aVictim.SupplierTimer + Teams[aKiller.Team].Size * 5 * Cores[aKiller.Team].Grade;
 					PenalizeTeamForKill( Other, aKiller.Team);
 					aVictim.AddRU(10 * RuMult);
 					aVictim.sgInfoSpreeCount = 0;
+					SupplierTicks += 10 + int(aVictim.SupplierTimer);
 				}
 				else if ( aKiller != None )
 				{
@@ -1268,9 +1282,13 @@ function ScoreKill(Pawn killer, Pawn other)
 						TStart = Killer.Location;
 						TStart.Z += Killer.BaseEyeHeight - Killer.CollisionHeight * 0.5;
 						if ( !FastTrace( Other.Location, TStart) && !FastTrace( Other.Location-vect(0,0,20), TStart) && !FastTrace( Other.Location+vect(0,0,20), TStart) )
-							aKiller.sgInfoSpreeCount += 1;
+							aKiller.sgInfoSpreeCount += 2;
 					}
 				}
+				
+				if ( SupplierTicks > 0 )
+					ForEach AllActors( class'sgEquipmentSupplier', Supplier, class'SiegeStatics'.static.TeamTag(aVictim.Team) )
+						Supplier.MultiSupplyTicks += SupplierTicks;
 			}
 			else
 			{
@@ -1312,6 +1330,15 @@ function ScoreKill(Pawn killer, Pawn other)
 			}
 			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
 		}
+		
+		if ( aKiller != None )
+		{
+			NukeAmmo = Min( NukeAmmo, 2);
+			if ( (aVictim.Team < 4) && (NetworthStat[aVictim.Team] != None) )
+				NetworthStat[aVictim.Team].AddEvent( 2 + class'SiegeStatics'.static.GetTeam(killer,0));
+			if ( (aKiller != None) && (aKiller.Team < 4) && (NetworthStat[aKiller.Team] != None) )
+				NetworthStat[aKiller.Team].AddEvent( 2 + class'SiegeStatics'.static.GetTeam(other,0));
+		}	
 	}
 
 	other.DieCount++;
@@ -1898,6 +1925,7 @@ simulated Event Timer()
 	local Bot ThisBot;
 	local int BestCore, i;
 	local bool bTied;
+	local Pawn P;
 
 	if ( bRoundMode && (RoundRestart > 0) )
 	{
@@ -1971,6 +1999,67 @@ simulated Event Timer()
 				ThisPawn.bAlwaysRelevant=True;
 		foreach AllActors(Class'Bot', ThisBot)
 			ThisBot.bAlwaysRelevant=True;
+	}
+	
+	NetworthTimerProc();
+}
+
+function NetworthTimerProc()
+{
+	local Pawn P;
+	local int i, Index;
+	local float OldMaximum[4];
+	local float Maximum[4];
+	local float BiggestMaximum;
+	local Ammo Ammo;
+	
+	if ( NetworthTimer-- <= 0 )
+	{
+		NetWorthTimer += 15;
+		
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+			{
+				Index = NetworthStat[i].CurrentIndex + 1;
+				break;
+			}
+			
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+			{
+				NetworthStat[i].CurrentIndex = Index;
+				OldMaximum[i] = NetworthStat[i].TotalNetworth( Index );
+				NetworthStat[i].ResetNetworth( Index );
+			}
+		
+		ForEach AllActors( class'Pawn', P)
+		{
+			if ( (sgPRI(P.PlayerReplicationInfo) != None) && (P.PlayerReplicationInfo.Team < 4) )
+			{
+				if ( NetworthStat[P.PlayerReplicationInfo.Team] != None )
+					NetworthStat[P.PlayerReplicationInfo.Team].EvaluatePlayer( P);
+			}
+			else if ( sgBuilding(P) != None && (sgBuilding(P).Team < 4) )
+			{
+				if ( NetworthStat[sgBuilding(P).Team] != None )
+					NetworthStat[sgBuilding(P).Team].EvaluateBuilding( sgBuilding(P));
+			}
+		}
+		
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+			{
+				Maximum[i] = NetworthStat[i].TotalNetworth( Index );
+				if ( (Maximum[i] > OldMaximum[i]) || (Maximum[i] > NetworthStat[i].MaxTeamNetworth) ) 
+					NetworthStat[i].MaxTeamNetworth = fMax( NetworthStat[i].MaxTeamNetworth, Maximum[i] ); //Fast
+				else
+					NetworthStat[i].MaxTeamNetworth = NetworthStat[i].MaximumNetworth(); //Slow
+				BiggestMaximum = Max( BiggestMaximum, NetworthStat[i].MaxTeamNetworth);
+			}
+			
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+				NetworthStat[i].MaxTotalNetworth = BiggestMaximum;
 	}
 }
 

@@ -40,6 +40,18 @@ static function bool DetectXCGE( Actor Other)
 	return default.bXCGE;
 }
 
+//**********************************
+//Invalid floating point number test
+//**********************************
+static final function bool BadFloat( float F)
+{
+	local string S;
+	
+	S = Caps(string(F));
+	return InStr(S,"#") != -1 || InStr(S,"NAN") != -1 || InStr(S,"IND") != -1 || InStr(S,"INF") != -1;
+}
+
+
 //*****************
 //Swap two integers
 //*****************
@@ -387,6 +399,25 @@ static final function Name TeamTag( int Team)
 		return default.TeamBuildingTags[Team];
 	return default.TeamBuildingTags[4];
 }
+
+
+//*************************************
+//Get this Pawn's team*****************
+//*************************************
+static final function byte GetTeam( Pawn Other, optional byte DefaultNone)
+{
+	if ( Other != None )
+	{
+		if ( Other.PlayerReplicationInfo != None )
+			return Other.PlayerReplicationInfo.Team;
+		if ( sgBuilding(Other) != None )
+			return sgBuilding(Other).Team;
+	}
+	if ( DefaultNone != 0 )
+		return DefaultNone;
+	return 255;
+}
+
 
 
 

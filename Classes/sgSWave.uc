@@ -6,6 +6,9 @@ class sgSWave extends Effects;
 
 var float ShockSize;
 var rotator HitNorm;
+var float TeamDamage[4];
+var byte Team;
+var bool bAmplified;
 
 event PostBeginPlay()
 {
@@ -14,6 +17,16 @@ event PostBeginPlay()
 	ForEach RadiusActors (class'PlayerPawn', P, 3000)
 		P.ShakeView(0.5, 800000.0/VSize(P.Location - Location), 10);
 
+	if ( Instigator != None )
+	{
+		if ( Instigator.PlayerReplicationInfo != None )
+			Team = Instigator.PlayerReplicationInfo.Team;
+		else if ( sgBuilding(Instigator) != None )
+			Team = sgBuilding(Instigator).Team;
+		
+		bAmplified = Instigator.DamageScaling >= 2;
+	}
+		
     HitNorm = Rotation;
     RotationRate = RotRand()-RotRand()*1.5;
 
@@ -26,6 +39,39 @@ event PostBeginPlay()
 simulated event PostNetBeginPlay()
 {
     SetTimer(0.1, true);
+}
+
+event Destroyed()
+{
+	local SiegeGI Game;
+	local float HighestDamage, FriendlyFireScale;
+	local int i;
+	
+	Game = SiegeGI(Level.Game);
+	if ( Game == None )
+		return;
+		
+	if ( Team < 4 )
+	{
+		FriendlyFireScale = 1;
+		if ( TeamGamePlus(Level.Game) != None )
+			FriendlyFireScale = TeamGamePlus(Level.Game).FriendlyFireScale;
+		else if ( TeamGame(Level.Game) != None )
+			FriendlyFireScale = TeamGame(Level.Game).FriendlyFireScale;
+			
+	
+		TeamDamage[Team] *= FriendlyFireScale;
+		if ( Game.NetworthStat[Team] != None )
+			Game.NetworthStat[Team].AddEvent( 6 + int(bAmplified) );
+	}
+		
+	For ( i=0 ; i<4 ; i++ )
+		HighestDamage = Max( HighestDamage, TeamDamage[i]);
+		
+	For ( i=0 ; i<4 ; i++ )
+		if ( (TeamDamage[i] > HighestDamage * 0.2) && (Game.NetworthStat[i] != None) )
+			Game.NetworthStat[i].AddEvent(0); //Nuke blast
+			
 }
 
 simulated event Tick( float DeltaTime )
@@ -42,12 +88,11 @@ simulated event Tick( float DeltaTime )
 simulated event Timer()
 {
     local rotator   randRot;
-    local actor     victim;
-	local float     damageScale,
-                    dist,
-                    moScale;
-    local vector    dir;
+    local Actor     Victim;
+	local float     Damage, DamageRadius;
+    local vector    Dir;
     local int       i;
+	local byte VictimTeam;
 
     ShockSize = FMax( 0.1, 100 - 100 * LifeSpan / default.LifeSpan);
 
@@ -62,26 +107,46 @@ simulated event Timer()
 			Spawn(class'sgNukeFlame',,, Location + vector(randRot) * ShockSize * 14.5);
 		}
 	}
-
-	if ( Role == ROLE_Authority )
-		foreach VisibleCollidingActors( class 'Actor', victim, ShockSize*29, Location )
-		{
-			if ( Pawn(victim) != None || Mover(victim) != None || Projectile(victim) != None )
-			{
-				dir = Location - victim.Location;
-				dist = VSize(dir); 
-				dir = normal(dir);
 	
-				moScale = 1 - dist / (ShockSize*29);
-				victim.TakeDamage(moScale*220, Instigator,victim.Location -
-					0.5 * (victim.CollisionHeight + victim.CollisionRadius) * dir,
-					vect(0,0,0), 'exploded');
+	if ( Role == ROLE_Authority )
+	{
+		DamageRadius = ShockSize * 29;
+		ForEach VisibleCollidingActors( class 'Actor', victim, DamageRadius, Location )
+			if ( Pawn(Victim) != None || Mover(Victim) != None || Projectile(Victim) != None )
+			{
+				Dir = Victim.Location - Location;
+				Damage = 220.0 * (1.0 - VSize(Dir) / DamageRadius);
+				if ( Damage >= 1 )
+				{
+					if ( Pawn(Victim) != None )
+					{
+						if ( Pawn(Victim).PlayerReplicationInfo != None )
+							VictimTeam = Pawn(Victim).PlayerReplicationInfo.Team;
+						else if ( sgBuilding(Victim) != None )
+							VictimTeam = sgBuilding(Victim).Team;
+						else
+							VictimTeam = 254; //Ensure non players can harm each other
+							
+						if ( VictimTeam < 4 )
+							TeamDamage[VictimTeam] += Damage;
+					}
+					Victim.TakeDamage
+					(
+						Damage,
+						Instigator,
+						Victim.Location - (0.5 * (Victim.CollisionHeight + Victim.CollisionRadius) * Normal(Dir)),
+						vect(0,0,0),
+						'exploded'
+					);
+
+				}
 			}
-		}		
+	}
 }
 
 defaultproperties
 {
+	Team=255
      bAlwaysRelevant=True
      Physics=PHYS_Rotating
      RemoteRole=ROLE_SimulatedProxy

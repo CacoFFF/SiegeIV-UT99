@@ -80,14 +80,16 @@ simulated function WarnCannons()
 		}
 }
 
-singular function TakeDamage( int NDamage, Pawn instigatedBy, Vector hitlocation, 
-						vector momentum, name damageType )
+singular function TakeDamage( int NDamage, Pawn instigatedBy, vector hitlocation, vector momentum, name damageType )
 {
+	local SiegeGI Game;
+	local byte OwnerTeam, DenierTeam;
+	
 	if ( bDeleteMe )
 		return;
 	health-=NDamage;
 
-	if ( (health <= 0) && (Role ==ROLE_Authority)  )
+	if ( (health <= 0) && (Role == ROLE_Authority)  )
 	{
 		if ( instigatedBy != Instigator && instigatedBy.bIsPlayer && instigatedBy.PlayerReplicationInfo != None )
 		{
@@ -99,14 +101,26 @@ singular function TakeDamage( int NDamage, Pawn instigatedBy, Vector hitlocation
 					sgPRI(instigatedBy.PlayerReplicationInfo).AddRU(400.0 + 200*FRand());
 					instigatedBy.PlayerReplicationInfo.Score += 10;
 				}
-                  
 			}
 			else
 				Level.Game.BroadcastMessage("The nuke was taken down by"@ instigatedBy.PlayerReplicationInfo.PlayerName$"!");
 			sgPRI(instigatedBy.PlayerReplicationInfo).sgInfoWarheadKiller++;
 		}
-		if ( (SiegeGI(Level.Game) != none) && SiegeGI(Level.Game).bUseDenied )
-			DeniedSound();
+		Game = SiegeGI(Level.Game);
+		if ( Game != none )
+		{
+			if ( Game.bUseDenied )
+				DeniedSound();
+			OwnerTeam = class'SiegeStatics'.static.GetTeam(Instigator);
+			DenierTeam = class'SiegeStatics'.static.GetTeam(instigatedBy);
+			if ( (OwnerTeam < 4) && (DenierTeam < 4) )
+			{
+				if ( Game.NetworthStat[OwnerTeam] != None )
+					Game.NetworthStat[OwnerTeam].AddEvent( 2 + DenierTeam);
+				if ( (OwnerTeam != DenierTeam) && (Game.NetworthStat[DenierTeam] != None) )
+					Game.NetworthStat[DenierTeam].AddEvent( 1);
+			}
+		}
 		Spawn(class'UT_SpriteBallExplosion');
 		RemoteRole = ROLE_SimulatedProxy;	 		 		
  		Destroy();
@@ -117,13 +131,12 @@ function DeniedSound()
 {
 	local PlayerPawn P;
 	
-	ForEach AllActors( class'PlayerPawn',P)
+	ForEach AllActors( class'PlayerPawn', P)
 		P.ClientPlaySound( sound'denied_3');
 }
 
 auto state Flying
 {
-
 	simulated function ZoneChange( Zoneinfo NewZone )
 	{
 		local waterring w;
@@ -144,15 +157,19 @@ auto state Flying
 
 	function Explode(vector HitLocation, vector HitNormal)
 	{
+		local vector SpawnLocation;
+		
 		if ( Role < ROLE_Authority )
 			return;
 	 	
+		SpawnLocation = Location; //was HitLocation + HitNormal*16
+		
 		PlaySound(impactsound, SLOT_None, 20,,10000,1+(FRand()*0.3-0.15));
 		PlaySound(sound'sgmedia.sgnukering', SLOT_None, 20,,7500);
 		PlaySound(miscsound, SLOT_None, 30,,5000,1+(FRand()*0.3-0.15));
-		spawn(class'sgNukeRing',,,HitLocation+HitNormal*16,rotator(hitnormal));
- 		spawn(class'sgNukeFlash',,,HitLocation+ HitNormal*16, rotator(hitnormal));
-		spawn(class'sgSWave',,,HitLocation+ HitNormal*16, rotator(hitnormal));	
+		Spawn(class'sgNukeRing',,,SpawnLocation,rotator(hitnormal));
+ 		Spawn(class'sgNukeFlash',,,SpawnLocation, rotator(hitnormal));
+		Spawn(class'sgSWave',,,SpawnLocation, rotator(hitnormal));	
 		RemoteRole = ROLE_SimulatedProxy;	 		 		
  		Destroy();
 	}
@@ -190,3 +207,4 @@ defaultproperties
      CollisionHeight=14.000000
      bProjTarget=True
 }
+
