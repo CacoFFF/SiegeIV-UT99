@@ -401,6 +401,25 @@ static final function Name TeamTag( int Team)
 }
 
 
+//*************************************
+//Get this Pawn's team*****************
+//*************************************
+static final function byte GetTeam( Pawn Other, optional byte DefaultNone)
+{
+	if ( Other != None )
+	{
+		if ( Other.PlayerReplicationInfo != None )
+			return Other.PlayerReplicationInfo.Team;
+		if ( sgBuilding(Other) != None )
+			return sgBuilding(Other).Team;
+	}
+	if ( DefaultNone != 0 )
+		return DefaultNone;
+	return 255;
+}
+
+
+
 
 defaultproperties
 {

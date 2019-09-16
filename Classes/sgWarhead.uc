@@ -47,6 +47,16 @@ function PostBuild()
 function Destruct( optional pawn instigatedBy)
 {
 	local sgPRI aPRI;
+	local SiegeGI Game;
+	local byte KillerTeam;
+	
+	Game = SiegeGI(Level.Game);
+	KillerTeam = class'SiegeStatics'.static.GetTeam(instigatedBy, Team);
+	
+	if ( (Team < 4) && (Game.NetworthStat[Team] != None) )
+		Game.NetworthStat[Team].AddEvent( 2 + KillerTeam);
+	if ( (KillerTeam != Team) && (KillerTeam < 4) && (Game.NetworthStat[KillerTeam] != None) )
+		Game.NetworthStat[KillerTeam].AddEvent( 1);
 	
 	if ( instigatedBy != none )
 	{

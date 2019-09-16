@@ -42,13 +42,14 @@ var() config int NumBuildings;
 var() string sgRanks[8];
 //var() string sgRankDesc[8];
 //var() int sgOldBuilt[41];
-var() texture TeamIcons[5];
+var() Texture TeamIcons[5];
 var bool UseSpecialColor;
 var int AmpCharge;
 
 var float DecimalTimer;
 var float HudItemSlotSpace;
 
+var sgTeamNetworth NetworthStat[4];
 
 // The message color variable
 var color SpecialMessageColor;
@@ -97,9 +98,25 @@ var() int iCacheInvs;
 //UTPure sets enemy health to random values
 simulated function PostBeginPlay()
 {
+	local sgTeamNetworth TN;
+
 	Super.PostBeginPlay();
 	if ( Owner != none && Owner.IsA('bbPlayer') )
 		bEnforceHealth = true;
+		
+	if ( SiegeGI(Level.Game) != None )
+	{
+		NetworthStat[0] = SiegeGI(Level.Game).NetworthStat[0];
+		NetworthStat[1] = SiegeGI(Level.Game).NetworthStat[1];
+		NetworthStat[2] = SiegeGI(Level.Game).NetworthStat[2];
+		NetworthStat[3] = SiegeGI(Level.Game).NetworthStat[3];
+	}
+	else
+	{
+		ForEach AllActors( class'sgTeamNetworth', TN)
+			if ( TN.Team < 4 )
+				NetworthStat[TN.Team] = TN;
+	}
 }
 
 //Weapon wasn't hooked in inventory chain
@@ -384,18 +401,15 @@ simulated function DrawTeamRU(canvas C)
 
 }
 
-simulated function DrawSiegeStats(canvas C)
+simulated function DrawSiegeStats( Canvas C)
 {
-
+	local float FontSizeDirective;
 	local float XL, YL, X1, Y1, Height, Width;
 	local float TinyFontHeight, SmallFontHeight, BigFontHeight, HugeFontHeight;
 	local int X, OldX ,Y,i, nBuildings,Rows, Col, R, nPlayers;
 	local string s1, s2;
 	local int MaxPerColumn;
 	local int Columns;
-	local pawn p;
-
-	local color 	cCol;
 	
 	local sgPRI pInfo[8];
 	local string sInfo[8];
@@ -405,10 +419,10 @@ simulated function DrawSiegeStats(canvas C)
 
 	sgGRI = sgGameReplicationInfo(PlayerPawn(Owner).GameReplicationInfo);
 	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
-
+	FontSizeDirective = C.ClipX * 0.6 + C.ClipY * 0.5;
+	
 	C.Style = ERenderStyle.STY_Normal;
 
-	C.Font = MyFonts.GetHugeFont( C.ClipX );
 	if ( PRI.Team < 5 ) //Higor: extra case for a fifth team
 		C.DrawColor = TeamColor[PRI.Team];
 	else
@@ -416,18 +430,18 @@ simulated function DrawSiegeStats(canvas C)
 
 	C.Font = Font'SmallFont';
 	C.TextSize("A", Width, TinyFontHeight);
-	C.Font = MyFonts.GetSmallFont( C.ClipX );
+	C.Font = MyFonts.GetSmallFont( FontSizeDirective );
 	C.TextSize("A", Width, SmallFontHeight);
-	C.Font = MyFonts.GetBigFont( C.ClipX );
+	C.Font = MyFonts.GetBigFont( FontSizeDirective );
 	C.TextSize("A", Width, BigFontHeight);
-	C.Font = MyFonts.GetHugeFont( C.ClipX );
+	C.Font = MyFonts.GetHugeFont( FontSizeDirective );
 	C.TextSize("A", Width, HugeFontHeight);
 	BigFontHeight+=1;
 
 	C.bCenter = true;
 	C.SetPos(0, HugeFontHeight );
-	C.DrawText("-= Siege Ultimate Game Stats =-", True );
-	C.Font = MyFonts.GetBigFont( C.ClipX );
+	C.DrawText("-= Siege IV Game Stats =-", True );
+	C.Font = MyFonts.GetBigFont( FontSizeDirective );
 	C.SetPos(0, YL + HugeFontHeight*2);
 	
 	C.DrawText("Top Player Rankings", True );
@@ -436,7 +450,7 @@ simulated function DrawSiegeStats(canvas C)
 	
 	YL += C.ClipY/2 - (5 * (BigFontHeight+TinyFontHeight)) - BigFontHeight;
 	YL = int(YL * 0.5);
-
+	
 	//Higor, use the player's own PRI as preprocessing base
 	for ( i=0 ; i<8 ; i++ )
 		pInfo[i] = PRI;
@@ -473,18 +487,21 @@ simulated function DrawSiegeStats(canvas C)
 	if ( pInfo[7].sgInfoUpgradeRepair <= 0)	pInfo[7] = none;
 
 	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+
+	X = C.ClipX / 4;
+	if ( FontSizeDirective >= 800 )
+		X -= 128;
+
 	for (i=0;i<8;i++)
 	{
-		X=C.ClipX/4;
 		Y1 = YL + ((BigFontHeight+TinyFontHeight+1)*i);
-		C.Font = MyFonts.GetBigFont( C.ClipX );
+		C.Font = MyFonts.GetBigFont( FontSizeDirective );
 		C.DrawColor = WhiteColor;
 		C.SetPos(X, Y1);
 		C.DrawText(sgRanks[i]);
 
 		if (pInfo[i] != None) 
 		{
-			
 			s1 = pInfo[i].PlayerName;
 			if (pInfo[i] == PRI)
         			C.DrawColor = GoldColor;
@@ -497,36 +514,46 @@ simulated function DrawSiegeStats(canvas C)
 			C.DrawColor = GreyColor;
 		}
 		C.TextSize(s1, Width, Height);
-		C.SetPos(((C.ClipX/4)*3)-Width, Y1);
+		C.SetPos( X + (C.ClipX/2) - Width, Y1);
 		C.DrawText(s1);	
 		C.Font = Font'SmallFont';
 		C.DrawColor = GreyColor;
 		if (sInfo[i] != "")
 		{
 			C.TextSize(sInfo[i], Width, Height);
-			C.SetPos(((C.ClipX/4)*3)-Width, Y1 + BigFontHeight-2);
+			C.SetPos( X + (C.ClipX/2) - Width, Y1 + BigFontHeight-2);
 			C.DrawText(sInfo[i]);
 		}
 //		C.SetPos(X, Y1 + BigFontHeight-3);
 //		C.DrawText(sgRankDesc[i]);
 	}
-	C.Font = MyFonts.GetBigFont( C.ClipX );
-	if ( PRI.Team < 5 ) //Higor: extra case for a fifth team
-		C.DrawColor = TeamColor[PRI.Team];
-	else
-		C.DrawColor = TeamColor[3];
-	Y1 = YL + ((BigFontHeight+TinyFontHeight+2)*9);
-	C.bCenter = true;
-//	C.SetPos(0, Y1 + BigFontHeight-3);
-	C.SetPos(0, Y1);
-	C.DrawText(GetPlural(nPlayers,"Player")@"Playing");
-	C.bCenter = false;
+
+	//Draw Net Worth graph
+	X += C.ClipX / 1.9;
+	Y1 = YL;
+	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+	C.DrawColor = WhiteColor;
+	C.Style = ERenderStyle.STY_Masked;
+	For ( i=0 ; i<4 ; i++ )
+		if ( (NetworthStat[i] != None) && ((Spectator(Owner) != None) || (PRI.Team == i)) )
+		{
+			C.SetPos( X, Y1);
+			if ( NetworthStat[i].GraphTexture == None )
+				NetworthStat[i].SetGraphTexture();
+			NetworthStat[i].bGlobal = Spectator(Owner) != None;
+			NetworthStat[i].bFirstGlobal = NetworthStat[i].bGlobal && (Y1 <= YL);
+			C.DrawIcon( NetworthStat[i].GraphTexture, 1);
+			Y1 += 128;
+		}
 	
 	//HIGOR: Remove messages
+	if ( PRI.Team < 4 )
+		C.DrawColor = TeamColor[PRI.Team];
+	Y1 = YL + ((BigFontHeight+TinyFontHeight+2)*9);
 	Height = (C.ClipY - BigFontHeight*2) - Y1;
 	MaxPerColumn = Clamp( Height / (SmallFontHeight + 2), 0, PRI.iHistory);
-	Width = C.ClipX * 0.1;
-	C.Font = MyFonts.GetSmallFont( C.ClipX );
+	Width = C.ClipX * 0.075;
+	C.Font = MyFonts.GetSmallFont( FontSizeDirective );
 	Y1 += int(BigFontHeight * 0.35);
 	For ( i=MaxPerColumn-1 ; i>=0 ; i-- )
 	{

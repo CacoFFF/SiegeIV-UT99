@@ -74,6 +74,8 @@ var int RoundGames;
 var int RoundRestart;
 var float RoundRuScale;
 var sgCategoryInfo CategoryInfo[4];
+var sgTeamNetworth NetworthStat[4];
+var int NetworthTimer;
 var Weapon theWeapon; //We keep this pointer during Weapon mutation
 var sgPRI LastMidSpawnToucher;
 var string LastMidSpawnItemName;
@@ -345,6 +347,8 @@ function InitGame(string options, out string error)
 			continue;
 		CategoryInfo[i] = Spawn( class'sgCategoryInfo');
 		CategoryInfo[i].Team = i;
+		NetworthStat[i] = Spawn( class'sgTeamNetworth');
+		NetworthStat[i].SetTeam( i);
 	}
 
 	//Load custom weapons, no package means load straight from this SiegeIV file
@@ -1326,6 +1330,15 @@ function ScoreKill(Pawn killer, Pawn other)
 			}
 			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
 		}
+		
+		if ( aKiller != None )
+		{
+			NukeAmmo = Min( NukeAmmo, 2);
+			if ( (aVictim.Team < 4) && (NetworthStat[aVictim.Team] != None) )
+				NetworthStat[aVictim.Team].AddEvent( 2 + class'SiegeStatics'.static.GetTeam(killer,0));
+			if ( (aKiller != None) && (aKiller.Team < 4) && (NetworthStat[aKiller.Team] != None) )
+				NetworthStat[aKiller.Team].AddEvent( 2 + class'SiegeStatics'.static.GetTeam(other,0));
+		}	
 	}
 
 	other.DieCount++;
@@ -1912,6 +1925,7 @@ simulated Event Timer()
 	local Bot ThisBot;
 	local int BestCore, i;
 	local bool bTied;
+	local Pawn P;
 
 	if ( bRoundMode && (RoundRestart > 0) )
 	{
@@ -1985,6 +1999,67 @@ simulated Event Timer()
 				ThisPawn.bAlwaysRelevant=True;
 		foreach AllActors(Class'Bot', ThisBot)
 			ThisBot.bAlwaysRelevant=True;
+	}
+	
+	NetworthTimerProc();
+}
+
+function NetworthTimerProc()
+{
+	local Pawn P;
+	local int i, Index;
+	local float OldMaximum[4];
+	local float Maximum[4];
+	local float BiggestMaximum;
+	local Ammo Ammo;
+	
+	if ( NetworthTimer-- <= 0 )
+	{
+		NetWorthTimer += 15;
+		
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+			{
+				Index = NetworthStat[i].CurrentIndex + 1;
+				break;
+			}
+			
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+			{
+				NetworthStat[i].CurrentIndex = Index;
+				OldMaximum[i] = NetworthStat[i].TotalNetworth( Index );
+				NetworthStat[i].ResetNetworth( Index );
+			}
+		
+		ForEach AllActors( class'Pawn', P)
+		{
+			if ( (sgPRI(P.PlayerReplicationInfo) != None) && (P.PlayerReplicationInfo.Team < 4) )
+			{
+				if ( NetworthStat[P.PlayerReplicationInfo.Team] != None )
+					NetworthStat[P.PlayerReplicationInfo.Team].EvaluatePlayer( P);
+			}
+			else if ( sgBuilding(P) != None && (sgBuilding(P).Team < 4) )
+			{
+				if ( NetworthStat[sgBuilding(P).Team] != None )
+					NetworthStat[sgBuilding(P).Team].EvaluateBuilding( sgBuilding(P));
+			}
+		}
+		
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+			{
+				Maximum[i] = NetworthStat[i].TotalNetworth( Index );
+				if ( (Maximum[i] > OldMaximum[i]) || (Maximum[i] > NetworthStat[i].MaxTeamNetworth) ) 
+					NetworthStat[i].MaxTeamNetworth = fMax( NetworthStat[i].MaxTeamNetworth, Maximum[i] ); //Fast
+				else
+					NetworthStat[i].MaxTeamNetworth = NetworthStat[i].MaximumNetworth(); //Slow
+				BiggestMaximum = Max( BiggestMaximum, NetworthStat[i].MaxTeamNetworth);
+			}
+			
+		For ( i=0 ; i<4 ; i++ )
+			if ( NetworthStat[i] != None )
+				NetworthStat[i].MaxTotalNetworth = BiggestMaximum;
 	}
 }
 
