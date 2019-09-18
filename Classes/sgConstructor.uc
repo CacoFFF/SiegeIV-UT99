@@ -1014,7 +1014,7 @@ simulated function Pawn BestRepairCandidate( byte Team)
 			}
 			continue;
 		}
-		if ( (PPlayer == none) && P.bIsPlayer && !P.bHidden && (P.Health < 150) && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
+		if ( (PPlayer == none) && P != Pawn(Owner) && P.bIsPlayer && !P.bHidden && (P.Health < 150) && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
 			PPlayer = P;
 	}
 	if ( sgBest != none )
@@ -1139,7 +1139,7 @@ function bool RepairFunction( float DeltaRep)
 		return true;
 	}
 
-	if ( HitActor != none && HitActor != Pawn(Owner) )
+	if ( HitActor != none )
 	{
 		REP_PLAYER:
 		fPri = FMin(FMin(150 - HitActor.Health, 40), ownerPRI.RU * 2.5);
