@@ -25,7 +25,7 @@ class sgConstructor extends TournamentWeapon;
 //Base constructor mesh made by Higor
 #exec MESH IMPORT MESH=Constructor ANIVFILE=MODELS\Constructor_a.3d DATAFILE=MODELS\Constructor_d.3d UNMIRROR=1
 //#exec MESH LODPARAMS MESH=Transloc HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
-#exec MESH ORIGIN MESH=Constructor X=0.00 Y=0.00 Z=0.00 YAW=-60.00 ROLL=0.00 PITCH=0.00 
+#exec MESH ORIGIN MESH=Constructor X=0.00 Y=0.00 Z=0.00 YAW=-60.00 ROLL=0.00 PITCH=0.00
 //was -61
 //was -5
 
@@ -50,7 +50,7 @@ class sgConstructor extends TournamentWeapon;
 //Left handed version by DeepakOV
 #exec MESH IMPORT MESH=ConstructorL ANIVFILE=MODELS\ConstructorL_a.3d DATAFILE=MODELS\ConstructorL_d.3d MIRROR=1
 //#exec MESH LODPARAMS MESH=Transloc HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
-#exec MESH ORIGIN MESH=ConstructorL X=0.00 Y=0.00 Z=0.00 YAW=-60.00 ROLL=0.00 PITCH=0.00 
+#exec MESH ORIGIN MESH=ConstructorL X=0.00 Y=0.00 Z=0.00 YAW=-60.00 ROLL=0.00 PITCH=0.00
 //was -61
 //was -5
 
@@ -217,9 +217,9 @@ exec function AntiLeech()
 		if ( sgRP != None )
 		{
 			sgRP.AddRemove();
-			if ( sgRP.RemoveWarning() ) 
+			if ( sgRP.RemoveWarning() )
 				class'SiegeStatics'.static.AnnounceAll( self, "Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" has been warned for Team Removing.");
-			if ( sgRP.ExcessRemove() ) 
+			if ( sgRP.ExcessRemove() )
 			{
 				class'SiegeStatics'.static.AnnounceAll( self, "Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" was kicked for being a Team Remover.");
 				Owner.Destroy();
@@ -298,14 +298,14 @@ static function string GetPackageName()
 exec function FreeBuild()
 {
 	local sgPRI NFO;
-	
+
 	NFO = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
 	if ( NFO.bAdmin != true )
 		return;
-		
-	log("FREEBUILD!!"@NFO);	
-	
+
+	log("FREEBUILD!!"@NFO);
+
 	if ( SiegeGI(Level.Game) != None )
 		{
 			SiegeGI(Level.Game).MaxRUs[NFO.Team] = 10000000;
@@ -458,7 +458,7 @@ simulated function CycleForward()
 
 	if ( !FindCatActor() )
 		return;
-	
+
 	Owner.PlaySound(ChangeSound, SLOT_None, Pawn(Owner).SoundDampening*1.2,,,1 + (FRand()*0.2 - 0.4));
 	if ( !ListenPlayer() )
 		ServerCycleSound();
@@ -572,7 +572,7 @@ simulated function PrimaryFunc( optional float Code)
 	local float Delta;
 	local bool bResult;
 
-	
+
 	if ( Code == 333 )
 	{
 		Delta = 1.0; //One shot
@@ -585,7 +585,7 @@ simulated function PrimaryFunc( optional float Code)
 //		OpenGui();
 		return;
 	}
-	
+
 	if ( GuiState > 0 )
 		return;
 
@@ -633,7 +633,7 @@ simulated function PrimaryFunc( optional float Code)
 	{
 		if ( !FindCatActor() )
 			return;
-		
+
 		if ( (SelectedBuild == none) && (Category >= 4) )
 		{
 			SelectedIndex = CatActor.FirstCatBuild( Category - 4);
@@ -696,10 +696,10 @@ function bool BotBuild( int Idx, optional bool bCheat, optional vector FixedLoc)
 	local sgBuilding sgNew;
 	local sgPRI ownerPRI;
 	local class<sgBuilding> classToBuild;
-	
+
 	if ( !FindCatActor() )
 		return false;
-	
+
 	classToBuild = CatActor.GetBuild(Idx);
 	if ( classToBuild != none )
 	{
@@ -752,7 +752,7 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 		Priority = sgPRI(Other.PlayerReplicationInfo).RU;
 		fPri=FMin(RUamount, ownerPRI.RU);
 		sgPRI(Other.PlayerReplicationInfo).AddRU(fPri);
-		ownerPRI.sgInfoUpgradeRepair+= fPri;	
+		ownerPRI.sgInfoUpgradeRepair+= fPri;
 		ownerPRI.AddRU(-1 * (sgPRI(Other.PlayerReplicationInfo).RU - Priority));
 		ownerPRI.Score += (sgPRI(Other.PlayerReplicationInfo).RU - Priority) / 100;
 		Other.PlaySound(sound'sgMedia.sgPickRUs', SLOT_None,Other.SoundDampening*2.5);
@@ -770,7 +770,7 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 			ownerPRI.AddRU( (sgBuilding(Other).UpgradeCost * (sgBuilding(Other).Grade + 1)) * (-fPri) );
 			sgBuilding(Other).RUinvested += sgBuilding(Other).UpgradeCost * (sgBuilding(Other).Grade + 1) * fPri;
 			ownerPRI.Score += fPri;
-			ownerPRI.sgInfoUpgradeRepair+= fPri;	
+			ownerPRI.sgInfoUpgradeRepair+= fPri;
 		}
 		sgBuilding(Other).Grade += fPri;
 		ownerPRI.sgInfoUpgradeRepair += fPri;
@@ -874,7 +874,7 @@ State Active
 	function bool PutDown()
 	{
 		GotoState('DownWeapon');
-		return true; 
+		return true;
 	}
 //Serverside correction if necessary
 Begin:
@@ -934,7 +934,7 @@ simulated function Pawn BestUpgradeCandidate( byte Team)
 		{
 			if ( P.bBlockActors ) //Solid
 				break;
-			continue; 
+			continue;
 		}
 		sgB = sgBuilding(P);
 		if ( sgB != none )
@@ -982,7 +982,7 @@ simulated function Pawn BestRepairCandidate( byte Team)
 		{
 			if ( P.bBlockActors ) //Solid
 				break;
-			continue; 
+			continue;
 		}
 		sgB = sgBuilding(P);
 		if ( sgB != none )
@@ -1014,7 +1014,7 @@ simulated function Pawn BestRepairCandidate( byte Team)
 			}
 			continue;
 		}
-		if ( (PPlayer == none) && P.bIsPlayer && !P.bHidden && (P.Health < 150) && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
+		if ( (PPlayer == none) && P != Pawn(Owner) && P.bIsPlayer && !P.bHidden && (P.Health < 150) && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
 			PPlayer = P;
 	}
 	if ( sgBest != none )
@@ -1037,7 +1037,7 @@ simulated function sgBuilding BestRemoveCandidate( byte Team)
 		{
 			if ( sgB.bBlockActors ) //Solid
 				break;
-			continue; 
+			continue;
 		}
 		if ( (sgB.Team != Pawn(Owner).PlayerReplicationInfo.Team) || sgB.bNoRemove )
 			continue;
@@ -1073,11 +1073,11 @@ simulated function sgBuilding BestDragCandidate( byte Team)
 		{
 			if ( sgB.bBlockActors ) //Solid
 				break;
-			continue; 
+			continue;
 		}
 		if ( !sgB.bDragable || (sgB.Team != Pawn(Owner).PlayerReplicationInfo.Team) )
 			continue;
-		
+
 		fPri = 1;
 		if ( !BuildingOwned(sgB) )
 		{
@@ -1130,7 +1130,7 @@ function bool RepairFunction( float DeltaRep)
 		if ( SpecialPause == 1)
 			Owner.PlaySound(Misc2Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
 //		else SETUP AMBIENT (0.10) every repair
-		
+
 		if (sgBaseCore(sgBest)!=None)
 			ownerPRI.sgInfoCoreRepair += fPri;
 		else
@@ -1175,7 +1175,7 @@ function bool UpgradeFunction( float DeltaRep)
 	HitActor = BestUpgradeCandidate( ownerPRI.Team);
 	sgBest = sgBuilding(HitActor);
 	SpecialPause = DeltaRep;
-	
+
 	if ( sgBest != none )
 	{
 		if ( DeltaRep == 1 ) //Don't let a single bind multi-upgrade
@@ -1192,7 +1192,7 @@ function bool UpgradeFunction( float DeltaRep)
 			ownerPRI.AddRU( (sgBest.UpgradeCost * int(sgBest.Grade + 1)) * (-fPri) );
 			sgBest.RUinvested += sgBest.UpgradeCost * (sgBest.Grade + 1) * fPri;
 			ownerPRI.Score += fPri;
-			ownerPRI.sgInfoUpgradeRepair+= fPri;	
+			ownerPRI.sgInfoUpgradeRepair+= fPri;
 		}
 
 		sgBest.Grade += fPri;
@@ -1215,7 +1215,7 @@ function bool UpgradeFunction( float DeltaRep)
 		{
 			fPri=FMin(100, ownerPRI.RU);
 			sgPRI(HitActor.PlayerReplicationInfo).AddRU(fPri);
-			ownerPRI.sgInfoUpgradeRepair+= fPri;	
+			ownerPRI.sgInfoUpgradeRepair+= fPri;
 			ownerPRI.AddRU(-1 * (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority));
 			ownerPRI.Score += (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
 			HitActor.PlayerReplicationInfo.Score -= (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
@@ -1256,12 +1256,12 @@ function bool RemoveFunction()
 		if ( sgRP != None )
 		{
 			sgRP.AddRemove();
-			if ( sgRP.RemoveWarning() ) 
+			if ( sgRP.RemoveWarning() )
 			{
 				sMessage="Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" has been warned for Team Removing.";
 				class'SiegeStatics'.static.AnnounceAll( self, sMessage);
 			}
-			if ( sgRP.ExcessRemove() ) 
+			if ( sgRP.ExcessRemove() )
 			{
 				sMessage="Player "@Pawn(Owner).PlayerReplicationInfo.PlayerName@" was kicked for being a Team Remover.";
 				class'SiegeStatics'.static.AnnounceAll( self, sMessage);
@@ -1292,7 +1292,7 @@ function bool DragFunction() //10 times a sec
 	local vector X, Y, Z;
 	local rotator View;
 	local float MaxOffset;
-	
+
 	View = Pawn(Owner).ViewRotation;
 	if ( Dragging == None || Dragging.bDeleteMe )
 	{
@@ -1367,7 +1367,7 @@ simulated function bool BuildingOwned( sgBuilding sgB)
 	{
 		if ( SiegeGI(Level.Game) == none )
 			return sgB.sPlayerIP == (GetPlayerNetworkAddres()@string(Pawn(Owner).PlayerReplicationInfo.Team));
-		
+
 		aPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 		if ( aPRI != none )
 			return aPRI.PlayerFingerPrint == sgB.sPlayerIP;
@@ -1390,7 +1390,7 @@ simulated event RenderOverlays( canvas Canvas )
 	if ( bHideWeapon )
 		return;
 	PawnOwner = Pawn(Owner);
-	if ( PawnOwner == None ) 
+	if ( PawnOwner == None )
 		return;
 
 	PlayerOwner = PlayerPawn(Owner);
@@ -1427,7 +1427,7 @@ simulated event RenderOverlays( canvas Canvas )
 		PawnOwner.WalkBob = vect(0,0,0);
 
 	WideScreenFactor = (Canvas.ClipY / Canvas.ClipX) ** 0.7; //Smaller on HD, bigger on square screens
-	
+
 //	DrawOffset = ((0.9/PawnOwner.FOVAngle * PlayerViewOffset) >> PawnOwner.ViewRotation);
 	FovFactor = (90/PawnOwner.FOVAngle);
 	DrawOffset = FovFactor * 0.01 * PlayerViewOffset;
@@ -1436,17 +1436,17 @@ simulated event RenderOverlays( canvas Canvas )
 	DrawOffset.Z *= (1.f + WideScreenFactor) * 0.5;
 	DrawOffset = DrawOffset >> PawnOwner.ViewRotation;
 
-	if ( (Level.NetMode == NM_DedicatedServer) 
+	if ( (Level.NetMode == NM_DedicatedServer)
 		|| ((Level.NetMode == NM_ListenServer) && (Owner.RemoteRole == ROLE_AutonomousProxy)) )
 		DrawOffset += (PawnOwner.BaseEyeHeight * vect(0,0,1));
 	else
-	{	
+	{
 		DrawOffset += (PawnOwner.EyeHeight * vect(0,0,1));
 		WeaponBob = BobDamping * PawnOwner.WalkBob;
 		WeaponBob.Z = (0.45 + 0.55 * BobDamping) * PawnOwner.WalkBob.Z;
 		DrawOffset += WeaponBob;
 	}
-	
+
 	SetLocation( Owner.Location + DrawOffset );
 	NewRot = PawnOwner.ViewRotation;
 
@@ -1475,7 +1475,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	local byte DenyBuild;
 	local int RUReq, i;
 	local sgPRI PRI;
-	
+
 	if ( !FindCatActor() || ClientActor.bNoConstructorScreen )
 	{
 		Tex.DrawTile( 0, 0, 255, 255, 0, 0, 1, 1, Texture'GUI_Border4_F', false);
@@ -1486,7 +1486,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 	//Left HAND only for now
 	F = MyFonts.GetBigFont(1280);
 	SF = MyFonts.GetBigFont( 640);
-	
+
 	For ( i=3+CatActor.NumCats() ; i>=0 ; i-- )
 	{
 		if ( i == Category )
@@ -1496,7 +1496,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 		else
 			Tex.DrawTile( 35 + 9*i, 16, 8, 16, 0, 0, 8, 16, Texture'CPanel_HCat_N', false);
 	}
-	
+
 	if ( Category <= 3 )
 	{
 		Tex.DrawTile( 54, 75, 64, 64, 0, 0, 64, 64, Texture'GUI_Border4_F', false);
@@ -1535,7 +1535,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 			CachedCategory = Category;
 			CachedCBuildCount = CatActor.CountCategoryBuilds( Category - 4);
 		}
-			
+
 		Tex.DrawTile( 54, 75, 64, 64, 0, 0, 64, 64, Texture'GUI_Border4_F', false);
 		Tex.DrawTile( 118, 75, 64, 64, 63, 0, -64, 64, Texture'GUI_Border4_F', false);
 		Tex.DrawTile( 54, 139, 64, 64, 0, 63, 64, -64, Texture'GUI_Border4_F', false);
@@ -1587,7 +1587,7 @@ simulated function PostRender( canvas Canvas)
 	local string aStr, aStr2, RuleString;
 	local byte DenyBuild;
 	local int Cycles;
-	
+
 	if ( MyFonts == none )
 	{
 		GetFonts();
@@ -1596,7 +1596,7 @@ simulated function PostRender( canvas Canvas)
 
 	if ( !FindCatActor() )
 		return;
-	
+
 /*	if ( GuiState > 0 )
 	{
 		DrawGui( Canvas);
@@ -1610,7 +1610,7 @@ simulated function PostRender( canvas Canvas)
 	Canvas.TextSize("TEST", XL, YL);
 
 	if ( bHideWeapon )		YOffset = Canvas.ClipY - 64*Scale - YL*3;
-	else					YOffset = Canvas.ClipY - 96*Scale - YL*3; 
+	else					YOffset = Canvas.ClipY - 96*Scale - YL*3;
 
 	//If weapon is hidden, draw stats the old way
 	if ( true )
@@ -1773,7 +1773,7 @@ simulated function DrawGui( canvas Canvas)
 	aX = int(Canvas.ClipX - tH * 1.3);
 
 	Canvas.bNoSmooth = False;
-	
+
 	//Draw back modulated panel
 	Canvas.Style = ERenderStyle.STY_Modulated;
 	Canvas.SetPos(aX,aY);
@@ -1870,7 +1870,7 @@ simulated function DrawGui( canvas Canvas)
 				{
 					cZ = YL * 1.25 * (1.5+i);
 					DrawCapsule( Canvas, aX + YL, aY + cZ, lastXL, YL+2);
-				}				
+				}
 				if ( k==0 )					DrawSlider( Canvas, aX, aY, YL, YL * 1.875, ClientActor.GuiSensitivity, GuiSens);
 				else					DrawPlainSlider( Canvas, aX, aY, YL, YL * 1.875, ClientActor.GuiSensitivity, GuiSens);
 
@@ -2149,10 +2149,10 @@ function int CountBuilds( class<sgBuilding> cType, bool bExact, optional bool bS
 simulated function PostBeginPlay()
 {
 	Super.PostBeginPlay();
-	
+
 	if ( !bDeleteMe )
 		GetFonts();
-		
+
 	if ( Role == ROLE_Authority )
 	{
 		if ( (SiegeGI(Level.Game) == none) || (SiegeGI(Level.Game).FreeBuild) )
@@ -2245,7 +2245,7 @@ simulated function Tick(float DeltaTime)
 	local float Speed2D;
 	local name aState;
 	local Pawn P;
-	
+
 	P = Pawn(Owner);
 	if ( P == none )
 	{
@@ -2281,7 +2281,7 @@ simulated function Tick(float DeltaTime)
 		AmbientSound = Sound'cons_loop1';
 	else
 		AmbientSound = none;
-		
+
 	if ( P.Weapon != self )
 	{
 		bClientUp = false;
@@ -2313,7 +2313,7 @@ simulated function Tick(float DeltaTime)
 //		if ( (GuiState > 0) && !bJustOpenedGUI )
 //			GuiControls(DeltaTime);
 	}
-		
+
 
 //	bJustOpenedGui = False;
 	bHadFire = P.bFire > 0;
@@ -2333,7 +2333,7 @@ simulated function GuiControls( float DeltaTime)
 {
 	local PlayerPawn POwner;
 	local float moveX, moveY;
-	
+
 	local float lastMx, lastMy;
 
 	lastMx = MX;
@@ -2444,7 +2444,7 @@ simulated function PlayerRelease();
 simulated final function bool FindCatActor()
 {
 	local sgCategoryInfo aC;
-	
+
 	if ( Pawn(Owner) == none || Pawn(Owner).PlayerReplicationInfo == none )
 		return false;
 	if ( CatActor != none && CatActor.Team == Pawn(Owner).PlayerReplicationInfo.Team )
@@ -2461,7 +2461,7 @@ simulated final function bool FindCatActor()
 simulated final function bool FindClientActor()
 {
 	local sgClient aC;
-	
+
 	if ( ClientActor != none )
 		return true;
 	if ( LocalOwner() )
@@ -2480,7 +2480,7 @@ simulated function bool ActiveOrbs()
 {
 	local sgPRI OwnerPRI;
 	local sg_XC_Orb aOrb;
-	
+
 	OwnerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
 	if ( OwnerPRI.XC_Orb != none )
@@ -2515,7 +2515,7 @@ function GiveTo( pawn Other )
 function string GetPlayerNetworkAddres()
 {
    local string s;
-   
+
 	if( Owner == None )
 	    return "";
 	else if ( PlayerPawn(Owner) != none )
@@ -2596,7 +2596,7 @@ simulated function PlaySelect()
 	bCanClientFire = false;
 	if ( AnimSequence != 'Select' )
 		PlayAnim('Select',0.2,0.0);
-//	Owner.PlaySound(SelectSound, SLOT_Misc, Pawn(Owner).SoundDampening);	
+//	Owner.PlaySound(SelectSound, SLOT_Misc, Pawn(Owner).SoundDampening);
 	if ( Level.NetMode == NM_Client )
 		bClientUp = true;
 	else if ( PlayerPawn(Owner) != none && ViewPort(PlayerPawn(Owner).Player) != none )
@@ -2724,7 +2724,7 @@ defaultproperties
      GuiFingerPrint="Keep fingerprint"
      GuiPerf="High Performance"
      GuiBInfo="Build Interface"
-     
+
      ColorPals(0)=Texture'BGL_R'
      ColorPals(1)=Texture'BGL_B'
      ColorPals(2)=Texture'BGL_G'
