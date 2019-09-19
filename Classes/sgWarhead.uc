@@ -8,13 +8,18 @@ class sgWarhead extends sgItem;
 var class<CriticalEventPlus> MessageClass;
 var string sBuildMessage;
 
+
+
 //Decrease nuke counter
-function bool RemovedBy( pawn Other, optional bool bWasLeech, optional float CheatMargin)
+function bool RemovedBy( Pawn Other, optional bool bWasLeech, optional float CheatMargin)
 {
+	local SiegeStatPlayer Stat;
+
 	if ( Super.RemovedBy( Other, bWasLeech, CheatMargin) )
 	{
-		if ( Other != none && sgPRI(Other.PlayerReplicationInfo) != none )
-			sgPRI(Other.PlayerReplicationInfo).sgInfoWarheadMaker--;
+		Stat = SGS.static.GetPlayerStat( Other);
+		if ( Stat != None )
+			Stat.WarheadBuildEvent( -1 );
 		return true;
 	}
 }
@@ -23,6 +28,7 @@ function PostBuild()
 {
 	local TournamentPlayer P;
 	local string sLocation;
+	local SiegeStatPlayer Stat;
 
 	Super.PostBuild();
 
@@ -33,13 +39,16 @@ function PostBuild()
 		if ( P.PlayerReplicationInfo != none && P.PlayerReplicationInfo.Team != Team )
 			P.ReceiveLocalizedMessage(MessageClass, Team);
 
-	if ( Pawn(owner).PlayerReplicationInfo.PlayerLocation != None )
+	if ( Pawn(Owner).PlayerReplicationInfo.PlayerLocation != None )
 		sLocation = PlayerReplicationInfo.PlayerLocation.LocationName;
-	else if ( Pawn(owner).PlayerReplicationInfo.PlayerZone != None )
-		sLocation = Pawn(owner).PlayerReplicationInfo.PlayerZone.ZoneName;
+	else if ( Pawn(Owner).PlayerReplicationInfo.PlayerZone != None )
+		sLocation = Pawn(Owner).PlayerReplicationInfo.PlayerZone.ZoneName;
 	if ( sLocation != "" && sLocation != " ")
 		sLocation = "at"@sLocation;
-	sgPRI(Pawn(owner).PlayerReplicationInfo).sgInfoWarheadMaker++;
+		
+	Stat = SGS.static.GetPlayerStat( Pawn(Owner) );
+	if ( Stat != None )
+		Stat.WarheadBuildEvent( 1 );
 
 	AnnounceTeam(sBuildMessage@BuildingName@sLocation, Team);
 }
@@ -49,12 +58,13 @@ function Destruct( optional pawn instigatedBy)
 	local sgPRI aPRI;
 	local SiegeGI Game;
 	local byte KillerTeam;
+	local SiegeStatPlayer Stat;
 	
 	Game = SiegeGI(Level.Game);
 	KillerTeam = class'SiegeStatics'.static.GetTeam(instigatedBy, Team);
 	
 	if ( (Team < 4) && (Game.NetworthStat[Team] != None) )
-		Game.NetworthStat[Team].AddEvent( 2 + KillerTeam);
+		Game.NetworthStat[Team].AddEvent( 2 + Min(KillerTeam,3) );
 	if ( (KillerTeam != Team) && (KillerTeam < 4) && (Game.NetworthStat[KillerTeam] != None) )
 		Game.NetworthStat[KillerTeam].AddEvent( 1);
 	
@@ -63,10 +73,13 @@ function Destruct( optional pawn instigatedBy)
 		aPRI = sgPRI(instigatedBy.PlayerReplicationInfo);
 		if ( aPRI != none )
 		{
-			aPRI.sgInfoWarheadKiller++;
 			aPRI.AddRu(200);
 			aPRI.Score += 5;
 		}
+		
+		Stat = SGS.static.GetPlayerStat( instigatedBy );
+		if ( Stat != None )
+			Stat.WarheadDestroyEvent( 1 );
 	}
 	Super.Destruct( instigatedBy);
 }

@@ -106,29 +106,39 @@ simulated function string KillMessage( name damageType, pawn Other )
 	local string s;
 	local string sWarhead;
 	local Pawn P;
-	local sgPRI aPRI;
+	local PlayerReplicationInfo PRI;
 	local SiegeGI Game;
 	local byte VictimTeam;
+	local SiegeStatPlayer Stat;
 	
+	WarheadCount = Min( SGS.static.GetAmmoAmount( Other, class'WarheadAmmo'), 2);
+
 	P = Pawn(Owner);
 	if ( (P != none) && P.PlayerReplicationInfo != none )
 	{
-		s = " built by" @ P.PlayerReplicationInfo.PlayerName;
-		P.PlayerReplicationInfo.Score += 1;
-		aPRI = sgPRI( P.PlayerReplicationInfo);
+		PRI = P.PlayerReplicationInfo;
+		PRI.Score += 1 + WarheadCount * 3;
+
+		s = " built by" @ PRI.PlayerName;
 	}
 
-	WarheadCount = Min( SGS.static.GetAmmoAmount( Other, class'WarheadAmmo'), 2);
 	if ( WarheadCount > 0 )
 	{
-		if ( WarheadCount == 1 )
-			sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying a WARHEAD!!!";
-		else
-			sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying TWO WARHEADS!!!";
+		Stat = SGS.static.GetPlayerStat( P );
+		if ( Stat != None )
+			Stat.WarheadDestroyEvent( WarheadCount);
+
+		if ( Other.PlayerReplicationInfo != None )
+		{
+			if ( WarheadCount == 1 )
+				sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying a WARHEAD!!!";
+			else
+				sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying TWO WARHEADS!!!";
+		}
 		Game = SiegeGI(Level.Game);
 		if ( Game != none )
 		{
-			Game.SharedReward( aPRI, Team, 500 * WarheadCount );
+			Game.SharedReward( sgPRI(PRI), Team, 500 * WarheadCount );
 			VictimTeam = class'SiegeStatics'.static.GetTeam( Other);
 			if ( Team < 4 && VictimTeam < 4 )
 			{
@@ -140,11 +150,6 @@ simulated function string KillMessage( name damageType, pawn Other )
 						Game.NetworthStat[VictimTeam].AddEvent( 2 + Team);
 				}
 			}
-		}
-		if ( aPRI != none )
-		{
-			aPRI.sgInfoWarheadKiller += WarheadCount;
-			aPRI.Score += WarheadCount * 3;
 		}
 	}
 	else

@@ -84,6 +84,7 @@ singular function TakeDamage( int NDamage, Pawn instigatedBy, vector hitlocation
 {
 	local SiegeGI Game;
 	local byte OwnerTeam, DenierTeam;
+	local SiegeStatPlayer Stat;
 	
 	if ( bDeleteMe )
 		return;
@@ -91,28 +92,36 @@ singular function TakeDamage( int NDamage, Pawn instigatedBy, vector hitlocation
 
 	if ( (health <= 0) && (Role == ROLE_Authority)  )
 	{
-		if ( instigatedBy != Instigator && instigatedBy.bIsPlayer && instigatedBy.PlayerReplicationInfo != None )
+		OwnerTeam = class'SiegeStatics'.static.GetTeam(Instigator);
+		DenierTeam = class'SiegeStatics'.static.GetTeam(instigatedBy);
+
+		if ( instigatedBy != Instigator )
 		{
-			if ( Instigator != None && Instigator.PlayerReplicationInfo != None )
-			{
-				Level.Game.BroadcastMessage(Instigator.PlayerReplicationInfo.PlayerName$ "'s nuke was taken down by"@ instigatedBy.PlayerReplicationInfo.PlayerName$"!");
-				if ( instigatedBy.PlayerReplicationInfo.Team != Instigator.PlayerReplicationInfo.Team && sgPRI(instigatedBy.PlayerReplicationInfo) != None )
-				{
-					sgPRI(instigatedBy.PlayerReplicationInfo).AddRU(400.0 + 200*FRand());
-					instigatedBy.PlayerReplicationInfo.Score += 10;
-				}
-			}
-			else
-				Level.Game.BroadcastMessage("The nuke was taken down by"@ instigatedBy.PlayerReplicationInfo.PlayerName$"!");
-			sgPRI(instigatedBy.PlayerReplicationInfo).sgInfoWarheadKiller++;
+			Stat = class'SiegeStatics'.static.GetPlayerStat( instigatedBy );
+			if ( Stat != None )
+				Stat.WarheadDestroyEvent( 1 );
 		}
+	
+		if ( instigatedBy != None )
+		{
+			if ( Instigator != None )
+				Level.Game.BroadcastMessage( Instigator.GetHumanName()$ "'s nuke was taken down by"@ instigatedBy.GetHumanName()$"!");
+			else
+				Level.Game.BroadcastMessage("The nuke was taken down by"@ instigatedBy.GetHumanName()$"!");
+		}
+	
+		if ( (OwnerTeam != DenierTeam) && (instigatedBy != None) && (instigatedBy.PlayerReplicationInfo != None) )
+		{
+			if ( sgPRI(instigatedBy.PlayerReplicationInfo) != None )
+				sgPRI(instigatedBy.PlayerReplicationInfo).AddRU( 500 );
+			instigatedBy.PlayerReplicationInfo.Score += 10;
+		}
+
 		Game = SiegeGI(Level.Game);
 		if ( Game != none )
 		{
 			if ( Game.bUseDenied )
 				DeniedSound();
-			OwnerTeam = class'SiegeStatics'.static.GetTeam(Instigator);
-			DenierTeam = class'SiegeStatics'.static.GetTeam(instigatedBy);
 			if ( (OwnerTeam < 4) && (DenierTeam < 4) )
 			{
 				if ( Game.NetworthStat[OwnerTeam] != None )

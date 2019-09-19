@@ -682,7 +682,7 @@ simulated function PrimaryFunc( optional float Code)
 						ownerPRI.RU -= SelectedBuild.default.BuildCost;
 					ownerPRI.Score += SelectedBuild.default.BuildCost / 100;
 				}
-				ownerPRI.sgInfoBuildingMaker++;
+				AddBuildCount( 1 );
 			}
 			else
 				ServerDenySound();
@@ -721,7 +721,7 @@ function bool BotBuild( int Idx, optional bool bCheat, optional vector FixedLoc)
 			if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 				ownerPRI.RU -= CatActor.BuildCost(Idx);
 			ownerPRI.Score += CatActor.BuildCost(Idx) / 100;
-			ownerPRI.sgInfoBuildingMaker++;
+			AddBuildCount( 1 );
 			sgNew.iCatTag = Idx;
 			sgNew.RUinvested = CatActor.BuildCost(Idx);
 		}
@@ -739,7 +739,6 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 	local float Priority, UpgradeAmount, UpgradeCost;
 	local sgPRI ownerPRI;
 	local sgBuilding Building;
-	local SiegeStatPlayer Stat;
 
 	if ( !FastTrace(Other.Location, Owner.Location + vect(0,0,10)) )
 		return false;
@@ -748,15 +747,13 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 	if ( ownerPRI.RU < 5 ) //Nothing to give
 		return true;
-	Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner));
 
 	if ( sgPRI(Other.PlayerReplicationInfo) != none )
 	{
 		Priority = sgPRI(Other.PlayerReplicationInfo).RU;
 		UpgradeAmount = FMin(RUamount, ownerPRI.RU);
 		sgPRI(Other.PlayerReplicationInfo).AddRU( UpgradeAmount );
-		if ( Stat != None )
-			Stat.UpgradeRepairEvent( UpgradeAmount);
+		AddUpgradeRepairAmount( UpgradeAmount );
 		ownerPRI.AddRU( -1 * (sgPRI(Other.PlayerReplicationInfo).RU - Priority));
 		ownerPRI.Score += (sgPRI(Other.PlayerReplicationInfo).RU - Priority) / 100;
 		Other.PlaySound(sound'sgMedia.sgPickRUs', SLOT_None,Other.SoundDampening*2.5);
@@ -777,8 +774,7 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 			ownerPRI.AddRU( -UpgradeCost );
 			Building.RUinvested += UpgradeCost;
 			ownerPRI.Score += UpgradeAmount;
-			if ( Stat != None )
-				Stat.UpgradeRepairEvent( UpgradeCost);
+			AddUpgradeRepairAmount( UpgradeAmount );
 		}
 
 		Building.Grade += UpgradeAmount;
@@ -1108,7 +1104,6 @@ simulated function sgBuilding BestDragCandidate( byte Team)
 function bool RepairFunction( float DeltaRep)
 {
 	local Pawn HitActor;
-	local SiegeStatPlayer Stat;
 	local sgPri OwnerPRI;
 	local float RepairAmount;
 
@@ -1130,9 +1125,7 @@ function bool RepairFunction( float DeltaRep)
 		if ( RepairAmount > 0 )
 		{
 			HitActor.Health += RepairAmount;
-			Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner));
-			if ( Stat != None )
-				Stat.UpgradeRepairEvent( RepairAmount * 2);
+			AddUpgradeRepairAmount( RepairAmount * 2 );
 			if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 				OwnerPRI.AddRU( -0.2 * RepairAmount);
 			OwnerPRI.Score += RepairAmount/100;
@@ -2541,6 +2534,38 @@ simulated function bool OnHand()
 		return false;
 	return (Pawn(Owner).Weapon == self);
 }
+
+/*--- Stat control. ------------------------------------------------------------*/
+
+function AddBuildCount( int Count)
+{
+	local SiegeStatPlayer Stat;
+	
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner) );
+	if ( Stat != None )
+		Stat.BuildEvent( Count);
+}
+
+function AddUpgradeRepairAmount( float Amount)
+{
+	local SiegeStatPlayer Stat;
+
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner) );
+	if ( Stat != None )
+		Stat.UpgradeRepairEvent( Amount);
+}
+
+function AddCoreRepairAmount( float Amount)
+{
+	local SiegeStatPlayer Stat;
+
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner) );
+	if ( Stat != None )
+		Stat.CoreRepairEvent( Amount);
+}
+
+
+/*--- Sounds. ------------------------------------------------------------*/
 
 //Play a server version of the sound, the client has already simulated his own sound so we use PlayOwnedSound inside a non-simulated function
 function ServerCycleSound()

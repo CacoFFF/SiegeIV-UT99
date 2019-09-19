@@ -3,6 +3,15 @@
 
 class SiegeStatPlayer expands SiegeActor;
 
+const GRI_CoreDamage     = 0;
+const GRI_CoreRepair     = 1;
+const GRI_BuildingDamage = 2;
+const GRI_Kill           = 3;
+const GRI_Build          = 4;
+const GRI_WarheadBuild   = 5;
+const GRI_WarheadDestroy = 6;
+const GRI_UpgradeRepair  = 7;
+
 var SiegeStatPool Pool;
 var Pawn Player;
 var string MyFP; //Quick fingerprint access
@@ -11,8 +20,8 @@ var byte Team;
 var SiegeStatPlayer NextStat;
 
 
-var float sgInfoCoreKiller, sgInfoCoreRepair, sgInfoBuildingHurt, sgInfoUpgradeRepair;
-var int	sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller;
+var float InfoCoreDamage, InfoCoreRepair, InfoBuildingDamage, InfoUpgradeRepair;
+var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy;
 
 var int CarryingWarheads;
 
@@ -61,10 +70,10 @@ function UpdateData()
 	PRI = sgPRI(Player.PlayerReplicationInfo);
 	if ( PRI == none )
 		return;
-	sgInfoKiller = PRI.sgInfoKiller;
-	sgInfoBuildingMaker = PRI.sgInfoBuildingMaker;
-	sgInfoWarheadMaker = PRI.sgInfoWarheadMaker;
-	sgInfoWarheadKiller = PRI.sgInfoWarheadKiller;
+	PRI.sgInfoKiller = InfoKill;
+	PRI.sgInfoBuildingMaker = InfoBuild;
+	PRI.sgInfoWarheadMaker = InfoWarheadBuild;
+	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
 	Team = PRI.Team;
 	RU = PRI.RU;
 	Score = PRI.Score;
@@ -79,10 +88,10 @@ function RestoreData()
 	PRI = sgPRI(Player.PlayerReplicationInfo);
 	if ( PRI == none )
 		return;
-	PRI.sgInfoKiller = sgInfoKiller;
-	PRI.sgInfoBuildingMaker = sgInfoBuildingMaker;
-	PRI.sgInfoWarheadMaker = sgInfoWarheadMaker;
-	PRI.sgInfoWarheadKiller = sgInfoWarheadKiller;
+	PRI.sgInfoKiller = InfoKill;
+	PRI.sgInfoBuildingMaker = InfoBuild;
+	PRI.sgInfoWarheadMaker = InfoWarheadBuild;
+	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
 	PRI.RU = RU;
 	PRI.Score = Score;
 	PRI.Deaths = Deaths;
@@ -206,64 +215,85 @@ function GiveRUtoTeam( optional bool bForceAll)
 //======= Stat Events
 //========================================
 
-function CoreKillerEvent( float Amount)
+function PropagateToGRI( int i, float Value)
 {
 	local sgGameReplicationInfo GRI;
 	
-	sgInfoCoreKiller += Amount;
 	GRI = sgGameReplicationInfo(Level.Game.GameReplicationInfo);
-	if ( (GRI != None) && (sgInfoCoreKiller > GRI.TopCoreKillerValue) )
+	if ( (GRI != None) && (Value > GRI.StatTop_Value[i]) )
 	{
-		GRI.TopCoreKiller = Player.PlayerReplicationInfo.PlayerName;
-		GRI.TopCoreKillerPRI = Player.PlayerReplicationInfo;
-		GRI.TopCoreKillerTeam = Player.PlayerReplicationInfo.Team;
-		GRI.TopCoreKillerValue = sgInfoCoreKiller;
+		GRI.StatTop_Name[i]  = Player.PlayerReplicationInfo.PlayerName;
+		GRI.StatTop_PRI[i]   = Player.PlayerReplicationInfo;
+		GRI.StatTop_Team[i]  = Player.PlayerReplicationInfo.Team;
+		GRI.StatTop_Value[i] = Value;
 	}
+}
+
+
+function CoreDamageEvent( float Amount)
+{
+	InfoCoreDamage += Amount;
+	PropagateToGRI( GRI_CoreDamage, InfoCoreDamage);
 }
 
 function CoreRepairEvent( float Amount)
 {
+	InfoCoreRepair += Amount;
+	PropagateToGRI( GRI_CoreRepair, InfoCoreRepair);
+}
+
+function BuildingDamageEvent( float Amount)
+{
+	InfoBuildingDamage += Amount;
+	PropagateToGRI( GRI_BuildingDamage, InfoBuildingDamage);
+}
+
+function KillEvent( int Change)
+{
+	InfoKill += Change;
+	PropagateToGRI( GRI_Kill, float(InfoKill) + 0.01 ); //Corrects rounding down
+	if ( sgPRI(Player.PlayerReplicationInfo) != None )
+		sgPRI(Player.PlayerReplicationInfo).sgInfoKiller = InfoKill;
+}
+
+function BuildEvent( int Change)
+{
+	InfoBuild += Change;
+	PropagateToGRI( GRI_Build, float(InfoBuild) + 0.01); //Corrects rounding down
+}
+
+function WarheadBuildEvent( int Change)
+{
+	local SiegeStatPlayer Stat;
 	local sgGameReplicationInfo GRI;
+
+	InfoWarheadBuild += Change;
+	PropagateToGRI( GRI_WarheadBuild, float(InfoWarheadBuild) + 0.01); //Corrects rounding down
 	
-	sgInfoCoreRepair += Amount;
+	//Fix substraction!
 	GRI = sgGameReplicationInfo(Level.Game.GameReplicationInfo);
-	if ( (GRI != None) && (sgInfoCoreRepair > GRI.TopCoreRepairValue) )
+	if ( (Change < 0) && (GRI.StatTop_PRI[GRI_WarheadBuild] == Player.PlayerReplicationInfo) )
 	{
-		GRI.TopCoreRepair = Player.PlayerReplicationInfo.PlayerName;
-		GRI.TopCoreRepairPRI = Player.PlayerReplicationInfo;
-		GRI.TopCoreRepairTeam = Player.PlayerReplicationInfo.Team;
-		GRI.TopCoreRepairValue = sgInfoCoreRepair;
+		GRI.StatTop_Reset(GRI_WarheadBuild);
+		For ( Stat=Pool.Active ; Stat!=None ; Stat=Stat.NextStat )
+			if ( Stat.InfoWarheadBuild > GRI.StatTop_Value[GRI_WarheadBuild] )
+				Stat.PropagateToGRI( GRI_WarheadBuild, float(Stat.InfoWarheadBuild) + 0.01);
+/*		For ( Stat=Pool.Inactive ; Stat!=None ; Stat=Stat.NextStat )
+			if ( Stat.InfoWarheadBuild > GRI.StatTop_Value[GRI_WarheadBuild] )
+				Stat.PropagateToGRI( GRI_WarheadBuild, float(Stat.InfoWarheadBuild) + 0.01);*/
 	}
 }
 
-function BuildingHurtEvent( float Amount)
+function WarheadDestroyEvent( int Change)
 {
-	local sgGameReplicationInfo GRI;
-	
-	sgInfoBuildingHurt += Amount;
-	GRI = sgGameReplicationInfo(Level.Game.GameReplicationInfo);
-	if ( (GRI != None) && (sgInfoBuildingHurt > GRI.TopBuildingHurtValue) )
-	{
-		GRI.TopBuildingHurt = Player.PlayerReplicationInfo.PlayerName;
-		GRI.TopBuildingHurtPRI = Player.PlayerReplicationInfo;
-		GRI.TopBuildingHurtTeam = Player.PlayerReplicationInfo.Team;
-		GRI.TopBuildingHurtValue = sgInfoBuildingHurt;
-	}
+	InfoWarheadDestroy += Change;
+	PropagateToGRI( GRI_WarheadDestroy, float(InfoWarheadDestroy) + 0.01); //Corrects rounding down
 }
 
 function UpgradeRepairEvent( float Amount)
 {
-	local sgGameReplicationInfo GRI;
-	
-	sgInfoUpgradeRepair += Amount;
-	GRI = sgGameReplicationInfo(Level.Game.GameReplicationInfo);
-	if ( (GRI != None) && (sgInfoUpgradeRepair > GRI.TopUpgradeRepairValue) )
-	{
-		GRI.TopUpgradeRepair = Player.PlayerReplicationInfo.PlayerName;
-		GRI.TopUpgradeRepairPRI = Player.PlayerReplicationInfo;
-		GRI.TopUpgradeRepairTeam = Player.PlayerReplicationInfo.Team;
-		GRI.TopUpgradeRepairValue = sgInfoUpgradeRepair;
-	}
+	InfoUpgradeRepair += Amount;
+	PropagateToGRI( GRI_UpgradeRepair, InfoUpgradeRepair);
 }
 
 

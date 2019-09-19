@@ -5,6 +5,8 @@
 //=============================================================================
 class SiegeGI extends TeamGamePlus config(SiegeIV_0032);
 
+const SGS = class'SiegeStatics';
+
 var class<Object> GCBind; //SiegeNative plugin ref to prevent GC cleaning
 
 var SiegeStatPool   StatPool;
@@ -155,7 +157,7 @@ function InitGame(string options, out string error)
 	bUseTranslocator = True;
 	bMultiWeaponStay = false;
 	bCoopWeaponMode = true;
-	class'SiegeStatics'.static.DetectXCGE( self);
+	SGS.static.DetectXCGE( self);
 	Super.InitGame(options, error);
 
 	opt = ParseOption(options, "FreeBuild");
@@ -890,7 +892,7 @@ function PostLogin(playerpawn NewPlayer)
 	{
 		if (bPreventSpectate && !CheckSpecIPPolicy(NewPlayer.GetPlayerNetworkAddress()) )
 		{
-			class'SiegeStatics'.static.AnnounceAll( self, NewPlayer.PlayerReplicationInfo.PlayerName@"has been denied Spectator access.");
+			SGS.static.AnnounceAll( self, NewPlayer.PlayerReplicationInfo.PlayerName@"has been denied Spectator access.");
 			NewPlayer.Destroy();
 			return;
 		}
@@ -1013,21 +1015,25 @@ function Killed( pawn Killer, pawn Other, name damageType )
 	Super.Killed( killer, other, damagetype);
 }
 
-function ScoreKill(Pawn killer, Pawn other)
+function ScoreKill( Pawn killer, Pawn other)
 {
     local int NukeAmmo;
 	local float RuMult;
 	local bool bTeamKill;
 	local sgPRI aVictim, aKiller;
-	local sgNukeLauncher Nuke;
 	local vector TStart;
 	local sgEquipmentSupplier Supplier;
 	local int SupplierTicks;
+	local SiegeStatPlayer Stat;
+	local byte KillerTeam, VictimTeam;
 
 	RuMult = 1;
 
 	if ( Other != none )	aVictim = sgPRI(other.PlayerReplicationInfo);
 	if ( Killer != none )	aKiller = sgPRI(killer.PlayerReplicationInfo);
+	Stat = SGS.static.GetPlayerStat( killer);
+	KillerTeam = SGS.static.GetTeam(killer);
+	VictimTeam = SGS.static.GetTeam(other);
 
 	if ( killer == other || killer == None )
 	{
@@ -1041,8 +1047,9 @@ function ScoreKill(Pawn killer, Pawn other)
 	}
 	else
 	{
-		if( aKiller != None )
-			aKiller.sgInfoKiller++;
+		if( (Stat != None) && (KillerTeam != VictimTeam) )
+			Stat.KillEvent( 1 );
+			
 		killer.KillCount++;
 		if ( killer.bIsPlayer && other.bIsPlayer && (aKiller != None) && (aVictim != None) )
    		{
@@ -1090,50 +1097,37 @@ function ScoreKill(Pawn killer, Pawn other)
 				bTeamKill = true;
 				aKiller.Score -= 1;
 				if ( aKiller != None )
-				{
-					aKiller.sgInfoKiller--; //Don't award the pusher with a kill
 					aKiller.AddRU( KillRUReward( aVictim, true) * RuMult);
-				}
 			}
 		}
         if ( aVictim != None )
             aVictim.AddRU(-10 * RuMult);
 	}
 
-    Nuke = sgNukeLauncher(other.FindInventoryType(class'sgNukeLauncher'));
-	if( (aVictim != none) && (Nuke != None) )
+	NukeAmmo = SGS.static.GetAmmoAmount( Other, class'WarheadAmmo');
+	if( (NukeAmmo > 0) && (Other.PlayerReplicationInfo != none) )
 	{
-		NukeAmmo = Nuke.AmmoType.AmmoAmount;
-		if (NukeAmmo == 1)
+		if ( NukeAmmo == 1 )
+			SGS.static.AnnounceAll( self, Other.PlayerReplicationInfo.PlayerName@"was carrying a WARHEAD!!!" );
+		else
+			SGS.static.AnnounceAll( self, Other.PlayerReplicationInfo.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
+		
+		NukeAmmo = Min( NukeAmmo, 2);
+		if ( KillerTeam != VictimTeam )
 		{
-			if (killer != None && (aKiller != None) && killer != other)
+			if ( aKiller != None )
 			{
-				aKiller.AddRU(500 * abs(int(bTeamKill)-1) );
-				aKiller.sgInfoWarheadKiller += abs(int(bTeamKill)-1);
-				killer.PlayerReplicationInfo.Score += 5 * abs(int(bTeamKill)-1);
+				aKiller.AddRU( 500 * NukeAmmo);
+				aKiller.Score += 5 * NukeAmmo;
 			}
-			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying a WARHEAD!!!" );
+			if ( Stat != None )
+				Stat.WarheadDestroyEvent( NukeAmmo );
 		}
 
-		if (NukeAmmo > 1)
-		{
-			if (killer != None && (aKiller != None) && killer != other)
-			{
-				aKiller.AddRU(1000 * abs(int(bTeamKill)-1) );
-				aKiller.sgInfoWarheadKiller += 2 * abs(int(bTeamKill)-1);
-				killer.PlayerReplicationInfo.Score += 10 * abs(int(bTeamKill)-1);
-			}
-			class'SiegeStatics'.static.AnnounceAll( self, aVictim.PlayerName@"was carrying "$NukeAmmo$" WARHEADS!!!" );
-		}
-		
-		if ( aKiller != None )
-		{
-			NukeAmmo = Min( NukeAmmo, 2);
-			if ( (aVictim.Team < 4) && (NetworthStat[aVictim.Team] != None) )
-				NetworthStat[aVictim.Team].AddEvent( 2 + class'SiegeStatics'.static.GetTeam(killer,0));
-			if ( (aKiller != None) && (aKiller.Team < 4) && (NetworthStat[aKiller.Team] != None) )
-				NetworthStat[aKiller.Team].AddEvent( 2 + class'SiegeStatics'.static.GetTeam(other,0));
-		}	
+		if ( (KillerTeam < 4) && (KillerTeam != VictimTeam) && (NetworthStat[KillerTeam] != None) )
+			NetworthStat[KillerTeam].AddEvent( 1);
+		if ( (VictimTeam < 4) && (NetworthStat[VictimTeam] != None) )
+			NetworthStat[VictimTeam].AddEvent( 2 + Min(KillerTeam,3) );
 	}
 
 	other.DieCount++;
@@ -1169,7 +1163,10 @@ function int ReduceDamage( int damage, name damageType, Pawn injured,  Pawn inst
 		}
 	}
 
-	damage = Super.ReduceDamage(damage, damageType, injured, instigatedBy);
+	if ( (sgBuilding(instigatedBy) != None) && (sgBuilding(instigatedBy).Team == SGS.static.GetTeam(injured)) )
+		damage *= FriendlyFireScale;
+	
+	damage = Super.ReduceDamage( damage, damageType, injured, instigatedBy);
 
 	//Building related
 	if ( sgBuilding(injured) != none )

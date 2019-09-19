@@ -227,7 +227,6 @@ simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float
 {
 	local float RepairAmount, RepairValue;
 	local sgPRI PRI;
-	local SiegeStatPlayer Stat;
 	
 	if ( bDisabledByEMP || bIsOnFire )
 	{
@@ -248,10 +247,8 @@ simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float
 	}
 	Energy += RepairAmount;
 	PRI.Score += RepairValue/20;
-
-	Stat = class'SiegeStatics'.static.GetPlayerStat( Other);
-	if ( Stat != None )
-		Stat.CoreRepairEvent( RepairAmount);
+	Constructor.AddCoreRepairAmount( RepairAmount);
+	return true;
 }
 
 
@@ -323,7 +320,7 @@ simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, V
 		Energy -= actualDamage;
 		Stat = class'SiegeStatics'.static.GetPlayerStat( instigatedBy );
 		if ( Stat != None )
-			Stat.CoreKillerEvent( actualDamage);
+			Stat.CoreDamageEvent( actualDamage);
 		Spawn(class'sgFlash');
 	}
 
@@ -353,6 +350,19 @@ function UpdateScore()
 	if ( SiegeGI(Level.Game) != None )
 		SiegeGI(Level.Game).Teams[Team].Score = (Energy/MaxEnergy)*100;
 }
+
+function string GetHumanName()
+{
+	local TeamGamePlus Game;
+	
+	Game = TeamGamePlus(Level.Game);
+	if ( (Game != None) && (Game.Teams[Team] != None) )
+		return Game.Teams[Team].TeamName@"team";
+
+	return Super.GetHumanName();
+}
+
+
 
 defaultproperties
 {

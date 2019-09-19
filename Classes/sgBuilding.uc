@@ -399,7 +399,7 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 			NetUpdateFrequency = 50;
 		Stat = class'SiegeStatics'.static.GetPlayerStat( instigatedBy );
 		if ( Stat != None )
-			Stat.BuildingHurtEvent( actualDamage);
+			Stat.BuildingDamageEvent( actualDamage);
 	}
 	if ( Energy <= 0 )
 		Destruct( instigatedBy); 
@@ -537,7 +537,6 @@ simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float
 {
 	local float RepairAmount, RepairValue;
 	local sgPRI PRI;
-	local SiegeStatPlayer Stat;
 	
 	if ( bDisabledByEMP || bIsOnFire )
 	{
@@ -558,10 +557,7 @@ simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float
 	}
 	Energy += RepairAmount;
 	PRI.Score += RepairValue/20;
-
-	Stat = class'SiegeStatics'.static.GetPlayerStat( Other);
-	if ( Stat != None )
-		Stat.UpgradeRepairEvent( RepairAmount);
+	Constructor.AddUpgradeRepairAmount( RepairAmount );
 
 	return true;
 }

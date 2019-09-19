@@ -39,7 +39,6 @@ var float sCore;
 var float GainedRU;
 var float GainedRUExp;
 var() config int NumBuildings;
-var() string sgRanks[8];
 //var() string sgRankDesc[8];
 //var() int sgOldBuilt[41];
 var() Texture TeamIcons[5];
@@ -420,9 +419,6 @@ simulated function DrawSiegeStats( Canvas C)
 	local int MaxPerColumn;
 	local int Columns;
 	
-	local sgPRI pInfo[8];
-	local string sName[8];
-	local byte   sTeam[8];
 	local string sInfo[8];
 
 	local sgGameReplicationInfo GRI;
@@ -463,52 +459,13 @@ simulated function DrawSiegeStats( Canvas C)
 		
 		YL += C.ClipY/2 - (5 * (BigFontHeight+TinyFontHeight)) - BigFontHeight;
 		YL = int(YL * 0.5);
+
+
+		if ( GRI.StatTop_Value[3] >= 1 ) sInfo[3] = GetPlural( GRI.StatTop_Value[3],"player")@"killed";
+		if ( GRI.StatTop_Value[4] >= 1 ) sInfo[4] = GetPlural( GRI.StatTop_Value[4],"building")@"created";
+		if ( GRI.StatTop_Value[5] >= 1 ) sInfo[5] = GetPlural( GRI.StatTop_Value[5],"Warhead")@"created";
+		if ( GRI.StatTop_Value[6] >= 1 ) sInfo[6] = GetPlural( GRI.StatTop_Value[6],"Warhead")@"destroyed";
 		
-		//TODO: Use normal PRI, use GRI to get all stats
-		sName[0] = GRI.TopCoreKiller;
-		sName[1] = GRI.TopCoreRepair;
-		sName[2] = GRI.TopBuildingHurt;
-		sName[7] = GRI.TopUpgradeRepair;
-		sTeam[0] = GRI.TopCoreKillerTeam;
-		sTeam[1] = GRI.TopCoreRepairTeam;
-		sTeam[2] = GRI.TopBuildingHurtTeam;
-		sTeam[7] = GRI.TopUpgradeRepairTeam;
-	
-		//Higor, use the player's own PRI as preprocessing base
-		for ( i=1 ; i<8 ; i++ )
-			pInfo[i] = PRI;
-
-		for (i=0;i<32;i++)
-		{
-			PRI = sgPRI(GRI.PRIArray[i]);
-			if ( (PRI != None) && !PRI.bIsSpectator )
-			{
-				if (PRI.sgInfoKiller > pInfo[3].sgInfoKiller) pInfo[3]=PRI;
-				if (PRI.sgInfoBuildingMaker > pInfo[4].sgInfoBuildingMaker) pInfo[4]=PRI;
-				if (PRI.sgInfoWarheadMaker > pInfo[5].sgInfoWarheadMaker) pInfo[5]=PRI;
-				if (PRI.sgInfoWarheadKiller > pInfo[6].sgInfoWarheadKiller) pInfo[6]=PRI;
-			}
-		}
-
-		//Higor, post process the array, remove zero'd elements
-		if ( pInfo[3].sgInfoKiller <= 0 )		pInfo[3] = none;
-		else									sInfo[3] = GetPlural(pInfo[3].sgInfoKiller,"player")@"killed";
-		if ( pInfo[4].sgInfoBuildingMaker <= 0)	pInfo[4] = none;
-		else									sInfo[4] = GetPlural(pInfo[4].sgInfoBuildingMaker,"building")@"created";
-		if ( pInfo[5].sgInfoWarheadMaker <= 0)	pInfo[5] = none;
-		else									sInfo[5] = GetPlural(pInfo[5].sgInfoWarheadMaker,"Warhead")@"created";
-		if ( pInfo[6].sgInfoWarheadKiller <= 0)	pInfo[6] = none;
-		else									sInfo[6] = GetPlural(pInfo[6].sgInfoWarheadKiller,"Warhead")@"destroyed";
-
-		for ( i=3 ; i<7 ; i++ )
-			if ( pInfo[i] != None )
-			{
-				sName[i] = pInfo[i].PlayerName;
-				sTeam[i] = pInfo[i].Team;
-			}
-		
-		PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
-
 		X = C.ClipX / 4;
 		if ( FontSizeDirective >= 800 )
 			X -= 128;
@@ -519,9 +476,9 @@ simulated function DrawSiegeStats( Canvas C)
 			C.Font = MyFonts.GetBigFont( FontSizeDirective );
 			C.DrawColor = WhiteColor;
 			C.SetPos(X, Y1);
-			C.DrawText( sgRanks[i] );
+			C.DrawText( GRI.StatTop_Desc[i] );
 
-			s1 = sName[i];
+			s1 = GRI.StatTop_Name[i];
 			if ( s1 ~= PRI.PlayerName )
 				C.DrawColor = GoldColor;
 			else if ( s1 == "" )
@@ -529,16 +486,16 @@ simulated function DrawSiegeStats( Canvas C)
 				s1 = "None"; //TODO: Localize
 				C.DrawColor = GreyColor;
 			}
-			else if ( sTeam[i] < 4 )
-				C.DrawColor = TeamColor[sTeam[i]];
+			else if ( GRI.StatTop_Team[i] < 4 )
+				C.DrawColor = TeamColor[GRI.StatTop_Team[i]];
 
 			C.TextSize( s1, Width, Height);
 			C.SetPos( X + (C.ClipX/2) - Width, Y1);
-			C.DrawText(s1);	
+			C.DrawText( s1 );	
 			C.Font = Font'SmallFont';
-			C.DrawColor = GreyColor;
-			if (sInfo[i] != "")
+			if ( sInfo[i] != "" )
 			{
+				C.DrawColor = GreyColor;
 				C.TextSize(sInfo[i], Width, Height);
 				C.SetPos( X + (C.ClipX/2) - Width, Y1 + BigFontHeight-2);
 				C.DrawText(sInfo[i]);
@@ -2187,15 +2144,7 @@ defaultproperties
      RedColour=128
      TheWhiteStuff=(R=255,G=255,B=255)
      nHUDDecPlaces=1
-     sgRanks(0)="Top BaseCore attacker"
-     sgRanks(1)="Top BaseCore repairer"
-     sgRanks(2)="Top attacker"
-     sgRanks(3)="Top player killer"
-     sgRanks(4)="Top builder"
-     sgRanks(5)="Top Warhead maker"
-     sgRanks(6)="Top Warhead defender"
-     sgRanks(7)="Top repairer/upgrader"
-
+ 
      CacheInvs(0)=Class'UT_Invisibility'
      CacheInvs(1)=Class'Dampener'
      CacheInvs(2)=Class'UT_JumpBoots'
