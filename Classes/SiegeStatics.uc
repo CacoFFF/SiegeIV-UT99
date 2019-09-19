@@ -321,6 +321,21 @@ static final function sgPlayerData GetPlayerData( Pawn Other)
 	return Result;
 }
 
+//******************************************
+//Find the SiegeStatPlayer element of a pawn
+//******************************************
+static final function SiegeStatPlayer GetPlayerStat( Pawn Other)
+{
+	if ( Other != None )
+	{
+		if ( sgPRI(Other.PlayerReplicationInfo) != None )
+			return sgPRI(Other.PlayerReplicationInfo).Stat;
+		//TODO: Add more ways
+	}
+	return None;
+}
+
+
 
 //**********************************************
 //Announce to all player and pseudo-player pawns
@@ -416,6 +431,24 @@ static final function byte GetTeam( Pawn Other, optional byte DefaultNone)
 	if ( DefaultNone != 0 )
 		return DefaultNone;
 	return 255;
+}
+
+//****************************************************
+//Get this Pawn's ammo amount of a specific ammo type*
+//****************************************************
+static final function int GetAmmoAmount( Pawn Other, class<Inventory> InvClass)
+{
+	local Inventory Inv;
+	
+	if ( Other != None )
+	{
+		Inv = Other.FindInventoryType(InvClass);
+		if ( Ammo(Inv) != None )
+			return Ammo(Inv).AmmoAmount;
+		if ( (Weapon(Inv) != None) && (Weapon(Inv).AmmoType != None) )
+			return Weapon(Inv).AmmoType.AmmoAmount;
+	}
+	return 0;
 }
 
 

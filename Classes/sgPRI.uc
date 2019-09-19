@@ -7,10 +7,6 @@
 //=============================================================================
 class sgPRI extends PlayerReplicationInfo;
 
-var float	sgInfoCoreKiller, 
-		sgInfoCoreRepair, 
-		sgInfoBuildingHurt,
-		sgInfoUpgradeRepair;
 var int		sgInfoKiller,
 		sgInfoBuildingMaker,
 		sgInfoWarheadMaker,
@@ -50,6 +46,8 @@ var byte sColors[20];
 var byte iHistory;
 
 var Pawn PushedBy;
+var XC_ReplicationNotify RepNotify;
+var SiegeStatPlayer Stat;
 
 //Remove protection
 var int RemoveTimer;
@@ -67,13 +65,15 @@ var int iNoFP;
 
 //For use in AI modes
 var name Orders;
-var actor OrderObject;
+var Actor OrderObject;
 var sgAIqueuer AIQueuer;
 
 replication
 {
+	reliable if ( (Role == ROLE_Authority) && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
+		RU;
 	reliable if ( Role == ROLE_Authority )
-		RU, XC_Orb, Orb, sgInfoCoreKiller, sgInfoBuildingHurt, sgInfoCoreRepair, sgInfoUpgradeRepair, sgInfoKiller, sgInfoBuildingMaker,sgInfoWarheadMaker, sgInfoWarheadKiller, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
+		/*RU,*/ XC_Orb, Orb, sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
 	reliable if ( Role == ROLE_Authority )
 		ReceiveMessage, RequestFingerPrint, ClientReceiveRU;
 	reliable if ( Role < ROLE_Authority )
@@ -83,8 +83,17 @@ replication
 event PostBeginPlay()
 {
 	Super.PostBeginPlay();
+
 	if ( SiegeGI(Level.Game) != None )
 		RU = SiegeGI(Level.Game).StartingRU;
+}
+
+event Destroyed()
+{
+	Super.Destroyed();
+	if ( RepNotify != None )
+		RepNotify.Destroy();
+	Stat = None;
 }
 
 simulated function ClientReceiveRU( float NewRU)
@@ -119,15 +128,14 @@ function SendFingerPrint( string aFingerPrint)
 
 	PlayerFingerPrint = aFingerPrint;
 	ForEach AllActors ( class'sgBuilding', sgB)
-	{
 		if ( (sgB.Owner == none) && (sgB.sPlayerIP == PlayerFingerPrint) )
 		{
 			sgB.SetOwner( Owner);
 			sgB.SetOwnership();
 		}
-	}
+
 	if ( Spectator(Owner) == none )
-		SiegeGI(Level.Game).RURecovery.RecoverRU(Pawn(Owner));
+		SiegeGI(Level.Game).StatPool.SetupPlayer(Pawn(Owner));
 	bReceivedFingerPrint = true;
 }
 
@@ -186,9 +194,12 @@ state ServerOp
 		//Local Player
 		else if ( ViewPort(PlayerPawn(Owner).Player) != None ) 
 		{
-			PlayerFingerPrint = "LocalPlayer_"$PlayerID;
+			SendFingerPrint("LOCALPLAYER_"$PlayerID);
 			Owner.Spawn(class'sgClient');
 		}
+		//Remote Player
+		else if ( NetConnection(PlayerPawn(Owner).Player) != None )
+			RepNotify = Spawn( class'XC_ReplicationNotify', self);
 	}
 	
 Begin:

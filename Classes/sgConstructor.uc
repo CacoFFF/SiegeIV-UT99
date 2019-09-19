@@ -736,8 +736,10 @@ function bool BotBuild( int Idx, optional bool bCheat, optional vector FixedLoc)
 //RUamount is either amount of ru or target level
 function bool BotUpgrade( Pawn Other, optional float RUamount)
 {
-	local float Priority, fPri;
+	local float Priority, UpgradeAmount, UpgradeCost;
 	local sgPRI ownerPRI;
+	local sgBuilding Building;
+	local SiegeStatPlayer Stat;
 
 	if ( !FastTrace(Other.Location, Owner.Location + vect(0,0,10)) )
 		return false;
@@ -746,43 +748,50 @@ function bool BotUpgrade( Pawn Other, optional float RUamount)
 	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 	if ( ownerPRI.RU < 5 ) //Nothing to give
 		return true;
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner));
 
 	if ( sgPRI(Other.PlayerReplicationInfo) != none )
 	{
 		Priority = sgPRI(Other.PlayerReplicationInfo).RU;
-		fPri=FMin(RUamount, ownerPRI.RU);
-		sgPRI(Other.PlayerReplicationInfo).AddRU(fPri);
-		ownerPRI.sgInfoUpgradeRepair+= fPri;
-		ownerPRI.AddRU(-1 * (sgPRI(Other.PlayerReplicationInfo).RU - Priority));
+		UpgradeAmount = FMin(RUamount, ownerPRI.RU);
+		sgPRI(Other.PlayerReplicationInfo).AddRU( UpgradeAmount );
+		if ( Stat != None )
+			Stat.UpgradeRepairEvent( UpgradeAmount);
+		ownerPRI.AddRU( -1 * (sgPRI(Other.PlayerReplicationInfo).RU - Priority));
 		ownerPRI.Score += (sgPRI(Other.PlayerReplicationInfo).RU - Priority) / 100;
 		Other.PlaySound(sound'sgMedia.sgPickRUs', SLOT_None,Other.SoundDampening*2.5);
 		return true;
 	}
-	if ( sgBuilding(Other) != none )
-	{
-		if ( VSize(Other.Location - Owner.Location) > 120 + FRand() * FRand() * 70 )
-			return false;
-		fPri = FMin(5 - sgBuilding(Other).Grade, RUamount);
 
+	Building = sgBuilding(Other);
+	if ( Building != none )
+	{
+		if ( VSize(Building.Location - Owner.Location) > 120 + FRand() * FRand() * 70 )
+			return false;
+
+		UpgradeAmount = FMin( 5 - Building.Grade, RUamount);
 		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 		{
-			fPri = FMin(fPri, (ownerPRI.RU / (sgBuilding(Other).UpgradeCost * (sgBuilding(Other).Grade + 1))));
-			ownerPRI.AddRU( (sgBuilding(Other).UpgradeCost * (sgBuilding(Other).Grade + 1)) * (-fPri) );
-			sgBuilding(Other).RUinvested += sgBuilding(Other).UpgradeCost * (sgBuilding(Other).Grade + 1) * fPri;
-			ownerPRI.Score += fPri;
-			ownerPRI.sgInfoUpgradeRepair+= fPri;
+			UpgradeAmount = FMin( UpgradeAmount, (ownerPRI.RU / Building.UpgradeCost * (Building.Grade + 1)) );
+			UpgradeCost = Building.UpgradeCost * (Building.Grade + 1.0) * UpgradeAmount;
+			ownerPRI.AddRU( -UpgradeCost );
+			Building.RUinvested += UpgradeCost;
+			ownerPRI.Score += UpgradeAmount;
+			if ( Stat != None )
+				Stat.UpgradeRepairEvent( UpgradeCost);
 		}
-		sgBuilding(Other).Grade += fPri;
-		ownerPRI.sgInfoUpgradeRepair += fPri;
-		if ( fPri > 0 )
+
+		Building.Grade += UpgradeAmount;
+		if ( UpgradeAmount > 0 )
 		{
-			sgBuilding(Other).Upgraded();
-			Owner.PlaySound(Misc3Sound, SLOT_None, pawn(Owner).SoundDampening*2.5);
+			Building.Upgraded();
+			Owner.PlaySound( Misc3Sound, SLOT_None, pawn(Owner).SoundDampening*2.5);
 		}
-		if ( (ownerPRI.AIqueuer.RoleCode < 2) && (ownerPRI.RU > 100) && ((ownerPRI.RU / SiegeGI(Level.Game).MaxRUs[ownerPRI.Team]) > (sgBuilding(Other).Grade / 10) ) ) //Upgrade multiple times!
+		if ( (ownerPRI.AIqueuer.RoleCode < 2) && (ownerPRI.RU > 100) && ((ownerPRI.RU / SiegeGI(Level.Game).MaxRUs[ownerPRI.Team]) > (Building.Grade / 10) ) ) //Upgrade multiple times!
 			return false;
 		return true;
 	}
+	
 	return false;
 }
 
@@ -1014,7 +1023,7 @@ simulated function Pawn BestRepairCandidate( byte Team)
 			}
 			continue;
 		}
-		if ( (PPlayer == none) && P != Pawn(Owner) && P.bIsPlayer && !P.bHidden && (P.Health < 150) && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
+		if ( (PPlayer == none) && (P != Owner) && P.bIsPlayer && !P.bHidden && (P.Health < 150) && (P.PlayerReplicationInfo != none) && (P.PlayerReplicationInfo.Team == Team) )
 			PPlayer = P;
 	}
 	if ( sgBest != none )
@@ -1099,59 +1108,40 @@ simulated function sgBuilding BestDragCandidate( byte Team)
 function bool RepairFunction( float DeltaRep)
 {
 	local Pawn HitActor;
-	local sgBuilding sgBest;
+	local SiegeStatPlayer Stat;
 	local sgPri OwnerPRI;
-	local float fPri;
+	local float RepairAmount;
 
-	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+	HitActor = BestRepairCandidate( Pawn(Owner).PlayerReplicationInfo.Team);
 
-	HitActor = BestRepairCandidate( ownerPRI.Team);
-	sgBest = sgBuilding(HitActor);
-
-	if ( sgBest != none )
+	if ( sgBuilding(HitActor) != none )
 	{
-		fPri = FMin(sgBest.MaxEnergy - sgBest.Energy, 60 * DeltaRep);
-
-		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+		if ( sgBuilding(HitActor).RepairedBy( Pawn(Owner), self, DeltaRep) )
 		{
-			if ( ownerPRI.RU < fPri )
-				return false;
-			ownerPRI.AddRU(-0.2 * fPri);
+			if ( SpecialPause == 1 )
+				Owner.PlaySound(Misc2Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
+			return true;
 		}
-		sgBest.Energy += fPri;
-
-		if (sgBest.bDisabledByEMP || sgBest.bIsOnFire)
+	}
+	else if ( HitActor != none )
+	{
+		OwnerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+		RepairAmount = FMin(FMin(150 - HitActor.Health, 40), OwnerPRI.RU * 2.5);
+		if ( RepairAmount > 0 )
 		{
-			sgBest.BackToNormal();
+			HitActor.Health += RepairAmount;
+			Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner));
+			if ( Stat != None )
+				Stat.UpgradeRepairEvent( RepairAmount * 2);
+			if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+				OwnerPRI.AddRU( -0.2 * RepairAmount);
+			OwnerPRI.Score += RepairAmount/100;
+			Owner.PlaySound( Misc2Sound, SLOT_Misc, Pawn(Owner).SoundDampening * 2.5);
 			SpecialPause = 1;
 		}
-
-		SpecialPause = DeltaRep;
-		if ( SpecialPause == 1)
-			Owner.PlaySound(Misc2Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
-//		else SETUP AMBIENT (0.10) every repair
-
-		if (sgBaseCore(sgBest)!=None)
-			ownerPRI.sgInfoCoreRepair += fPri;
-		else
-			ownerPRI.sgInfoUpgradeRepair += fPri;
-		ownerPRI.Score += fPri/100;
 		return true;
 	}
-
-	if ( HitActor != none )
-	{
-		REP_PLAYER:
-		fPri = FMin(FMin(150 - HitActor.Health, 40), ownerPRI.RU * 2.5);
-		HitActor.Health += fPri;
-		ownerPRI.sgInfoUpgradeRepair += fPri;
-		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
-			ownerPRI.AddRU(-0.2 * fPri);
-		ownerPRI.Score += fPri/100;
-		Owner.PlaySound(Misc2Sound, SLOT_Misc, Pawn(Owner).SoundDampening*2.5);
-		SpecialPause = 1;
-		return true;
-	}
+	
 	SpecialPause = -0.01;
 	if ( DeltaRep == 1 )
 	{
@@ -1166,13 +1156,15 @@ function bool UpgradeFunction( float DeltaRep)
 {
 	local pawn HitActor;
 	local sgBuilding sgBest;
-	local float fPri, Priority;
+	local float UpgradeAmount, UpgradeCost, ScoreAdd;
 	local sgPri OwnerPRI;
+	local SiegeStatPlayer Stat;
 
 
-	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+	OwnerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Pawn(Owner));
 
-	HitActor = BestUpgradeCandidate( ownerPRI.Team);
+	HitActor = BestUpgradeCandidate( OwnerPRI.Team);
 	sgBest = sgBuilding(HitActor);
 	SpecialPause = DeltaRep;
 
@@ -1182,23 +1174,28 @@ function bool UpgradeFunction( float DeltaRep)
 			SpecialPause = 0.2;
 		DeltaRep = 1;
 		SpecialPause = -1;
-		fPri = FMin( fMin(5,int(sgBest.Grade+1.001)) - sgBest.Grade, 1 * DeltaRep);
-
+		UpgradeAmount = FMin( fMin(5,int(sgBest.Grade+1.001)) - sgBest.Grade, 1 * DeltaRep);
+		ScoreAdd = UpgradeAmount;
+		
 		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 		{
-			fPri = FMin(fPri, (ownerPRI.RU / (sgBest.UpgradeCost * int(sgBest.Grade + 1))));
-			if ( sgBest.bNoFractionUpgrade && (int(sgBest.Grade) == int(sgBest.Grade + fPri)) )
+			UpgradeAmount = FMin(UpgradeAmount, (OwnerPRI.RU / (sgBest.UpgradeCost * int(sgBest.Grade + 1))));
+			if ( sgBest.bNoFractionUpgrade && (int(sgBest.Grade) == int(sgBest.Grade + UpgradeAmount)) )
 				return false;
-			ownerPRI.AddRU( (sgBest.UpgradeCost * int(sgBest.Grade + 1)) * (-fPri) );
-			sgBest.RUinvested += sgBest.UpgradeCost * (sgBest.Grade + 1) * fPri;
-			ownerPRI.Score += fPri;
-			ownerPRI.sgInfoUpgradeRepair+= fPri;
+			UpgradeCost = sgBest.UpgradeCost * int(sgBest.Grade + 1) * UpgradeAmount;
+			OwnerPRI.AddRU( -UpgradeCost );
+			sgBest.RUinvested += UpgradeCost;
+			ScoreAdd += UpgradeCost / 100.0;
 		}
+		else
+			UpgradeCost = ScoreAdd; //Nominal, for freebuild stats
+			
+		sgBest.Grade += UpgradeAmount;
+		OwnerPRI.Score += ScoreAdd;
+		if ( Stat != None )
+			Stat.UpgradeRepairEvent( UpgradeCost);
 
-		sgBest.Grade += fPri;
-		ownerPRI.sgInfoUpgradeRepair += fPri;
-
-		if ( fPri > 0 )
+		if ( UpgradeAmount > 0 )
 		{
 			sgBest.Upgraded();
 			if ( DeltaRep == 1 )
@@ -1209,16 +1206,15 @@ function bool UpgradeFunction( float DeltaRep)
 
 	if ( HitActor != none )
 	{
-		UP_PLAYER:
-		Priority = sgPRI(HitActor.PlayerReplicationInfo).RU;
-		if ( Priority < SiegeGI(Level.Game).MaxRUs[ownerPRI.Team] )
+		UpgradeAmount = FMin( FMin( 100, ownerPRI.RU), SiegeGI(Level.Game).MaxRUs[OwnerPRI.Team]-sgPRI(HitActor.PlayerReplicationInfo).RU );
+		if ( UpgradeAmount > 0 )
 		{
-			fPri=FMin(100, ownerPRI.RU);
-			sgPRI(HitActor.PlayerReplicationInfo).AddRU(fPri);
-			ownerPRI.sgInfoUpgradeRepair+= fPri;
-			ownerPRI.AddRU(-1 * (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority));
-			ownerPRI.Score += (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
-			HitActor.PlayerReplicationInfo.Score -= (sgPRI(HitActor.PlayerReplicationInfo).RU - Priority) / 100;
+			sgPRI(HitActor.PlayerReplicationInfo).AddRU( UpgradeAmount );
+			ownerPRI.AddRU( -UpgradeAmount );
+			ownerPRI.Score += UpgradeAmount / 100;
+			HitActor.PlayerReplicationInfo.Score -= UpgradeAmount / 100;
+			if ( Stat != None )
+				Stat.UpgradeRepairEvent( UpgradeAmount);
 		}
 		HitActor.PlaySound(sound'sgMedia.sgPickRUs', SLOT_None,HitActor.SoundDampening*2.5);
 		SpecialPause = -1;
@@ -2129,19 +2125,16 @@ function int CountBuilds( class<sgBuilding> cType, bool bExact, optional bool bS
 	if ( StopAt <= 0 )
 		StopAt = 9999999;
 
-	ForEach AllActors (class'sgBuilding', sgB)
+	ForEach AllActors (class'sgBuilding', sgB, class'SiegeStatics'.static.TeamTag(aTeam) )
 	{
-		if ( sgB.Team != aTeam )	continue;
-		if ( bExact )
-		{	if ( sgB.Class != cType )	continue;
-		}
-		else if ( !ClassIsChildOf( sgB.Class, cType) )	continue;
-
-		if ( bSelfOwned && !BuildingOwned(sgB) )
+		if ( (sgB.Team != aTeam)
+		|| (bExact && (sgB.Class != cType) )
+		|| (!bExact && !ClassIsChildOf(sgB.Class, cType))
+		|| (bSelfOwned && !BuildingOwned(sgB)) )
 			continue;
-		if ( ++i == StopAt )
-			return i;
 
+		if ( ++i == StopAt )
+			break;
 	}
 	return i;
 }

@@ -41,17 +41,6 @@ function AltFire( float Value )
 
 	if ( TTarget != None )
 	{
-/*		foreach AllActors(class'sgBuilding',B)
-		{
-			B.bShadowCast=B.bBlockPlayers;
-			B.bBlockPlayers=False;
-		}
-		Pawn(Owner).bCountJumps = True;
-		Translocate();
-		foreach AllActors(class'sgBuilding',B)
-			B.bBlockPlayers=B.bShadowCast;
-		return;
-*/
 		OwnerTeam = Pawn(Owner).PlayerReplicationInfo.Team;
 		ForEach AllActors(class'sgBuilding',B)
 			if ( B.bCollideActors && B.bBlockActors && (B.Team != OwnerTeam) && class'SiegeStatics'.static.ActorsTouchingExt( TTarget, B, Owner.CollisionRadius, Owner.CollisionHeight) )

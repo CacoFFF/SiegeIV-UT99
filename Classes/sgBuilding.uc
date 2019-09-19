@@ -352,13 +352,14 @@ simulated function UnpackStatusFlags()
 
 event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
 {
-	local int actualDamage;
+	local float actualDamage;
 	local float tempScore, tmpRU;
+	local SiegeStatPlayer Stat;
 
 	if ( Role < ROLE_Authority || Level.Game == None || !bBuildInitialized || instigatedBy == self  )
 		return;
 
-	actualDamage = Level.Game.ReduceDamage(Damage, DamageType, Self, instigatedBy);
+	actualDamage = Level.Game.ReduceDamage( Damage, DamageType, Self, instigatedBy);
 	if ( XC_Orb != none )
 		actualDamage = (actualDamage * 8) / 10;
 
@@ -376,11 +377,8 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 
 		if (tempScore < 0 || tempScore > 100000)
 			return;
-		instigatedBy.PlayerReplicationInfo.Score += tempScore/1000;
-			
-		if (instigatedBy.PlayerReplicationInfo.Score < -1000)
-			instigatedBy.PlayerReplicationInfo.Score = 0;
 
+		instigatedBy.PlayerReplicationInfo.Score += tempScore/1000;
 		if ( sgPRI(instigatedBy.PlayerReplicationInfo) != None )
 		{
 			tmpRU = (tempScore/30)*RuRewardScale;
@@ -395,8 +393,14 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 		actualDamage *= TeamGamePlus(Level.Game).FriendlyFireScale;
 
 	Energy -= actualDamage;
-	if ( (actualDamage > 25) && (DamageType != 'Burned') )
-		NetUpdateFrequency = 50;
+	if ( actualDamage > 0 )
+	{
+		if ( (actualDamage > 25) && (DamageType != 'Burned') )
+			NetUpdateFrequency = 50;
+		Stat = class'SiegeStatics'.static.GetPlayerStat( instigatedBy );
+		if ( Stat != None )
+			Stat.BuildingHurtEvent( actualDamage);
+	}
 	if ( Energy <= 0 )
 		Destruct( instigatedBy); 
 }
@@ -459,6 +463,10 @@ simulated function FinishBuilding()
 		Spawn(class'sgFlash');
 		if ( ScaleBox > 0 )
 			SetCollisionSize( CollisionRadius * ScaleBox, CollisionHeight * ScaleBox);
+		//Clients receiving this actor don't need these variables anymore.
+		SCount = 0;
+		TotalSCount = 0;
+		BuildTime = default.BuildTime; 
 /*		if ( bBlocksPath )
 		{
 			PathBlock = new class'sgPathBlock';
@@ -487,7 +495,7 @@ simulated function FinishBuilding()
 	}
 }
 
-function bool RemovedBy( pawn Other, optional bool bWasLeech, optional float CheatMargin)
+function bool RemovedBy( Pawn Other, optional bool bWasLeech, optional float CheatMargin)
 {
 	local float ReturnRU;
 	local sgPRI PriorityReturn;
@@ -522,6 +530,39 @@ function bool RemovedBy( pawn Other, optional bool bWasLeech, optional float Che
 			sgPRI(Other.PlayerReplicationInfo).AddRU( (BuildCost+UpgradeCost) * 0.5 * CheatMargin );
 		Other.PlayerReplicationInfo.Score -= BuildCost / 100 + Grade * UpgradeCost / 100;
 	}
+	return true;
+}
+
+simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float DeltaRep)
+{
+	local float RepairAmount, RepairValue;
+	local sgPRI PRI;
+	local SiegeStatPlayer Stat;
+	
+	if ( bDisabledByEMP || bIsOnFire )
+	{
+		BackToNormal();
+		Constructor.SpecialPause = 1;
+		return true;
+	}
+
+	Constructor.SpecialPause = DeltaRep;
+	RepairAmount = FMin( MaxEnergy - Energy, 75.0 * DeltaRep);
+	RepairValue = RepairAmount * 0.15;
+	PRI = sgPRI(Other.PlayerReplicationInfo);
+	if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+	{
+		if ( PRI.RU < RepairAmount )
+			return false;
+		PRI.AddRU( -RepairValue);
+	}
+	Energy += RepairAmount;
+	PRI.Score += RepairValue/20;
+
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Other);
+	if ( Stat != None )
+		Stat.UpgradeRepairEvent( RepairAmount);
+
 	return true;
 }
 

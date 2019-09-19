@@ -102,47 +102,49 @@ function PostBuild()
 
 simulated function string KillMessage( name damageType, pawn Other )
 {
-    local sgNukeLauncher sgNuke;
-    local string s;
-    local string sWarhead;
-    local pawn p;
-    local sgPRI aPRI;
+	local int i, WarheadCount;
+	local string s;
+	local string sWarhead;
+	local Pawn P;
+	local sgPRI aPRI;
 	local SiegeGI Game;
 	local byte VictimTeam;
 	
-	p = Pawn(Owner);
-	if ( (p != none) && p.PlayerReplicationInfo != none )
+	P = Pawn(Owner);
+	if ( (P != none) && P.PlayerReplicationInfo != none )
 	{
-		s= " built by" @ p.PlayerReplicationInfo.PlayerName;
-		p.PlayerReplicationInfo.Score += 1;
-		aPRI = sgPRI( p.PlayerReplicationInfo);
+		s = " built by" @ P.PlayerReplicationInfo.PlayerName;
+		P.PlayerReplicationInfo.Score += 1;
+		aPRI = sgPRI( P.PlayerReplicationInfo);
 	}
 
-
-	sgNuke = sgNukeLauncher(Other.FindInventoryType(class'sgNukeLauncher'));
-	if ( (sgNuke != none) && (sgNuke.AmmoType.AmmoAmount > 0) )
+	WarheadCount = Min( SGS.static.GetAmmoAmount( Other, class'WarheadAmmo'), 2);
+	if ( WarheadCount > 0 )
 	{
-		if ( sgNuke.AmmoType.AmmoAmount == 1 )
+		if ( WarheadCount == 1 )
 			sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying a WARHEAD!!!";
 		else
 			sWarhead = ". " $ Other.PlayerReplicationInfo.PlayerName@"was carrying TWO WARHEADS!!!";
 		Game = SiegeGI(Level.Game);
 		if ( Game != none )
 		{
-			Game.SharedReward( aPRI, Team, 500 * Min(2, sgNuke.AmmoType.AmmoAmount) );
+			Game.SharedReward( aPRI, Team, 500 * WarheadCount );
 			VictimTeam = class'SiegeStatics'.static.GetTeam( Other);
 			if ( Team < 4 && VictimTeam < 4 )
 			{
-				if ( Game.NetworthStat[Team] != None )
-					Game.NetworthStat[Team].AddEvent( 1);
-				if ( Game.NetworthStat[VictimTeam] != None )
-					Game.NetworthStat[VictimTeam].AddEvent( 2 + Team);
+				For ( i=0 ; i<WarheadCount ; i++ )
+				{
+					if ( Game.NetworthStat[Team] != None )
+						Game.NetworthStat[Team].AddEvent( 1);
+					if ( Game.NetworthStat[VictimTeam] != None )
+						Game.NetworthStat[VictimTeam].AddEvent( 2 + Team);
+				}
 			}
 		}
 		if ( aPRI != none )
 		{
-			aPRI.sgInfoWarheadKiller += Min(2, sgNuke.AmmoType.AmmoAmount);
-			aPRI.Score += Min(2, sgNuke.AmmoType.AmmoAmount) * 3;
+			aPRI.sgInfoWarheadKiller += WarheadCount;
+			aPRI.Score += WarheadCount * 3;
 		}
 	}
 	else

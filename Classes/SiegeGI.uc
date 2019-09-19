@@ -7,7 +7,7 @@ class SiegeGI extends TeamGamePlus config(SiegeIV_0032);
 
 var class<Object> GCBind; //SiegeNative plugin ref to prevent GC cleaning
 
-var sgRURecovery    RURecovery;
+var SiegeStatPool   StatPool;
 var config float    NumResources;
 var config float    MaxCoreSnipeDistance;
 var config int      MaxSiegeTeams;
@@ -39,8 +39,15 @@ var float           MaxRUs[4], MaxFutureRUs[4];
 var globalconfig string Weapons[17];
 
 var() class<Weapon> WeaponClasses[17];
+
+
 var sgBaseCore      Cores[4];
 var sgBotController	BotControllers[4];
+var sgCategoryInfo CategoryInfo[4];
+var sgTeamNetworth NetworthStat[4];
+var sgTeamOnlyStats GlobalTeamOnlyStat;
+var int NetworthTimer;
+
 
 var config string   SpecIPs[32];
 var config bool     bPreventSpectate;
@@ -68,14 +75,6 @@ var bool bMutatingWeapons; //Intercept IsRelevant calls
 
 var bool bMatchStarted;
 var bool bRandomizeCores;
-var bool bRoundMode;
-var int RoundIndex; //0,1 NORMAL, 2 IS TIEBREAKER
-var int RoundGames;
-var int RoundRestart;
-var float RoundRuScale;
-var sgCategoryInfo CategoryInfo[4];
-var sgTeamNetworth NetworthStat[4];
-var int NetworthTimer;
 var Weapon theWeapon; //We keep this pointer during Weapon mutation
 var sgPRI LastMidSpawnToucher;
 var string LastMidSpawnItemName;
@@ -87,14 +86,7 @@ var Object ProfileObject;
 var SiegeCategoryRules CategoryRules;
 var CoreModifierRules CoreRules;
 
-/*
-replication
-{
-    // Things the server should send to the client.
-    reliable if ( Role == ROLE_Authority )
-        MaxRUs;
-}
-*/
+
 
 //Higor: rotate teams starts (teams 0-5 to 100-105), then finish and put them back on 0-5
 function SwapPlayerStarts( byte To, byte From)
@@ -174,10 +166,6 @@ function InitGame(string options, out string error)
 	if ( opt == "1" || opt ~= "true" )
 		bRandomizeCores = true;
 
-	opt = ParseOption(options, "RoundMode");
-	if ( opt == "1" || opt ~= "true" )
-		bRoundMode = true;
-
 	MaxRUs[0] = StartingMaxRU;
 	MaxRUs[1] = StartingMaxRU;
 	MaxRUs[2] = StartingMaxRU;
@@ -205,17 +193,6 @@ function InitGame(string options, out string error)
 			{
 				bRandomizeCores = false;
 				Log("NEVER RANDOMIZE CORES!");
-			}
-			sParse = aInfo.GetPropertyText("bRounds");
-			if ( Caps(sParse) == "TRUE" )
-			{
-				bRoundMode = true;
-				Log("ROUND GAME STARTED!");
-			}
-			else if ( Caps(sParse) == "FALSE" )
-			{
-				bRoundMode = false;
-				Log("ROUND GAME DISABLED FOR THIS MAP!");
 			}
 			break;
 		}
@@ -363,7 +340,7 @@ function InitGame(string options, out string error)
             WeaponClasses[i] = class<Weapon>(DynamicLoadObject(opt,class'Class'));
 		}
 
-    RURecovery = spawn(class'sgRURecovery');
+    StatPool = Spawn(class'SiegeStatPool');
 
 	// Spawn Random Item Spawner
 	if ( Redeemers == 1 && !SpawnedRandomItemSpawner )
@@ -401,8 +378,6 @@ function InitGame(string options, out string error)
 	For ( SuperItem=Inventory ; SuperItem!=none ; SuperItem=SuperItem.Inventory )
 		SuperItem.Destroy();
 	Inventory = none;
-	if ( bRoundMode )
-		RoundGames = MaxTeams;
 
 	//Clear defaults transferred from previous map
 	class'sgSupplier'.static.ClearWeaponClasses();
@@ -656,7 +631,6 @@ function EndGame( string Reason)
 	}
 }
 
-//Startmatch implementation to allow round based game
 function StartMatch()
 {
 	local WeightedItemSpawner ExistingSpawner;
@@ -664,12 +638,6 @@ function StartMatch()
 	local int i;
 
 	bMatchStarted = true;
-	if ( bRoundMode )
-	{
-		RemainingTime = 30 * TimeLimit;
-		ForEach AllActors (class'Actor',A,'RoundStart')
-			A.Trigger(self,none);
-	}
 
 	Foreach AllActors(class'WeightedItemSpawner',ExistingSpawner)
 		ExistingSpawner.GotoState('Spawning');
@@ -681,77 +649,6 @@ function StartMatch()
 	Super.StartMatch();
 }
 
-function StartRound()
-{
-	local sgBuilding aBuild;
-	local sgPRI aPRI;
-	local PathNode P;
-	local WeightedItemSpawner ExistingSpawner;
-	local vector aVec;
-	local actor aBase;
-
-	if ( bRandomizeCores && (Cores[2] == none) && (Cores[3] == none) )
-	{
-		SwapPlayerStarts(0,1);
-		SwapPlayerStarts(1,0);
-		FinishStarts();
-		aVec = Cores[0].Location;
-		aBase = Cores[0].Base;
-		Cores[0].SetLocation( Cores[1].Location);
-		Cores[0].SetBase( Cores[1].Base);
-		Cores[1].SetLocation( aVec);
-		Cores[1].SetBase( aBase);
-	}
-
-	bOverTime = false;
-	RemainingTime = 30 * TimeLimit;
-	ForEach AllActors (class'sgBuilding', aBuild )
-	{
-		aBuild.bNoNotify = true;
-		if ( sgBaseCore(aBuild) != none )
-		{
-			aBuild.Grade = 0;
-			aBuild.ScaleGlow = 1;
-			aBuild.SetCollision(true,false,false);
-			sgBaseCore(aBuild).bCoreDisabled = true;
-			aBuild.bProjTarget = true;
-			aBuild.Energy = aBuild.MaxEnergy;
-			aBuild.Enable('TakeDamage');
-			aBuild.GotoState('');
-			aBuild.bHidden = false;
-		}
-		else
-			aBuild.Destruct();
-	}
-	ForEach AllActors (class'PathNode', P)
-		if ( FRand() < NumResources)
-			Spawn(class'WRU50',,,P.Location);
-
-	Foreach AllActors(class'WeightedItemSpawner',ExistingSpawner)
-		ExistingSpawner.GotoState('Spawning');
-
-	aBase = none;
-	ForEach AllActors (class'Actor',aBase,'RoundStart')
-		aBase.Trigger(self,none);
-
-	ForEach AllActors (class'sgPRI',aPRI)
-	{
-		if ( aPRI.Team < 5 && Cores[aPRI.Team] != none )
-		{
-			aPRI.RU = StartingRU;
-			if ( PlayerPawn(aPRI.Owner) != none )
-			{
-				PlayerPawn(aPRI.Owner).ViewTarget = none;
-				PlayerPawn(aPRI.Owner).bBehindView = false;
-				PlayerPawn(aPRI.Owner).ServerRestartPlayer();
-			}
-		}
-	}
-	MaxRUs[0] = StartingMaxRU;
-	MaxRUs[1] = StartingMaxRU;
-	MaxRUs[2] = StartingMaxRU;
-	MaxRUs[3] = StartingMaxRU;
-}
 
 function RestoreAllPlayers()
 {
@@ -776,110 +673,9 @@ function RestoreAllPlayers()
 
 }
 
-function RoundEnded( sgBaseCore Winner)
-{
-	local int i, best;
-	local bool bTie;
-	local sgGameReplicationInfo sgGRI;
-	local Pawn P;
-	local PlayerPawn Player;
-	local WeightedItemSpawner ExistingSpawner;
-	local actor A;
-
-	RoundIndex++;
-	sgGRI = sgGameReplicationInfo(GameReplicationInfo);
-	sgGRI.TeamRounds[Winner.Team]++;
-
-	//Normal rounds
-	if (RoundIndex < RoundGames)
-	{
-		if ( sgGRI.TeamRounds[Winner.Team] > RoundGames/2) //Premature end
-		{
-			EndGame("teamscorelimit");
-			Log("SIEGEGI: Game ended on round "$RoundIndex);
-			return;
-		}
-	}
-	//Final round
-	else if ( RoundIndex == RoundGames )
-	{
-		For ( i=1 ; i<4 ; i++ )
-		{
-			if ( sgGRI.TeamRounds[best] < sgGRI.TeamRounds[i] )
-			{
-				bTie = false;
-				best = i;
-			}
-			else if ( sgGRI.TeamRounds[best] == sgGRI.TeamRounds[i] )
-				bTie = true;
-		}
-		if ( !bTie )
-		{
-			EndGame("teamscorelimit");
-			Log("SIEGEGI: Game ended on final round: "$RoundIndex);
-			return;
-		}
-		For ( i=0 ; i<4 ; i++ ) //Eliminate teams that aren't tied
-			if ( (Cores[i] != none) && (sgGRI.TeamRounds[i] != sgGRI.TeamRounds[best]) )
-				Cores[i].Destruct();
-
-	}
-	//Tiebreaker, winning team should always be the one to survive
-	else
-	{
-		EndGame("teamscorelimit");
-		Log("SIEGEGI: Game ended on TieBreaker");
-		return;
-	}
-
-	//Select this core as our viewtarget
-	for ( P=Level.PawnList; P!=None; P=P.nextPawn )
-	{
-		Player = PlayerPawn(P);
-		if ( Spectator(P) != none)
-			continue;
-		if ( Player != None )
-		{
-			Player.bBehindView = true;
-			Player.ViewTarget = Winner;
-			Player.ClientGameEnded();
-		}
-		P.GotoState('GameEnded');
-	}
-	Foreach AllActors(class'WeightedItemSpawner',ExistingSpawner)
-		ExistingSpawner.GotoState('Setup');
-	ForEach AllActors(class'Actor', A, 'RoundEnd')
-		A.Trigger(self,none);
-	RoundRestart = 10;
-	BroadcastMessage( Teams[Winner.Team].TeamName$" wins the round", true, 'CriticalEvent'); // Broadcast message to all
-	sgGRI.RoundGame++;
-}
-
-function bool SetEndCams(string Reason)
-{
-	local int i;
-	local float sTeams[4];
-	local bool result;
-
-	if ( !bRoundMode )
-		return Super.SetEndCams( Reason);
-
-	For ( i=0 ; i<4 ; i++ )
-	{
-		sTeams[i] = Teams[i].Score;
-		Teams[i].Score = sgGameReplicationInfo(GameReplicationInfo).TeamRounds[i];
-	}
-	result = Super.SetEndCams( Reason);
-	For ( i=0 ; i<4 ; i++ )
-		Teams[i].Score = sTeams[i];
-	return result;
-}
-
 function InitGameReplicationInfo()
 {
 	Super.InitGameReplicationInfo();
-	if ( bRoundMode )
-		sgGameReplicationInfo(GameReplicationInfo).RoundGame = 1;
 }
 
 event PostBeginPlay()
@@ -1228,8 +1024,7 @@ function ScoreKill(Pawn killer, Pawn other)
 	local sgEquipmentSupplier Supplier;
 	local int SupplierTicks;
 
-	if ( bRoundMode )		RuMult = RoundRuScale;
-	else					RuMult = 1;
+	RuMult = 1;
 
 	if ( Other != none )	aVictim = sgPRI(other.PlayerReplicationInfo);
 	if ( Killer != none )	aKiller = sgPRI(killer.PlayerReplicationInfo);
@@ -1345,7 +1140,7 @@ function ScoreKill(Pawn killer, Pawn other)
     BaseMutator.ScoreKill(Killer, other);
 }
 
-function int ReduceDamage(int damage, name damageType, Pawn injured,  Pawn instigatedBy)
+function int ReduceDamage( int damage, name damageType, Pawn injured,  Pawn instigatedBy)
 {
 	local string sMessage;
 	local bool bPlayerInstigated;
@@ -1387,11 +1182,6 @@ function int ReduceDamage(int damage, name damageType, Pawn injured,  Pawn insti
 				VSize(injured.Location - instigatedBy.Location) >
 				MaxCoreSnipeDistance )
 				return damage / 10;
-		}
-		else
-		{
-			if ( bPlayerInstigated && (sgBuilding(injured).Team != instigatedBy.PlayerReplicationInfo.Team) )
-				sgPRI(instigatedBy.PlayerReplicationInfo).sgInfoBuildingHurt += damage;
 		}
 	}
 	//Non-building related
@@ -1854,7 +1644,7 @@ function DefeatTeam( byte aTeam)
 			defeated.Died(None, '', defeated.Location);
 		}
 	}
-	RURecovery.ClearTeamRU( aTeam);
+	StatPool.ClearTeamRU( aTeam);
 }
 
 final function DebugShout(String DebugMessage)
@@ -1926,64 +1716,6 @@ simulated Event Timer()
 	local int BestCore, i;
 	local bool bTied;
 	local Pawn P;
-
-	if ( bRoundMode && (RoundRestart > 0) )
-	{
-		if ( --RoundRestart > 0 )
-		{
-			ForEach AllActors (class'PlayerPawn', ThisPawn)
-			{
-				ThisPawn.ClearProgressMessages();
-				if ( (RoundRestart < 6) && ThisPawn.IsA('TournamentPlayer') )
-					TournamentPlayer(ThisPawn).TimeMessage(RoundRestart);
-				else
-					ThisPawn.SetProgressMessage(RoundRestart$" seconds for next round", 0);
-			}
-		}
-		else
-			StartRound();
-		if ( RoundRestart == 1 )
-		{
-			For ( i=0 ; i<4 ; i++ )
-				if ( Cores[i] != none )
-					Cores[i].bCoreDisabled = false;
-			RestoreAllPlayers();
-		}
-	}
-
-	//Game will end right now! Stop it
-	if ( bRoundMode && (RemainingTime == 1) )
-	{
-		For ( i=1 ; i<4 ; i++ )
-		{
-			if ( Cores[i] == none )
-				continue;
-			if ( Cores[BestCore].Energy < Cores[i].Energy )
-			{
-				bTied = False;
-				BestCore = i;
-			}
-			else if ( Cores[BestCore].Energy == Cores[i].Energy )
-				bTied = True;
-		}
-		bOverTime = true; //Prevent game end
-
-		//Handle round tie by putting cores at 5% health
-		if ( bTied )
-		{
-			For ( i=0 ; i<4 ; i++ )
-			{
-				if ( (Cores[i] == none) || Cores[i].bCoreDisabled )
-					continue;
-				Cores[i].Energy = Cores[i].MaxEnergy * 0.05;
-			}
-			BroadcastLocalizedMessage( DMMessageClass, 0 );
-		}
-		//Pick a winner
-		else
-			RoundEnded( Cores[BestCore]);
-		RemainingTime--;
-	}
 
 	Super.Timer();
 	if ( !CheckedRandomSpawner )
@@ -2133,9 +1865,6 @@ function BuildingCreated( sgBuilding sgNew)
 			if ( aPRI.bAdmin || (aPRI.Team == Pawn(sgNew.Owner).PlayerReplicationInfo.Team) )
 				aPRI.ReceiveMessage( Pawn(sgNew.Owner).PlayerReplicationInfo.PlayerName @"built a"@sgNew.BuildingName, Pawn(sgNew.Owner).PlayerReplicationInfo.Team, false);
 
-	if ( bRoundMode )
-		sgB.RuRewardScale *= RoundRuScale;
-
 	if ( (CategoryInfo[sgNew.Team] != none) && (CategoryInfo[sgNew.Team].RuleList != none) )
 		CategoryInfo[sgNew.Team].RuleList.NotifyIn( sgNew);
 
@@ -2186,13 +1915,15 @@ function BuildingRemoved( sgBuilding sgRem, pawn Remover, optional bool bWasLeec
 }
 
 // Log internal F3 stats when a mid item is picked
-function MidItemPicked(sgPRI Owner, string ItemName) {
+function MidItemPicked(sgPRI Owner, string ItemName)
+{
 	local sgPRI aPRI;
 	local string MidItemPickedUpString;
 
 	MidItemPickedUpString = " picked up";
-	ForEach AllActors (class'sgPRI', aPRI) {
-		if(aPRI.bIsSpectator || (aPRI.Team == Owner.Team))
+	ForEach AllActors( class'sgPRI', aPRI)
+	{
+		if( aPRI.bIsSpectator || (aPRI.Team == Owner.Team) )
 			aPRI.ReceiveMessage( "[MID SPAWN] "@Owner.PlayerName $MidItemPickedUpString @ItemName, Owner.Team, false);
 	}
 }
@@ -2486,7 +2217,6 @@ defaultproperties
      MutatorClass=Class'SiegeMutator'
      RUsPerTeam=14
      bAutoconfigWeapons=False
-     RoundRuScale=2
      bUseNukeDeco=False
      bCore5AddsEnforcer=True
      BaseMotion=70

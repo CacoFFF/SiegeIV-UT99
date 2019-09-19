@@ -32,7 +32,7 @@ replication
 {
 	reliable if ( bNetInitial && ROLE==ROLE_Authority )
 		Team;
-	reliable if ( !bNetInitial && Role==ROLE_Authority )
+	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
 		BuildingNetworth, CarriedNetworth, ItemNetworth, EventCodes, CurrentIndex, MaxTotalNetworth, MaxTeamNetworth;
 }
 
@@ -46,12 +46,11 @@ function SetTeam( byte InTeam)
 simulated event PostNetBeginPlay()
 {
 	local sgHUD HUD;
-	
-	SetGraphTexture();
 
+	SetGraphTexture();
+	Log("PostNetBeginPlay"@Self@GraphTexture);
 	ForEach AllActors( class'sgHUD', HUD)
 		HUD.NetworthStat[Team] = self;
-	
 }
 
 simulated function SetGraphTexture()
@@ -187,13 +186,8 @@ function EvaluatePlayer( Pawn P)
 	local int i;
 	
 	i = CurrentIndex % 120;
-	CarriedNetworth[i] += sgPRI(P.PlayerReplicationInfo).RU;
-	Ammo = Ammo(P.FindInventoryType( class'WarheadAmmo'));
-	if ( Ammo != None )
-		ItemNetworth[i] += 600 * Min(Ammo.AmmoAmount,2);
-	Ammo = Ammo(P.FindInventoryType( class'BlueGunAmmo'));
-	if ( Ammo != None )
-		ItemNetworth[i] += 3 * Min(Ammo.AmmoAmount,200);
+	CarriedNetworth[i] += 600 * Min( class'SiegeStatics'.static.GetAmmoAmount( P, class'WarheadAmmo'), 2);
+	CarriedNetworth[i] +=   3 * Min( class'SiegeStatics'.static.GetAmmoAmount( P, class'BlueGunAmmo'), 200);
 }
 
 //Building already passed Team check

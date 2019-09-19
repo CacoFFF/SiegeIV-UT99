@@ -4,15 +4,14 @@
 //*****************************************************
 class sgGenericImpact expands SiegeActor;
 
-var actor Impacted;
+var Actor Impacted;
 var float NewVelX, NewVelY, NewVelZ; //Passed using full 32 bit precision
-var float NewLocX, NewLocY, NewLocZ;
 var EPhysics NewPhysics;
 
 replication
 {
 	reliable if ( Role==ROLE_Authority )
-		Impacted, NewVelX, NewVelY, NewVelZ, NewLocX, NewLocY, NewLocZ, NewPhysics;
+		Impacted, NewVelX, NewVelY, NewVelZ, NewPhysics;
 }
 
 function Setup( actor NewI)
@@ -28,9 +27,7 @@ event Timer()
 	NewVelX = Impacted.Velocity.X;
 	NewVelY = Impacted.Velocity.Y;
 	NewVelZ = Impacted.Velocity.Z;
-	NewLocX = Impacted.Location.X;
-	NewLocY = Impacted.Location.Y;
-	NewLocZ = Impacted.Location.Z;
+	SetLocation( Impacted.Location);
 	NewPhysics = Impacted.Physics;
 	RemoteRole = ROLE_DumbProxy; //Become relevant now
 }
@@ -40,10 +37,7 @@ simulated event PostNetBeginPlay()
 	local vector aVec;
 	if ( Impacted != none )
 	{
-		aVec.X = NewLocX;
-		aVec.Y = NewLocY;
-		aVec.Z = NewLocZ;
-		Impacted.SetLocation( aVec );
+		Impacted.SetLocation( Location );
 		aVec.X = NewVelX;
 		aVec.Y = NewVelY;
 		aVec.Z = NewVelZ;

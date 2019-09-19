@@ -117,7 +117,7 @@ event Timer()
 
 	oldCount = BuildCount;
 	BuildCount = 0;
-	ForEach AllActors ( class'sgBuilding', sgB)
+	ForEach AllActors ( class'sgBuilding', sgB, class'SiegeStatics'.static.TeamTag(Team) )
 	{
 		if ( (sgB.Team == Team) && sgB.class == BuildClass && (sgB.SCount <= 0) && (sgB.Grade >= TargetLevel) )
 			BuildCount++;

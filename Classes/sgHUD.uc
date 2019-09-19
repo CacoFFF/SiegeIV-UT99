@@ -50,9 +50,10 @@ var float DecimalTimer;
 var float HudItemSlotSpace;
 
 var sgTeamNetworth NetworthStat[4];
+var sgTeamOnlyStats TeamOnlyStat;
 
 // The message color variable
-var color SpecialMessageColor;
+var Color SpecialMessageColor;
 
 //Thermal Visor Variables
 var() bool bSeeAllHeat, bSeeBehindWalls;
@@ -116,6 +117,20 @@ simulated function PostBeginPlay()
 		ForEach AllActors( class'sgTeamNetworth', TN)
 			if ( TN.Team < 4 )
 				NetworthStat[TN.Team] = TN;
+	}
+}
+
+//Select most appropiate team stat for this player
+simulated function RegisterTeamStat( sgTeamOnlyStats NewStat)
+{
+	if ( NewStat == None || NewStat == TeamOnlyStat )
+		return;
+		
+	if ( ((Spectator(Owner) != None) && (NewStat.Team == 255))
+		|| (Pawn(Owner).PlayerReplicationInfo.Team == NewStat.Team) )
+	{
+		TeamOnlyStat = NewStat;
+		return;
 	}
 }
 
@@ -335,14 +350,8 @@ simulated function DrawTeam(Canvas Canvas, TeamInfo TI)
 		Canvas.DrawIcon(TeamIcons[TI.TeamIndex], Spacing );
 
 		Canvas.StrLen(int(TI.Score) $ "  ", XL, YL);
-		if ( sgGRI.RoundGame > 0 )
-			Canvas.SetPos( Canvas.ClipX - (128 * Spacing + XL), Canvas.ClipY * 0.9 - (268 + 60 * Spacing * TI.TeamIndex));
-		else
-			Canvas.SetPos(Canvas.ClipX - (128 * Spacing), Canvas.ClipY * 0.9 - (268 * Spacing + 60 * Spacing * TI.TeamIndex));
-		if ( sgGRI.RoundGame > 0 )
-			Canvas.DrawText( sgGRI.TeamRounds[TI.TeamIndex] @"-"@ int(TI.Score), false);
-		else
-			Canvas.DrawText(int(TI.Score), false);
+		Canvas.SetPos(Canvas.ClipX - (128 * Spacing), Canvas.ClipY * 0.9 - (268 * Spacing + 60 * Spacing * TI.TeamIndex));
+		Canvas.DrawText(int(TI.Score), false);
 	}
 	//60 > 72 IF FAILS
 }
@@ -406,18 +415,20 @@ simulated function DrawSiegeStats( Canvas C)
 	local float FontSizeDirective;
 	local float XL, YL, X1, Y1, Height, Width;
 	local float TinyFontHeight, SmallFontHeight, BigFontHeight, HugeFontHeight;
-	local int X, OldX ,Y,i, nBuildings,Rows, Col, R, nPlayers;
+	local int X, OldX ,Y,i, nBuildings,Rows, Col, R;
 	local string s1, s2;
 	local int MaxPerColumn;
 	local int Columns;
 	
 	local sgPRI pInfo[8];
+	local string sName[8];
+	local byte   sTeam[8];
 	local string sInfo[8];
 
-	local sgGameReplicationInfo sgGRI;
+	local sgGameReplicationInfo GRI;
 	local sgPRI PRI;
 
-	sgGRI = sgGameReplicationInfo(PlayerPawn(Owner).GameReplicationInfo);
+	GRI = sgGameReplicationInfo(PlayerPawn(Owner).GameReplicationInfo);
 	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 	FontSizeDirective = C.ClipX * 0.6 + C.ClipY * 0.5;
 	
@@ -444,90 +455,100 @@ simulated function DrawSiegeStats( Canvas C)
 	C.Font = MyFonts.GetBigFont( FontSizeDirective );
 	C.SetPos(0, YL + HugeFontHeight*2);
 	
-	C.DrawText("Top Player Rankings", True );
-	YL+=HugeFontHeight*2;
-	C.bCenter = false;
-	
-	YL += C.ClipY/2 - (5 * (BigFontHeight+TinyFontHeight)) - BigFontHeight;
-	YL = int(YL * 0.5);
-	
-	//Higor, use the player's own PRI as preprocessing base
-	for ( i=0 ; i<8 ; i++ )
-		pInfo[i] = PRI;
-
-	for (i=0;i<32;i++)
+	if ( GRI != None )
 	{
-		PRI = sgPRI(sgGRI.PRIArray[i]);
-		if ( (PRI != None) && !PRI.bIsSpectator )
+		C.DrawText("Top Player Rankings", True );
+		YL+=HugeFontHeight*2;
+		C.bCenter = false;
+		
+		YL += C.ClipY/2 - (5 * (BigFontHeight+TinyFontHeight)) - BigFontHeight;
+		YL = int(YL * 0.5);
+		
+		//TODO: Use normal PRI, use GRI to get all stats
+		sName[0] = GRI.TopCoreKiller;
+		sName[1] = GRI.TopCoreRepair;
+		sName[2] = GRI.TopBuildingHurt;
+		sName[7] = GRI.TopUpgradeRepair;
+		sTeam[0] = GRI.TopCoreKillerTeam;
+		sTeam[1] = GRI.TopCoreRepairTeam;
+		sTeam[2] = GRI.TopBuildingHurtTeam;
+		sTeam[7] = GRI.TopUpgradeRepairTeam;
+	
+		//Higor, use the player's own PRI as preprocessing base
+		for ( i=1 ; i<8 ; i++ )
+			pInfo[i] = PRI;
+
+		for (i=0;i<32;i++)
 		{
-			nPlayers++;
-			if (PRI.sgInfoCoreKiller > pInfo[0].sgInfoCoreKiller) pInfo[0]=PRI; 
-			if (PRI.sgInfoCoreRepair > pInfo[1].sgInfoCoreRepair) pInfo[1]=PRI;
-			if (PRI.sgInfoBuildingHurt > pInfo[2].sgInfoBuildingHurt) pInfo[2]=PRI;
-			if (PRI.sgInfoKiller > pInfo[3].sgInfoKiller) pInfo[3]=PRI;
-			if (PRI.sgInfoBuildingMaker > pInfo[4].sgInfoBuildingMaker) pInfo[4]=PRI;
-			if (PRI.sgInfoWarheadMaker > pInfo[5].sgInfoWarheadMaker) pInfo[5]=PRI;
-			if (PRI.sgInfoWarheadKiller > pInfo[6].sgInfoWarheadKiller) pInfo[6]=PRI;
-			if (PRI.sgInfoUpgradeRepair > pInfo[7].sgInfoUpgradeRepair) pInfo[7]=PRI;
+			PRI = sgPRI(GRI.PRIArray[i]);
+			if ( (PRI != None) && !PRI.bIsSpectator )
+			{
+				if (PRI.sgInfoKiller > pInfo[3].sgInfoKiller) pInfo[3]=PRI;
+				if (PRI.sgInfoBuildingMaker > pInfo[4].sgInfoBuildingMaker) pInfo[4]=PRI;
+				if (PRI.sgInfoWarheadMaker > pInfo[5].sgInfoWarheadMaker) pInfo[5]=PRI;
+				if (PRI.sgInfoWarheadKiller > pInfo[6].sgInfoWarheadKiller) pInfo[6]=PRI;
+			}
 		}
-	}
 
-	//Higor, post process the array, remove zero'd elements
-	if ( pInfo[0].sgInfoCoreKiller <= 0 )	pInfo[0] = none;
-	if ( pInfo[1].sgInfoCoreRepair <= 0 )	pInfo[1] = none;
-	if ( pInfo[2].sgInfoBuildingHurt <= 0 )	pInfo[2] = none;
-	if ( pInfo[3].sgInfoKiller <= 0 )		pInfo[3] = none;
-	else									sInfo[3] = GetPlural(pInfo[3].sgInfoKiller,"player")@"killed";
-	if ( pInfo[4].sgInfoBuildingMaker <= 0)	pInfo[4] = none;
-	else									sInfo[4] = GetPlural(pInfo[4].sgInfoBuildingMaker,"building")@"created";
-	if ( pInfo[5].sgInfoWarheadMaker <= 0)	pInfo[5] = none;
-	else									sInfo[5] = GetPlural(pInfo[5].sgInfoWarheadMaker,"Warhead")@"created";
-	if ( pInfo[6].sgInfoWarheadKiller <= 0)	pInfo[6] = none;
-	else									sInfo[6] = GetPlural(pInfo[6].sgInfoWarheadKiller,"Warhead")@"destroyed";
-	if ( pInfo[7].sgInfoUpgradeRepair <= 0)	pInfo[7] = none;
+		//Higor, post process the array, remove zero'd elements
+		if ( pInfo[3].sgInfoKiller <= 0 )		pInfo[3] = none;
+		else									sInfo[3] = GetPlural(pInfo[3].sgInfoKiller,"player")@"killed";
+		if ( pInfo[4].sgInfoBuildingMaker <= 0)	pInfo[4] = none;
+		else									sInfo[4] = GetPlural(pInfo[4].sgInfoBuildingMaker,"building")@"created";
+		if ( pInfo[5].sgInfoWarheadMaker <= 0)	pInfo[5] = none;
+		else									sInfo[5] = GetPlural(pInfo[5].sgInfoWarheadMaker,"Warhead")@"created";
+		if ( pInfo[6].sgInfoWarheadKiller <= 0)	pInfo[6] = none;
+		else									sInfo[6] = GetPlural(pInfo[6].sgInfoWarheadKiller,"Warhead")@"destroyed";
 
-	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
+		for ( i=3 ; i<7 ; i++ )
+			if ( pInfo[i] != None )
+			{
+				sName[i] = pInfo[i].PlayerName;
+				sTeam[i] = pInfo[i].Team;
+			}
+		
+		PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
-	X = C.ClipX / 4;
-	if ( FontSizeDirective >= 800 )
-		X -= 128;
+		X = C.ClipX / 4;
+		if ( FontSizeDirective >= 800 )
+			X -= 128;
 
-	for (i=0;i<8;i++)
-	{
-		Y1 = YL + ((BigFontHeight+TinyFontHeight+1)*i);
-		C.Font = MyFonts.GetBigFont( FontSizeDirective );
-		C.DrawColor = WhiteColor;
-		C.SetPos(X, Y1);
-		C.DrawText(sgRanks[i]);
-
-		if (pInfo[i] != None) 
+		for ( i=0 ; i<8 ; i++ )
 		{
-			s1 = pInfo[i].PlayerName;
-			if (pInfo[i] == PRI)
-        			C.DrawColor = GoldColor;
-			else
-				C.DrawColor = TeamColor[pInfo[i].Team];
-		}
-		else
-		{
-			s1 = "None";
+			Y1 = YL + ((BigFontHeight+TinyFontHeight+1)*i);
+			C.Font = MyFonts.GetBigFont( FontSizeDirective );
+			C.DrawColor = WhiteColor;
+			C.SetPos(X, Y1);
+			C.DrawText( sgRanks[i] );
+
+			s1 = sName[i];
+			if ( s1 ~= PRI.PlayerName )
+				C.DrawColor = GoldColor;
+			else if ( s1 == "" )
+			{
+				s1 = "None"; //TODO: Localize
+				C.DrawColor = GreyColor;
+			}
+			else if ( sTeam[i] < 4 )
+				C.DrawColor = TeamColor[sTeam[i]];
+
+			C.TextSize( s1, Width, Height);
+			C.SetPos( X + (C.ClipX/2) - Width, Y1);
+			C.DrawText(s1);	
+			C.Font = Font'SmallFont';
 			C.DrawColor = GreyColor;
+			if (sInfo[i] != "")
+			{
+				C.TextSize(sInfo[i], Width, Height);
+				C.SetPos( X + (C.ClipX/2) - Width, Y1 + BigFontHeight-2);
+				C.DrawText(sInfo[i]);
+			}
+	//		C.SetPos(X, Y1 + BigFontHeight-3);
+	//		C.DrawText(sgRankDesc[i]);
 		}
-		C.TextSize(s1, Width, Height);
-		C.SetPos( X + (C.ClipX/2) - Width, Y1);
-		C.DrawText(s1);	
-		C.Font = Font'SmallFont';
-		C.DrawColor = GreyColor;
-		if (sInfo[i] != "")
-		{
-			C.TextSize(sInfo[i], Width, Height);
-			C.SetPos( X + (C.ClipX/2) - Width, Y1 + BigFontHeight-2);
-			C.DrawText(sInfo[i]);
-		}
-//		C.SetPos(X, Y1 + BigFontHeight-3);
-//		C.DrawText(sgRankDesc[i]);
-	}
 
+	}
+	
 	//Draw Net Worth graph
 	X += C.ClipX / 1.9;
 	Y1 = YL;

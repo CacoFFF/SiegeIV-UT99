@@ -35,7 +35,7 @@ var float LastFired;
 
 replication
 {
-    reliable if( Role==ROLE_Authority )
+    reliable if( Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
         URL1, TargetLoc, TelenetLoc;
 }
 

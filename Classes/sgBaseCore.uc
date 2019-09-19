@@ -14,7 +14,7 @@ var TeamInfo MyTeam;
 
 replication
 {
-	reliable if ( Role==ROLE_Authority )
+	reliable if ( !bNetInitial && (Role==ROLE_Authority) )
 		RuMultiplier, StoredRU;
 }
 
@@ -35,6 +35,8 @@ event PostBeginPlay()
 simulated event PostNetBeginPlay()
 {
 	local PlayerPawn P;
+	local sgGameReplicationInfo GRI;
+	
 	Super.PostNetBeginPlay();
 	if ( Level.NetMode == NM_Client )
 	{
@@ -46,6 +48,12 @@ simulated event PostNetBeginPlay()
 			}
 		if ( LocalClient == none )
 			Log("Replication messed up: Core replicated before local pawn");
+		else
+		{
+			GRI = sgGameReplicationInfo(LocalClient.GameReplicationInfo);
+			if ( (GRI != None) && (GRI.Cores[Team] == None) )
+				GRI.Cores[Team] = self;
+		}
 	}
 }
 
@@ -214,6 +222,39 @@ simulated function FinishBuilding()
 		myFX.RotationRate.Yaw = Energy;
 }
 
+
+simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float DeltaRep)
+{
+	local float RepairAmount, RepairValue;
+	local sgPRI PRI;
+	local SiegeStatPlayer Stat;
+	
+	if ( bDisabledByEMP || bIsOnFire )
+	{
+		BackToNormal();
+		Constructor.SpecialPause = 1;
+		return true;
+	}
+
+	Constructor.SpecialPause = DeltaRep;
+	RepairAmount = FMin( MaxEnergy - Energy, 60.0 * DeltaRep);
+	RepairValue = RepairAmount * 0.25;
+	PRI = sgPRI(Other.PlayerReplicationInfo);
+	if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
+	{
+		if ( PRI.RU < RepairAmount )
+			return false;
+		PRI.AddRU( -RepairValue);
+	}
+	Energy += RepairAmount;
+	PRI.Score += RepairValue/20;
+
+	Stat = class'SiegeStatics'.static.GetPlayerStat( Other);
+	if ( Stat != None )
+		Stat.CoreRepairEvent( RepairAmount);
+}
+
+
 simulated function MonsterDamage(int Damage, Pawn instigatedBy)
 {
     if ( (Energy-=Damage) <= 0 )
@@ -224,46 +265,41 @@ simulated function MonsterDamage(int Damage, Pawn instigatedBy)
 	}
 }
 
-simulated event TakeDamage(int Damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType)
+simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType)
 {
-	local int actualDamage;
+	local float actualDamage;
 	local float tempScore;
 	local TournamentPlayer p;
+	local SiegeStatPlayer Stat;
 
 	if ( Role < ROLE_Authority || Level.Game == None || bCoreDisabled || instigatedBy == self )
 		return;
 	
-	actualDamage = Level.Game.ReduceDamage(Damage, DamageType, Self, instigatedBy);
+	actualDamage = Level.Game.ReduceDamage( Damage, DamageType, Self, instigatedBy);
 
 	if ( instigatedBy != None && instigatedBy.bIsPlayer )
+	{
+		if ( TeamGamePlus(Level.Game) != None && instigatedBy.PlayerReplicationInfo.Team == Team )
 		{
-			if ( TeamGamePlus(Level.Game) != None && instigatedBy.PlayerReplicationInfo.Team == Team )
-				{
-					actualDamage *= TeamGamePlus(Level.Game).FriendlyFireScale;
-					tempScore = -1 * FMin(Energy, actualDamage);
-				}
-			else
-				tempScore = FMin(Energy, actualDamage);
-
-			tempScore *= (1 + Grade/10);
-
-			if (tempScore < 0 || tempScore > 100000)
-				return;
-			else
-				instigatedBy.PlayerReplicationInfo.Score += tempScore/100;
-				
-			if (instigatedBy.PlayerReplicationInfo.Score < -1000)
-				instigatedBy.PlayerReplicationInfo.Score = 0;
-
-			if ( sgPRI(instigatedBy.PlayerReplicationInfo) != None )
-			{
-				sgPRI(instigatedBy.PlayerReplicationInfo).AddRU((tempScore/7)*RuRewardScale);
-				LeechRU( (tempScore/7)*RuRewardScale );
-			}
+			actualDamage *= TeamGamePlus(Level.Game).FriendlyFireScale;
+			tempScore = -1 * FMin(Energy, actualDamage);
 		}
-    else
-		if ( sgBuilding(instigatedBy) != None && TeamGamePlus(Level.Game) != None && sgBuilding(instigatedBy).Team == Team )
-        	actualDamage *= TeamGamePlus(Level.Game).FriendlyFireScale;
+		else
+			tempScore = FMin( Energy, actualDamage);
+
+		tempScore *= (1 + Grade/10);
+		if (tempScore < 0 || tempScore > 100000)
+			return;
+
+		instigatedBy.PlayerReplicationInfo.Score += tempScore/100;
+		if ( sgPRI(instigatedBy.PlayerReplicationInfo) != None )
+		{
+			sgPRI(instigatedBy.PlayerReplicationInfo).AddRU((tempScore/7)*RuRewardScale);
+			LeechRU( (tempScore/7)*RuRewardScale );
+		}
+	}
+	else if ( sgBuilding(instigatedBy) != None && TeamGamePlus(Level.Game) != None && sgBuilding(instigatedBy).Team == Team )
+		actualDamage *= TeamGamePlus(Level.Game).FriendlyFireScale;
 
 
 	if ( (Level.TimeSeconds - LastMsgSpam) > 2 )
@@ -282,14 +318,19 @@ simulated event TakeDamage(int Damage, Pawn instigatedBy, Vector hitLocation, Ve
 		LastMsgSpam = Level.TimeSeconds;
 	}
 	
-	Energy -= actualDamage;
-	sgPRI(instigatedBy.PlayerReplicationInfo).sgInfoCoreKiller+=actualDamage;
+	if ( actualDamage > 0 )
+	{
+		Energy -= actualDamage;
+		Stat = class'SiegeStatics'.static.GetPlayerStat( instigatedBy );
+		if ( Stat != None )
+			Stat.CoreKillerEvent( actualDamage);
+		Spawn(class'sgFlash');
+	}
 
-    if (actualDamage>0) Spawn(class'sgFlash');
-		if (myFX!=None)
-			myFX.RotationRate.Yaw = Energy;
+	if (myFX!=None)
+		myFX.RotationRate.Yaw = Energy;
 
-    if ( Energy <= 0 )
+	if ( Energy <= 0 )
 		HandleDestruction( instigatedBy);
 
 	UpdateScore();
@@ -302,27 +343,6 @@ function HandleDestruction( pawn instigatedBy)
 	local SiegeGI aGame;
 	
 	aGame = SiegeGI(Level.Game);
-	//Round based game
-	if ( (aGame != none) && aGame.bRoundMode )
-	{
-		bCoreDisabled = True;
-		ScaleGlow = 0.1;
-		Energy = 0;
-		SetCollision(false);
-		bProjTarget = False;
-		class'SiegeStatics'.static.AnnounceAll( self, "BaseCore destroyed by "$ instigatedBy.PlayerReplicationInfo.PlayerName $"!!");
-		For ( i=0 ; i<4 ; i++ )
-			if ( (aGame.Cores[i] != none) && !aGame.Cores[i].bCoreDisabled )
-			{
-				j++;
-				Winner = aGame.Cores[i];
-			}
-		if ( j == 1 )
-			aGame.RoundEnded( Winner);
-		else //Disable this team from spawning, clear builds
-			aGame.DefeatTeam( Team);
-		return;
-	}
 	Energy = 0;
 	class'SiegeStatics'.static.AnnounceAll( self, "Game Over! "@instigatedBy.PlayerReplicationInfo.PlayerName@"killed the BaseCore!");
 	Destruct( instigatedBy);
@@ -336,7 +356,7 @@ function UpdateScore()
 
 defaultproperties
 {
-     NetPriority=2.2
+     NetPriority=2.1
 	 bNoRemove=True
 	 StoredRU=10
      RuMultiplier=1
