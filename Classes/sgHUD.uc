@@ -397,12 +397,12 @@ simulated function DrawTeamRU(canvas C)
 }
 
 simulated function DrawShowNukers(Canvas C) {
-	local string Nukers;
 	local string NukersList[4];
 	local sgPRI PRI;
 	local sgGameReplicationInfo GRI;
-	local int i, x, y;
+	local int yPos;					// if rendering all teams nukers, then need to keep track of Y position
 
+	yPos = -1;
 	PRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 	GRI = sgGameReplicationInfo(PlayerPawn(Owner).GameReplicationInfo);
 	NukersList[0] = GRI.Nukers_Red;
@@ -410,20 +410,77 @@ simulated function DrawShowNukers(Canvas C) {
 	NukersList[2] = GRI.Nukers_Green;
 	NukersList[3] = GRI.Nukers_Yellow;
 
+	if(PRI.Team == 255) {										// spectators need nukers info from all teams
+		yPos = RenderNukers(C, NukersList[0], 0, yPos);
+		yPos = RenderNukers(C, NukersList[1], 1, yPos);
+		yPos = RenderNukers(C, NukersList[2], 2, yPos);
+		yPos = RenderNukers(C, NukersList[3], 3, yPos);
+	} else {													// specific team
+		RenderNukers(C, NukersList[PRI.Team], PRI.Team, yPos);
+	}
+}
+
+simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
+	local int i, x, y;
+	local float width, height;
+	local bool bDrawingName;
+	local string S, S_CALC, S_RENDER;
+
+	S_CALC = Src;
+	S_RENDER = Src;
+	x = 10;
+	y = yPos;
+
 	C.Font = Font'SmallFont';
 	C.Style = ERenderStyle.STY_Normal;
 
-	// spectators: they need nukers info from all teams
-	if(PRI.Team == 255) {
+	bDrawingName = true;
+	CALC:									// this loop is just to calculate y
+		i = InStr(S_CALC, ";");
+		if(i >= 0)
+		{
+			S = Left(S_CALC, i);
+			if(bDrawingName) {
+				C.TextSize(S, width, height);
+				y++;
+			}
+			S_CALC = Mid(S_CALC, i+1);
+  			bDrawingName = !bDrawingName;
+   			Goto CALC;
+		}
 
-	} else {		// only copying for that team, rest are anyway not replicated
+		// if first time, render the HEADING, skip for rest of the times
+		if(yPos == -1) {
+			y = C.ClipY/3 - ((y * height)/2);
+			C.DrawColor = WhiteColor;
+			C.SetPos(x, y);
+			C.DrawText("Nukers:", True);
+			y += height;
+		}
 
-	}
+	C.DrawColor = TeamColor[Team];
 
+	bDrawingName = true;
+	RENDER:
+		i = InStr(S_RENDER, ";");
+		if(i >= 0)
+		{
+			S = Left(S_RENDER, i);
+			if(bDrawingName) {
+				C.SetPos(x, y);
+				C.DrawText(S, True);
+				y += height;
+			} else {
+				// Draw Nuker Ammo? We can decide
+				// C.SetPos(x + 5, y);
+				// C.DrawText(S, True);
+			}
+			S_RENDER = Mid(S_RENDER, i+1);
+			bDrawingName = !bDrawingName;
+			Goto RENDER;
+		}
 
-
-
-
+	return y;
 }
 
 simulated function DrawSiegeStats( Canvas C)
