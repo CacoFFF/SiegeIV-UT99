@@ -49,7 +49,6 @@ var float DecimalTimer;
 var float HudItemSlotSpace;
 
 var sgTeamNetworth NetworthStat[4];
-var sgTeamOnlyStats TeamOnlyStat;
 
 // The message color variable
 var Color SpecialMessageColor;
@@ -119,19 +118,6 @@ simulated function PostBeginPlay()
 	}
 }
 
-//Select most appropiate team stat for this player
-simulated function RegisterTeamStat( sgTeamOnlyStats NewStat)
-{
-	if ( NewStat == None || NewStat == TeamOnlyStat )
-		return;
-		
-	if ( ((Spectator(Owner) != None) && (NewStat.Team == 255))
-		|| (Pawn(Owner).PlayerReplicationInfo.Team == NewStat.Team) )
-	{
-		TeamOnlyStat = NewStat;
-		return;
-	}
-}
 
 //Weapon wasn't hooked in inventory chain
 simulated final function FixInventoryChain( optional bool bOnlyBreak)

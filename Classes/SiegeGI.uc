@@ -47,7 +47,6 @@ var sgBaseCore      Cores[4];
 var sgBotController	BotControllers[4];
 var sgCategoryInfo CategoryInfo[4];
 var sgTeamNetworth NetworthStat[4];
-var sgTeamOnlyStats GlobalTeamOnlyStat;
 var int NetworthTimer;
 
 

@@ -139,7 +139,7 @@ state Active
 	}
 Begin:
 	UpdateData();
-	Sleep( 1 + FRand() * Level.TimeDilation);
+	Sleep( (1 + FRand()) * Level.TimeDilation);
 	Goto('Begin');
 }
 
