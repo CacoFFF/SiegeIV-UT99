@@ -3,6 +3,7 @@
 // Revised by nOs*Badger
 // Inventory handling recoded by Higor
 // Fixed over 9000 log warnings
+// ShowNukers rendering by banny
 //=============================================================================
 class sgHUD extends ChallengeTeamHUD config;
 
@@ -454,6 +455,7 @@ simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
 			y = C.ClipY/3 - ((y * height)/2);
 			C.DrawColor = WhiteColor;
 			C.SetPos(x, y);
+			C.TextSize("Nukers:", width, height);
 			C.DrawText("Nukers:", True);
 			y += height;
 		}
