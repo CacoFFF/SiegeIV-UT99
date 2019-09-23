@@ -91,8 +91,8 @@ function bool AlwaysKeep(Actor Other)
 	{
 		if ( sgBuilding(Other) != none )
 			return true;
-		if ( TournamentPlayer(Other) != none )
-			TournamentPlayer(Other).PlayerReplicationInfoClass = class'sgPRI';
+		if ( TournamentPlayer(Other) != none || CHSpectator(Other) != None )
+			Pawn(Other).PlayerReplicationInfoClass = class'sgPRI';
 	}
 	if ( NextMutator != None )
 		return ( NextMutator.AlwaysKeep(Other) );

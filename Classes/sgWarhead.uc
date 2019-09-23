@@ -86,11 +86,16 @@ function Destruct( optional pawn instigatedBy)
 
 function bool GiveItems( Pawn Other)
 {
+	local SiegeStatPlayer Stat;
+
 	if ( Super.GiveItems(Other) )
 	{
 		Other.PlaySound(sound'sgMedia.sgGetNuke', SLOT_None, Other.SoundDampening * 3);
 		if ( PlayerPawn(Other) != none )
 			PlayerPawn(Other).GetWeapon( class<Weapon> (MyProduct.class) );
+		Stat = SGS.static.GetPlayerStat( Other );
+		if ( Stat != None )
+			Stat.WarheadPickupEvent();
 		return true;
 	}
 }

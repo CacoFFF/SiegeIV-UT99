@@ -703,8 +703,7 @@ function bool AddBot()
 
 }
 
-event PlayerPawn Login(string portal, string options, out string error,
-  class<PlayerPawn> spawnClass)
+event PlayerPawn Login( string portal, string options, out string error, class<PlayerPawn> spawnClass)
 {
 	local PlayerPawn newPlayer;
     local class<PlayerReplicationInfo> priClass;

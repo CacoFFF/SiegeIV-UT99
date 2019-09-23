@@ -32,6 +32,9 @@ var int Deaths;
 var int iSeconds;
 
 
+//Hack
+native(256) final function SleepModify( float Seconds );
+
 //========================================
 //======= Container logic
 //========================================
@@ -65,8 +68,13 @@ function Setup( Pawn Other, SiegeStatPool InPool)
 function UpdateData()
 {
 	local sgPRI PRI;
+	local int OldCarryingWarheads;
 	
+	OldCarryingWarheads = CarryingWarheads;
 	CarryingWarheads = SGS.static.GetAmmoAmount( Player, class'WarheadAmmo');
+	if ( (CarryingWarheads != OldCarryingWarheads) && (sgGameReplicationInfo(Level.Game.GameReplicationInfo) != None) )
+		sgGameReplicationInfo(Level.Game.GameReplicationInfo).UpdateNukerStats();
+	
 	PRI = sgPRI(Player.PlayerReplicationInfo);
 	if ( PRI == none )
 		return;
@@ -296,6 +304,11 @@ function UpgradeRepairEvent( float Amount)
 	PropagateToGRI( GRI_UpgradeRepair, InfoUpgradeRepair);
 }
 
+function WarheadPickupEvent()
+{
+	if ( LatentFloat > (0.1 * Level.TimeDilation) )
+		SleepModify( 0.05);
+}
 
 
 
