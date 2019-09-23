@@ -225,8 +225,16 @@ Begin:
 state ServerSpectatorOp
 {
 	ignores Tick;
+	
+	function LocalInit()
+	{
+		if ( NetConnection(Spectator(Owner).Player) != None )
+			RepNotify = Spawn( class'XC_ReplicationNotify', self);
+	}
+	
 Begin:
-	Stop;
+	Sleep(0.0);
+	LocalInit();
 }
 
 
