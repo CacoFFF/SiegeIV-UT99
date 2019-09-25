@@ -14,7 +14,7 @@ var int iP;
 
 var PlayerPawn LocalPush;
 var float LocalTime;
-var XC_AntigravityToucher Toucher;
+var ECM_AntigravPush ClientPush;
 var float LastDelta;
 
 
@@ -52,12 +52,12 @@ simulated event PreBeginPlay()
 simulated event PostBeginPlay()
 {
 	Super.PostBeginPlay();
-	if ( Level.NetMode == NM_Client && Toucher == none )
+	if ( Level.NetMode == NM_Client && ClientPush == none )
 	{
-		ForEach AllActors (class'XC_AntigravityToucher', Toucher)
+		ForEach AllActors (class'ECM_AntigravPush', ClientPush)
 			break;
-		if ( Toucher == none )
-			Toucher = Spawn(class'XC_AntigravityToucher', none,,vect(30100, 30100, 30100));
+		if ( ClientPush == none )
+			ClientPush = Spawn(class'ECM_AntigravPush', none,, vect(30100, 30100, 30100));
 	}
 }
 
@@ -126,38 +126,43 @@ simulated function Tick( float DeltaTime)
 		if ( (rPlayers[i] == none) || rPlayers[i].bDeleteMe || (rPlayers[i].Physics != PHYS_Falling) || !InPushZone(rPlayers[i]) )
 		{
 			if ( (rTime[i] > 0) && (rPlayers[i].Physics == PHYS_Falling) ) //Touching ground immediately cancels effect
-			{
 				rTime[i] -= DeltaTime;
-				if ( rPlayers[i].Role == ROLE_AutonomousProxy )
-					LocalTime = rTime[i];
-			}
 			else
 			{
-				if ( rPlayers[i].Role == ROLE_AutonomousProxy )
-					LocalPush = none;
 				rPlayers[i] = rPlayers[--iP];
 				rTime[i] = rTime[iP];
 				rPlayers[iP] = none;
 				continue;
 			}
 		}
-		rPlayers[i].Velocity.Z -= rPlayers[i].Region.Zone.ZoneGravity.Z * DeltaTime * 0.93;
+		ModifyVelocity( rPlayers[i], DeltaTime);
 		i++;
 	}
 
-	if ( (LocalPush != none) && (Level.NetMode == NM_Client) && (Toucher.CurPlat == self) )
+	if ( LocalPush != None )
 	{
-		LastDelta = DeltaTime;
-		class'sg_TouchUtil'.static.SetTouch( Toucher, LocalPush);
-		class'sg_TouchUtil'.static.SetTouch( LocalPush, Toucher);
+		if ( LocalPush.Physics != PHYS_Falling || !InPushZone(LocalPush) )
+		{
+			if ( (LocalTime > 0) && (LocalPush.Physics == PHYS_Falling) )
+				LocalTime -= DeltaTime;
+			else
+			{
+				if ( ClientPush != None )
+					ClientPush.AntigravEnd( self, LocalPush);
+				LocalPush = None;
+				LocalTime = 0;
+			}
+		}
+		if ( LocalPush != None )
+			ModifyVelocity( LocalPush, DeltaTime);
 	}
 }
 
-simulated function PlayerUpdatePush()
+simulated function ModifyVelocity( Pawn Other, float DeltaTime)
 {
-	if ( InPushZone(LocalPush) && (FRand() < LocalTime) )
-		LocalPush.Velocity.Z -= LocalPush.Region.Zone.ZoneGravity.Z * LastDelta * 0.93;
+	Other.Velocity.Z -= Other.Region.Zone.ZoneGravity.Z * DeltaTime * 0.93;
 }
+
 
 simulated function RegisterNew( pawn Other)
 {
@@ -177,9 +182,10 @@ simulated function RegisterNew( pawn Other)
 	rPlayers[iP++] = Other;
 	if ( (Level.NetMode == NM_Client) && (Other.Role == ROLE_AutonomousProxy) && (PlayerPawn(Other) != none) )
 	{
-		Toucher.CurPlat = self;
 		LocalPush = PlayerPawn(Other);
 		LocalTime = Grade * 0.25;
+		if ( !LocalPush.bUpdating && LocalPush.bCanTeleport )
+			ClientPush.AntigravStart( self, LocalPush);
 	}
 }
 

@@ -13,13 +13,14 @@ var float TransmitScale;
 var sgBuilding MyBuild; //On clients, the build itself is responsible for setting this if replicated late
 
 //No rotation support yet
+var float RelX, RelY, RelZ;
 var private vector RelativePosition;
 var private bool bHasStand;
 
 replication
 {
 	reliable if ( bNetInitial && (Role == ROLE_Authority) )
-		RelativePosition, MyBuild;
+		RelX, RelY, RelZ, MyBuild;
 }
 
 // When mover enters gameplay.
@@ -36,6 +37,12 @@ event PostBeginPlay()
 		bLocalHull = True;
 }
 
+simulated event PostNetBeginPlay()
+{
+	RelativePosition.X = RelX;
+	RelativePosition.Y = RelY;
+	RelativePosition.Z = RelZ;
+}
 
 
 //This is a mandatory method to setup the hull
@@ -47,6 +54,9 @@ function Setup( sgBuilding Other, float CRadius, float CHeight, optional vector 
 	if ( RelativePos != vect(0,0,0) )
 	{
 		RelativePosition = RelativePos;
+		RelX = RelativePosition.X;
+		RelY = RelativePosition.Y;
+		RelZ = RelativePosition.Z;
 		SetLocation( Other.Location + RelativePos);
 	}
 }
@@ -67,7 +77,7 @@ simulated event Attach( actor Other)
 
 simulated event Detach( actor Other)
 {
-	if ( Other.bIsPawn )
+	if ( Pawn(Other) != None )
 	{
 		if ( MyBuild != none )
 			MyBuild.CollisionJump( Pawn(Other));

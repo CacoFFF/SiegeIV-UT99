@@ -24,9 +24,9 @@ var Effects         Trail;
 var float aTimer;
 var float deltaUpdate; //Fuel variation since last update
 var float LastFuel; //Client last fuel
-var vector PendingVel;
+var float LastPlayerTimeStamp;
 
-var JetPushPool PushPool;
+var ECM_JetPush ClientPush;
 var bool bDelayActivate;
 var bool bOldFly;
 var bool bOldFalling;
@@ -70,9 +70,9 @@ simulated event Destroyed()
 		bClientForceWalk = false;
 		JetEnd();
 	}
-	if ( (PushPool != none) && (PushPool.CurJet == self) ) //Unregister
-		PushPool.CurJet = none;
-	PushPool = none;
+	if ( (ClientPush != none) && (ClientPush.CurJet == self) ) //Unregister
+		ClientPush.CurJet = none;
+	ClientPush = none;
 }
 
 
@@ -118,7 +118,8 @@ simulated event Tick( float DeltaTime)
 	{
 		bInstructions = true;
 		if ( PlayerPawn(P) != none && ViewPort(PlayerPawn(P).Player) != none )
-		{	P.ReceiveLocalizedMessage( class'JetPackMessagePlus', 1);
+		{
+			P.ReceiveLocalizedMessage( class'JetPackMessagePlus', 1);
 			P.ReceiveLocalizedMessage( class'JetPackMessagePlus', 0);
 		}
 	}
@@ -159,13 +160,27 @@ simulated event Tick( float DeltaTime)
 
 simulated function JetPush( float DeltaTime)
 {
-	if ( aTimer <= 0 )
+	local float TimeStampDiff;
+
+	//Network player controls his timer
+	if ( (PlayerPawn(Owner) != None) && (PlayerPawn(Owner).CurrentTimeStamp > 0) )
 	{
-		aTimer += 1 / ThrustFrequency;
+		TimeStampDiff = PlayerPawn(Owner).CurrentTimeStamp - LastPlayerTimeStamp;
+		if ( (TimeStampDiff < 0) || (TimeStampDiff > Level.TimeDilation) )
+			TimeStampDiff = DeltaTime;
+		aTimer -= TimeStampDiff;
+	}
+	else
+		aTimer -= DeltaTime;
+
+	if ( aTimer < -Level.TimeDilation )
+		aTimer = -1;
+	while ( aTimer <= 0 )
+	{
 		UserTimer();
+		aTimer += 1 / ThrustFrequency;
 	}
 
-	aTimer -= DeltaTime;
 	if ( Role == ROLE_Authority )
 		Fuel = FMax(Fuel - DeltaTime, 0);
 	else
@@ -237,17 +252,12 @@ simulated function UserTimer()
 		sp.GotoState('');
 	VelAdd = PushVel( Pawn(Owner).bRun == 0 );
 //	Log("Real velocity is: "$VelAdd@"from"@Owner.Velocity);
-	if ( PushPool != none )
-		PushPool.AddNewPush( VelAdd - Owner.Velocity, Pawn(Owner).bRun == 0);
-	if ( Level.NetMode == NM_Client )
-	{
-		Owner.PendingTouch = self;
-		PendingVel = VelAdd;
-	}
+	if ( ClientPush != none )
+		ClientPush.PushEvent( PlayerPawn(Owner), aTimer );
 	Owner.Velocity = VelAdd;
 }
 
-simulated function vector PushVel( bool bHover)
+simulated function vector PushVel( bool bHover, optional bool bClientUpdate)
 {
 	local vector horizVel, VelAdd;
 	local rotator rot;
@@ -265,7 +275,8 @@ simulated function vector PushVel( bool bHover)
 	if ( bHover && Owner.Velocity.Z > (-fThrust * 0.33) )
 	{
 		VelAdd.Z -= fThrust * 0.5;
-		Fuel += (0.5f / ThrustFrequency);
+		if ( !bClientUpdate )
+			Fuel += (0.5f / ThrustFrequency);
 	}
 	return VelAdd;
 }
@@ -273,20 +284,17 @@ simulated function vector PushVel( bool bHover)
 //Clientside corrections
 simulated function CheckPool()
 {
-	if ( PlayerPawn(Owner) == none || ViewPort(PlayerPawn(Owner).Player) == none )
+	if ( PlayerPawn(Owner) == none || Owner.Role != ROLE_AutonomousProxy )
 		return;
 
-	if ( PushPool == none )
+	if ( ClientPush == none )
 	{
-		ForEach AllActors (class'JetPushPool', PushPool)
+		ForEach AllActors (class'ECM_JetPush', ClientPush)
 			break;
-		if ( PushPool == none )
-		{
-			PushPool = Spawn(class'JetPushPool', Owner);
-			PushPool.Player = ViewPort(PlayerPawn(Owner).Player);
-		}
+		if ( ClientPush == none )
+			ClientPush = Spawn(class'ECM_JetPush', Owner);
 	}
-	PushPool.CurJet = self;
+	ClientPush.CurJet = self;
 }
 
 

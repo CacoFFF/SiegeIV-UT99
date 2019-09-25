@@ -63,6 +63,23 @@ function AltFire( float Value )
 		}
 }
 
+simulated function bool ClientAltFire( float Value )
+{
+	local TranslocatorTarget TT;
+	
+	if ( Owner != None )
+	{
+		ForEach AllActors( class'TranslocatorTarget', TT)
+			if ( TT.Instigator == Owner )
+			{
+				Spawn( class'ECM_TranslocatorEvent').SetupTranslocation( TT);
+				break;
+			}
+	}
+	
+	return true;
+}
+
 state NormalFire
 {
     ignores fire, altfire, AnimEnd;
