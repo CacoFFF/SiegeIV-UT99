@@ -46,6 +46,19 @@ function bool SpecialRights()
 	return bSpecialRights;
 }
 
+function SetViewTarget( Actor Other)
+{
+	if ( Other == None )
+		PlayerPawn(Owner).ViewSelf();
+	else
+	{
+		PlayerPawn(Owner).ViewTarget = Other;
+		PlayerPawn(Owner).bBehindView = true;
+		if ( (Pawn(Other) != None) && (Pawn(Other).PlayerReplicationInfo != None) )
+			PlayerPawn(Owner).ClientMessage(ViewingFrom@Pawn(Other).PlayerReplicationInfo.PlayerName, 'Event', true);
+	}
+}
+
 exec function Chase( string aPlayer)
 {
 	local PlayerReplicationInfo PRI;
@@ -54,15 +67,11 @@ exec function Chase( string aPlayer)
 		return;
 
 	ForEach AllActors ( class'PlayerReplicationInfo', PRI)
-	{
 		if ( (Spectator(PRI.Owner) == none) && (PRI.PlayerName != "Player") && (InStr(Caps(PRI.PlayerName), Caps(aPlayer)) >= 0) )
 		{
-			PlayerPawn(Owner).ViewTarget = PRI.Owner;
-			PlayerPawn(Owner).ClientMessage(ViewingFrom@Pawn(PRI.Owner).PlayerReplicationInfo.PlayerName, 'Event', true);
-			PlayerPawn(Owner).bBehindView = true;
+			SetViewTarget( PRI.Owner);
 			return;
 		}
-	}
 }
 
 exec function FindFlamer( optional int Skip)
@@ -73,39 +82,44 @@ exec function FindFlamer( optional int Skip)
 		return;
 
 	ForEach AllActors ( class'Flamethrower', F)
-	{
 		if ( F.AmmoType != none && F.AmmoType.AmmoAmount > 0 && F.Owner != none )
 		{
 			if ( Skip-- > 0 )
 				continue;
-			PlayerPawn(Owner).ViewTarget = F.Owner;
-			PlayerPawn(Owner).ClientMessage(ViewingFrom@Pawn(F.Owner).PlayerReplicationInfo.PlayerName, 'Event', true);
-			PlayerPawn(Owner).bBehindView = true;
+			SetViewTarget( F.Owner);
 			return;
 		}
-	}
 }
 
-exec function FindNuker( optional int Skip)
+exec function FindNuker()
 {
-	local WarheadAmmo W;
+	local WarheadAmmo W, WCur, WFirst;
+	local bool bNext;
 
 	if ( PlayerPawn(Owner) == none )
 		return;
 
+	if ( Pawn(PlayerPawn(Owner).ViewTarget) != None )
+		WCur = WarheadAmmo(Pawn(PlayerPawn(Owner).ViewTarget).FindInventoryType( class'WarheadAmmo'));
+
+	bNext = (WCur == None) || (WCur.Owner == None) || (WCur.AmmoAmount <= 0);
 	ForEach AllActors ( class'WarheadAmmo', W)
-	{
-		if ( W.AmmoAmount > 0 && W.Owner != none )
+		if ( (W.AmmoAmount > 0) && (W.Owner != None) )
 		{
-			if ( Skip-- > 0 )
-				continue;
-			PlayerPawn(Owner).ViewTarget = W.Owner;
-			PlayerPawn(Owner).ClientMessage(ViewingFrom@Pawn(W.Owner).PlayerReplicationInfo.PlayerName, 'Event', true);
-			PlayerPawn(Owner).bBehindView = true;
-			return;
+			if ( bNext )
+			{
+				SetViewTarget( W.Owner);
+				return;
+			}
+			bNext = (WCur == W);
+			if ( WFirst == None )
+				WFirst = W;
 		}
-	}
+	if ( (WFirst != None) && (WFirst != WCur) )
+		SetViewTarget( WFirst.Owner);
 }
+
+
 
 exec function ToWall()
 {

@@ -102,9 +102,10 @@ simulated function PostBeginPlay()
 	local sgTeamNetworth TN;
 
 	Super.PostBeginPlay();
-	if ( Owner != none && Owner.IsA('bbPlayer') )
-		bEnforceHealth = true;
 
+	bEnforceHealth = (Owner != None) && Owner.IsA('bbPlayer');  //UTPure being gay as usual
+	bShowNukers = Spectator(Owner) != None;
+		
 	if ( SiegeGI(Level.Game) != None )
 	{
 		NetworthStat[0] = SiegeGI(Level.Game).NetworthStat[0];
@@ -397,7 +398,8 @@ simulated function DrawTeamRU(canvas C)
 
 }
 
-simulated function DrawShowNukers(Canvas C) {
+simulated function DrawShowNukers( Canvas C)
+{
 	local string NukersList[4];
 	local sgPRI PRI;
 	local sgGameReplicationInfo GRI;
@@ -411,17 +413,21 @@ simulated function DrawShowNukers(Canvas C) {
 	NukersList[2] = GRI.Nukers_Green;
 	NukersList[3] = GRI.Nukers_Yellow;
 
-	if(PRI.Team == 255) {										// spectators need nukers info from all teams
-		yPos = RenderNukers(C, NukersList[0], 0, yPos);
-		yPos = RenderNukers(C, NukersList[1], 1, yPos);
-		yPos = RenderNukers(C, NukersList[2], 2, yPos);
-		yPos = RenderNukers(C, NukersList[3], 3, yPos);
-	} else {													// specific team
+	if( PRI.Team == 255 )
+	{										// spectators need nukers info from all teams
+		RenderNukers(C, NukersList[0], 0, yPos);
+		RenderNukers(C, NukersList[1], 1, yPos);
+		RenderNukers(C, NukersList[2], 2, yPos);
+		RenderNukers(C, NukersList[3], 3, yPos);
+	}
+	else
+	{													// specific team
 		RenderNukers(C, NukersList[PRI.Team], PRI.Team, yPos);
 	}
 }
 
-simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
+simulated function RenderNukers( Canvas C, String Src, byte Team, out int yPos)
+{
 	local int i, x, y;
 	local float width, height;
 	local bool bDrawingName;
@@ -438,10 +444,11 @@ simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
 	bDrawingName = true;
 	CALC:									// this loop is just to calculate y
 		i = InStr(S_CALC, ";");
-		if(i >= 0)
+		if ( i >= 0 )
 		{
 			S = Left(S_CALC, i);
-			if(bDrawingName) {
+			if ( bDrawingName )
+			{
 				C.TextSize(S, width, height);
 				y++;
 			}
@@ -451,7 +458,8 @@ simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
 		}
 
 		// if first time, render the HEADING, skip for rest of the times
-		if(yPos == -1) {
+		if( yPos == -1 )
+		{
 			y = C.ClipY/3 - ((y * height)/2);
 			C.DrawColor = WhiteColor;
 			C.SetPos(x, y);
@@ -465,14 +473,17 @@ simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
 	bDrawingName = true;
 	RENDER:
 		i = InStr(S_RENDER, ";");
-		if(i >= 0)
+		if( i >= 0 )
 		{
 			S = Left(S_RENDER, i);
-			if(bDrawingName) {
+			if ( bDrawingName )
+			{
 				C.SetPos(x, y);
 				C.DrawText(S, True);
 				y += height;
-			} else {
+			}
+			else
+			{
 				// Draw Nuker Ammo? We can decide
 				// C.SetPos(x + 5, y);
 				// C.DrawText(S, True);
@@ -482,7 +493,7 @@ simulated function int RenderNukers(Canvas C, String Src, byte Team, int yPos) {
 			Goto RENDER;
 		}
 
-	return y;
+	yPos = y;
 }
 
 simulated function DrawSiegeStats( Canvas C)
@@ -974,17 +985,17 @@ simulated function PostRender( canvas Canvas )
 	{
 		Canvas.Style = ERenderStyle.STY_Normal;
 		Canvas.DrawColor = WhiteColor;
-		Canvas.SetPos(Canvas.ClipX - (64*Scale), Canvas.ClipY / 2);
-		Canvas.DrawIcon(texture'DisconnectWarn', Scale);
+		Canvas.SetPos( Canvas.ClipX - (64*Scale), Canvas.ClipY / 2);
+		Canvas.DrawIcon( Texture'DisconnectWarn', Scale);
 	}
 
-	if (bSiegeStats)
-		DrawSiegeStats(Canvas);
-	else if (bTeamRU)
-		DrawTeamRU(Canvas);
+	if ( bSiegeStats )
+		DrawSiegeStats( Canvas );
+	else if ( bTeamRU )
+		DrawTeamRU( Canvas );
 
-	if(bShowNukers)
-		DrawShowNukers(Canvas);
+	if( bShowNukers )
+		DrawShowNukers( Canvas );
 }
 
 ///////////////////////////////////////////
@@ -1089,7 +1100,8 @@ exec function ToggleVisor()
 	}
 }
 
-exec function ShowNukers() {
+exec function ShowNukers()
+{
 	bShowNukers = !bShowNukers;
 }
 
