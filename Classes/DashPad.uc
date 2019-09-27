@@ -81,81 +81,76 @@ simulated function DoBoost( Pawn Other)
 			MA.Setup( self);
 		}
 	}
-/*	boost = 115 * (Grade + 3);
-	if ( Other.Velocity.Z < -1800 )
-		Other.Velocity.Z += boost;
-	else if ( Other.Velocity.Z < boost )
-		Other.Velocity.Z = boost;*/
+}
+
+simulated function Actor CollideTrace( out vector HitLocation, out vector HitNormal, vector TraceEnd, vector TraceStart)
+{
+	local Actor A;
+
+	ForEach TraceActors( class'Actor', A, HitLocation, HitNormal, TraceEnd, TraceStart)
+	{
+		if ( (A == Level) || (!A.bIsPawn && A.bBlockPlayers && A.bBlockActors) )
+			return A;
+	}
+	HitLocation = TraceEnd;
+	HitNormal = vect(0,0,0);
+	return None;
 }
 
 //First event in creation order?
 event Spawned()
 {
-	local vector HitLocation, HitNormal, TraceStart, TraceEnd, X, Y ,Z;
-	local plane CenterPlane;
-	local Actor A;
-	local rotator MyRot;
-	local float PlaneDist;
-	
+	local vector CenterOffset, X, Y;
+	local vector CenterPoint, CenterNormal;
+	local Actor Hit;
+	local rotator View;
+	local int i;
+	local vector Offset[4], HitLocation[4], HitNormal[4];
+
 	Super.Spawned();
 
-	MyRot = Rotation;
-	MyRot.Pitch = 0;
-	TraceEnd = Location;
-	TraceEnd.Z -= 60;
-	ForEach TraceActors (class'Actor', A, HitLocation, HitNormal, TraceEnd)
-	{
-		if ( A != Level && !A.bBlockPlayers && !A.bBlockActors )
-			continue;
-		CenterPlane.X = HitNormal.X;
-		CenterPlane.Y = HitNormal.Y;
-		CenterPlane.Z = HitNormal.Z;
-		CenterPlane.W = HitLocation dot HitNormal;
-		break;
-	}
-	if ( CenterPlane.Z < 0.73 )
+	//Setup Center
+	Hit = CollideTrace( CenterPoint, CenterNormal, Location - vect(0,0,60), Location);
+	if ( (Hit == None) || (CenterNormal.Z < 0.706) )
 	{
 		Destroy();
 		return;
 	}
+
+	//Setup Forward
+	View.Yaw = Rotation.Yaw - 16384;
+	X = CenterNormal cross vector(View);
+	
+	//Setup Right
+	View.Yaw = Rotation.Yaw;
+	Y = CenterNormal cross vector(View);
+	
+	Offset[0] = CenterNormal * 2 + X *  20;
+	Offset[1] = CenterNormal * 2 + X * -20;
+	Offset[2] = CenterNormal * 2 + Y *  20;
+	Offset[3] = CenterNormal * 2 + Y * -20;
+	
+	For ( i=0 ; i<ArrayCount(Offset) ; i++ )
+	{
+		CenterOffset = CenterPoint + Offset[i];
+		// CenterPoint >> CenterOffset >> CenterOffset into floor
+		if ( CollideTrace( HitLocation[i], HitNormal[i], CenterOffset, CenterPoint) != None
+		|| CollideTrace( HitLocation[i], HitNormal[i], CenterOffset - CenterNormal * 4, CenterOffset) == None )
+		{
+			Destroy();
+			return;
+		}
+	}
+	
 	bCollideWhenPlacing = false;
 	bCollideWorld = false;
-	SetLocation( HitLocation + HitNormal * 2);
+	SetLocation( CenterPoint);
 	
-	TraceStart = Location + vector(MyRot) * 20;
-	TraceEnd = TraceStart;
-	TraceEnd.Z -= 60;
-	ForEach TraceActors (class'Actor', A, HitLocation, HitNormal, TraceEnd, TraceStart)
-	{
-		if ( A != Level && !A.bBlockPlayers && !A.bBlockActors )
-			continue;
-		if ( VSize( CenterPlane - HitNormal) > 0.1 )
-		{
-			Destroy();
-//			Log("Mismatching normals");
-			return;
-		}
-		PlaneDist = HitLocation dot CenterPlane;
-		if ( Abs(PlaneDist) < 3 )
-		{
-			Destroy();
-//			Log("Not coplanar");
-			return;
-		}
-		HitLocation += HitNormal * 2;
-		PushDir = HitLocation - Location;
-		SetRotation( Rotator(PushDir));
-		PushDir.Z = 0;
-		GetAxes( Rotation, X, Y, Z);
-		X = Y + Z * (Y dot HitNormal); //Booster may be on a side slanted surface!!!
-		MyRot = Rotator(X); //Rotate 90º to left, this pitch is the original roll
-		DashRot = Rotation;
-		DashRot.Roll = MyRot.Pitch;
-		SetRotation( DashRot);
-		break;
-	}
-	if ( A == none )
-		Destroy();
+	PushDir = X;
+	DashRot = rotator(X);
+	View = rotator(Y);
+	DashRot.Roll = -View.Pitch;
+	SetRotation( DashRot);
 }
 
 defaultproperties
@@ -174,7 +169,7 @@ defaultproperties
      SpriteBlueTeam=Texture'ProtectorSpriteTeam1'
      SpriteGreenTeam=Texture'ProtectorSpriteTeam2'
      SpriteYellowTeam=Texture'ProtectorSpriteTeam3'
-     CollisionHeight=7
+     CollisionHeight=8
      CollisionRadius=44
 	 SpriteScale=1.00000
      DSofMFX=1.0
