@@ -45,7 +45,6 @@ simulated state Flying
 	}
 	simulated function ProcessTouch( Actor Other, Vector HitLocation )
 	{
-		local int hitdamage;
 		local vector hitDir;
 
 		if ( sgWarShell(Other) != None )
@@ -65,7 +64,7 @@ simulated state Flying
 			hitDir = Normal(Velocity);
 			if ( FRand() < 0.2 )
 				hitDir *= 5;
-			Other.TakeDamage(Damage, Instigator, HitLocation, MomentumTransfer * hitDir, 'sgSpecial');
+			Other.TakeDamage( Damage, Instigator, HitLocation, MomentumTransfer * hitDir, 'sgSpecial');
 		}
 
 		Other.PlaySound(MiscSound, SLOT_Misc, 0.7,,, 0.75+FRand()*0.5);

@@ -79,7 +79,6 @@ function ProcessBoost( PlayerPawn Client, float BaseTimeStamp, float BeforeTimeS
 {
 	local int i, Highest;
 	local float HighestTimeStamp;
-	local bool bOldUpdating, bOldCanTeleport;
 	
 	if ( CurJet == None || ECM == None || ECM.LocalPlayer == None )
 		return;

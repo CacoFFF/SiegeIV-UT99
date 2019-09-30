@@ -8,8 +8,6 @@ var UT_Invisibility Invis;
 
 function bool HandlePickupQuery( inventory Item )
 {
-	local Inventory I;
-
 	if (item.class == class) //Increase charge by 50
 	{
 			Charge = 150;

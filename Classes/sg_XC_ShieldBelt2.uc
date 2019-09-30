@@ -7,8 +7,6 @@ var float aTimer;
 
 function bool HandlePickupQuery( inventory Item )
 {
-	local Inventory I;
-
 	if (item.class == class) //Increase charge by 50
 	{
 			Charge = 150;
@@ -94,7 +92,7 @@ function PickupFunction(Pawn Other)
 event Tick( float DeltaTime)
 {
 	local Inventory I;
-	local bool bOldHidden;
+//	local bool bOldHidden;
 
 	if ( Owner == none)
 		return;

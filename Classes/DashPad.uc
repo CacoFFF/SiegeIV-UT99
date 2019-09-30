@@ -58,7 +58,6 @@ function CompleteBuilding()
 
 simulated function DoBoost( Pawn Other)
 {
-	local float boost;
 	local sgPlayerData sgPD;
 	local XC_MA_DashPad MA;
 	

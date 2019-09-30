@@ -12,9 +12,6 @@ function SetupPlayer( Pawn Player)
 	local SiegeStatPlayer Stat;
 	local sgPRI PRI;
 
-	local string sInfo, sCode;
-	local int i, k;
-
 	if ( Player == none || !Player.bIsPlayer || Player.IsA('Spectator') || Player.PlayerReplicationInfo == none || Player.PlayerReplicationInfo.PlayerName == "Player" )
 		return;
 

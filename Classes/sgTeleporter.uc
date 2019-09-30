@@ -66,7 +66,6 @@ event Spawned()
 	local Teleporter Tele;
 	local sgEquipmentSupplier ES;
 	local byte aTeam;
-	local float Dist;
 
 	Super.Spawned();
 
@@ -209,7 +208,7 @@ simulated function FinishBuilding()
 // Accept an actor that has teleported in.
 function bool Accept( Actor Incoming, Actor Source )
 {
-	local rotator newRot, oldRot;
+	local rotator newRot;
 	local Pawn P;
 	local int i;
 	local bool bTeleported;

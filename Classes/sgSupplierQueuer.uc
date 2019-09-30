@@ -13,8 +13,6 @@ var bool bSupplyFull;
 //Default sgSupplier radius is 60
 function Setup( sgEquipmentSupplier aS, Pawn NewP)
 {
-	local sgSupplierQueuer aQ;
-
 	Master = aS;
 	POwner = NewP;
 	SupplierRadius = Master.SupplyRadius + POwner.CollisionRadius;

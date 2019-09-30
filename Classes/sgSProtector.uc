@@ -13,7 +13,7 @@ function bool ShouldFire()
 //Rate self on AI teams, using category variations
 static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int cSlot)
 {
-	local float aStorage, aCost;
+	local float aCost;
 
 	if ( Super.AI_Rate(CrtTeam, sgC, cSlot) < 0 ) //Forbidden
 		return -1;

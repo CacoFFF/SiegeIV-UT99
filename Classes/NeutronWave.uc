@@ -44,8 +44,7 @@ simulated event Timer()
 {
     local rotator   randRot;
     local actor     victim;
-	local float     damageScale,
-                    dist,
+	local float     dist,
                     moScale;
     local vector    dir;
     local int       i;

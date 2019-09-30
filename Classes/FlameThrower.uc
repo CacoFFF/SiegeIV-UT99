@@ -397,52 +397,7 @@ simulated function TweenDown()
 		TweenAnim('Down', 0.26);
 }
 
-function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNormal, Vector X, Vector Y, Vector Z)
-{
-	local int i;
-	local PlayerPawn PlayerOwner;
 
-	if (Other==None)
-	{
-		HitNormal = -X;
-		HitLocation = Owner.Location + X*10000.0;
-	}
-
-	PlayerOwner = PlayerPawn(Owner);
-	if ( PlayerOwner != None )
-		PlayerOwner.ClientInstantFlash( -0.4, vect(450, 190, 650));
-	SpawnEffect(HitLocation, Owner.Location + CalcDrawOffset() + (FireOffset.X + 20) * X + FireOffset.Y * Y + FireOffset.Z * Z);
-
-	if ( ShockProj(Other)!=None )
-	{ 
-		AmmoType.UseAmmo(2);
-		ShockProj(Other).SuperExplosion();
-	}
-	else
-		Spawn(class'ut_RingExplosion5',,, HitLocation+HitNormal*8,rotator(HitNormal));
-
-	if ( (Other != self) && (Other != Owner) && (Other != None) ) 
-		Other.TakeDamage(HitDamage, Pawn(Owner), HitLocation, 60000.0*X, MyDamageType);
-}
-
-function SpawnEffect(vector HitLocation, vector SmokeLocation)
-{
-	local ShockBeam Smoke,shock;
-	local Vector DVector;
-	local int NumPoints;
-	local rotator SmokeRotation;
-
-	DVector = HitLocation - SmokeLocation;
-	NumPoints = VSize(DVector)/135.0;
-	if ( NumPoints < 1 )
-		return;
-	SmokeRotation = rotator(DVector);
-	SmokeRotation.roll = Rand(65535);
-	
-	Smoke = Spawn(class'ShockBeam',,,SmokeLocation,SmokeRotation);
-	Smoke.MoveAmount = DVector/NumPoints;
-	Smoke.NumPuffs = NumPoints - 1;	
-}
 
 defaultproperties
 {

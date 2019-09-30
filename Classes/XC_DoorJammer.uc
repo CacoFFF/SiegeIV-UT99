@@ -14,7 +14,7 @@ replication
 
 event PostBeginPlay()
 {
-	local vector HitLocation, HitNormal, Dir, VStart;
+	local vector HitLocation, HitNormal, Dir;
 	local actor A, Nearest;
 	local Mover M;
 	local float Dist, NearestDist;

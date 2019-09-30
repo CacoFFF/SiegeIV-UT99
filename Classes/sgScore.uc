@@ -44,6 +44,7 @@ final function int GetCycles()
 {
 //	if ( (Level.NetMode != NM_Client) && class'SiegeStatics'.default.XCGE_Version >= 19 )
 //		return AppCycles();
+	return 0;
 }
 
 
@@ -326,87 +327,74 @@ function ShowScores(Canvas Canvas)
 
 function DrawFooters( Canvas C )
 {
-  local float DummyX, DummyY, Nil, X1, Y1;
-  local string TextStr;
-  local string TimeStr, HeaderText;
-  local int Hours, Minutes, Seconds, i;
-  local PlayerReplicationInfo PRI;
-  local color specColor;
-  local int baseX, baseY;
+	local float DummyX, DummyY, Nil;
+	local string TextStr;
+	local string TimeStr, HeaderText;
+	local int Hours, Minutes, Seconds;
+	local PlayerReplicationInfo PRI;
 
-  C.bCenter = True;
-  C.Font = MyFonts.GetSmallFont( C.ClipX );
+	C.bCenter = True;
+	C.Font = MyFonts.GetSmallFont( C.ClipX );
 
-  // Display server info in bottom center
-  C.DrawColor = White;
-  C.StrLen( "Test", DummyX, DummyY );
-  C.SetPos( 0, C.ClipY - DummyY );
-  TextStr = "Playing" @ Level.Title @ "on" @ sgGRI.ServerName;
-  C.DrawText( TextStr );
+	// Display server info in bottom center
+	C.DrawColor = White;
+	C.StrLen( "Test", DummyX, DummyY );
+	C.SetPos( 0, C.ClipY - DummyY );
+	TextStr = "Playing" @ Level.Title @ "on" @ sgGRI.ServerName;
+	C.DrawText( TextStr );
 
-  // Draw Time
-  if( ( PlayerPawn(Owner).GameReplicationInfo.RemainingTime > 0 ) )
-  {
-
-	if( PlayerPawn(Owner).GameReplicationInfo.RemainingTime <= 0 )
+	// Draw Time
+	if( ( PlayerPawn(Owner).GameReplicationInfo.RemainingTime > 0 ) )
 	{
-	  TimeStr = RemainingTime $ "00:00";
+		Minutes = PlayerPawn(Owner).GameReplicationInfo.RemainingTime / 60;
+		Seconds = PlayerPawn(Owner).GameReplicationInfo.RemainingTime % 60;
+		TimeStr = RemainingTime $ TwoDigitString( Minutes ) $ ":" $ TwoDigitString( Seconds );
 	}
 	else
 	{
-	  Minutes = PlayerPawn(Owner).GameReplicationInfo.RemainingTime / 60;
-	  Seconds = PlayerPawn(Owner).GameReplicationInfo.RemainingTime % 60;
-	  TimeStr = RemainingTime $ TwoDigitString( Minutes ) $ ":" $ TwoDigitString( Seconds );
+		Seconds = PlayerPawn(Owner).GameReplicationInfo.ElapsedTime;
+		Minutes = Seconds / 60;
+		Hours = Minutes / 60;
+		Seconds = Seconds - ( Minutes * 60 );
+		Minutes = Minutes - ( Hours * 60 );
+		TimeStr = ElapsedTime $ TwoDigitString( Hours ) $ ":" $ TwoDigitString( Minutes ) $ ":" $ TwoDigitString( Seconds );
 	}
-  }
-  else
-  {
-	Seconds = PlayerPawn(Owner).GameReplicationInfo.ElapsedTime;
-	Minutes = Seconds / 60;
-	Hours = Minutes / 60;
-	Seconds = Seconds - ( Minutes * 60 );
-	Minutes = Minutes - ( Hours * 60 );
-	TimeStr = ElapsedTime $ TwoDigitString( Hours ) $ ":" $ TwoDigitString( Minutes ) $ ":" $ TwoDigitString( Seconds );
-  }
 
 	//Higor: this should help us break the 32 player limit barrier
 	ForEach AllActors (class'PlayerReplicationInfo', PRI)
-	{
 		if ( PRI.bIsSpectator && !PRI.bWaitingPlayer && PRI.StartTime > 0)
 		{
 			if(HeaderText=="") HeaderText = pri.Playername;
 			else HeaderText = HeaderText$", "$pri.Playername;
 		}
-	}
-	if (HeaderText=="") HeaderText = "there is currently no one spectating this match."; else HeaderText = HeaderText$"."; // I'm sorry about this, it's really stupid																													 //  but I'm to lazy rewrite it :P
-																														 // Atleast it's working..
-  C.SetPos( 0, C.ClipY - 2 * DummyY );
-  C.DrawText( "Current Time:" @ GetTimeStr() @ "|" @ TimeStr );
+	if ( HeaderText == "" )
+		HeaderText = "there is currently no one spectating this match.";
+	else
+		HeaderText = HeaderText$".";
 
-  // Draw Spectators
-  C.StrLen( HeaderText, DummyX, Nil );
-  C.Style = ERenderStyle.STY_Normal;
-  C.SetPos( 0, C.ClipY - 3 * DummyY );
-  
-  C.Font = MyFonts.GetSmallestFont(C.ClipX);
-  C.DrawColor = White;	  // Added in 4E
-  C.DrawText("Spectators:"@HeaderText);
-  
-  C.SetPos( 0, C.ClipY - 4 * DummyY );
-  C.DrawText(PlayerPawn(Owner).GameReplicationInfo.GameName);
-  
-  HeaderText=""; // This is declared as a global var, so we reset it to start with a clean slate.
+	C.SetPos( 0, C.ClipY - 2 * DummyY );
+	C.DrawText( "Current Time:" @ GetTimeStr() @ "|" @ TimeStr );
 
+	// Draw Spectators
+	C.StrLen( HeaderText, DummyX, Nil );
+	C.Style = ERenderStyle.STY_Normal;
+	C.SetPos( 0, C.ClipY - 3 * DummyY );
   
+	C.Font = MyFonts.GetSmallestFont(C.ClipX);
+	C.DrawColor = White;	  // Added in 4E
+	C.DrawText("Spectators:"@HeaderText);
+  
+	C.SetPos( 0, C.ClipY - 4 * DummyY );
+	C.DrawText(PlayerPawn(Owner).GameReplicationInfo.GameName);
    
-  C.bCenter = False;
+	C.bCenter = False;
 }
 
 function sortPRI()
 {
 	local int i,j,k, maxIndex, sorted;
 	local int oPRI;
-	local sgPRI aPRI, maxValue;
+	local sgPRI aPRI;
 	local int TeamPlayersToShow;
 
 	For ( i=0 ; i<4 ; i++ )

@@ -63,8 +63,6 @@ state ServerOp
 {
 	function LoadRules()
 	{
-		local sgCategoryInfo sgC;
-
 		if ( SiegeGI(Level.Game).ProfileObject == none )
 		{
 			SiegeGI(Level.Game).ProfileObject = new(Level.Game,SiegeGI(Level.Game).GameProfile) class'Object'; //This will be the profile's INI name

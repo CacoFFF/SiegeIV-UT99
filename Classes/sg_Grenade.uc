@@ -27,8 +27,7 @@ var float TrailModifier;
 function PostBeginPlay()
 {
 	local vector X,Y,Z;
-	local rotator RandRot;
-	local BubbleBurst BB;
+//	local BubbleBurst BB;
 	
 	Super.PostBeginPlay();
 

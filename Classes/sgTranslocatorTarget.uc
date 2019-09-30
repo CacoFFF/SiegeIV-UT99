@@ -41,7 +41,6 @@ auto state Pickup
 	{
 		local bool bMasterTouch;
 		local vector NewPos;
-		local float aRatio;
 
 		if ( Instigator == none || Instigator.bDeleteMe )
 		{

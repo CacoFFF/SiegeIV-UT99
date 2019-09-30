@@ -39,6 +39,7 @@ static function XC_SupFX Setup( XC_SupplierBase Master, vector SpawnAt)
 	sample.LocOffset = sample.Location - Master.Location;
 //Process scaleview later
 	sample.ImitateWeapon( Master.WeapList[Master.DispWeapons], 1);
+	return sample;
 }
 
 function ImitateWeapon(class<Weapon> aWeap, float ScaleView)

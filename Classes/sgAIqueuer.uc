@@ -256,8 +256,6 @@ function CheckBuild()
 
 event Destroyed()
 {
-	local sgAIqueuer aQ;
-
 	if ( Master == none )
 		return;
 

@@ -372,8 +372,6 @@ simulated function AddRU( float Amount, optional bool bPassiveRU)
 
 function Tick(float deltaTime)
 {
-    local sgBaseCore core;
-    local int I;
     local PlayerPawn P;
     local string temp;
 
@@ -496,8 +494,6 @@ function ProtTimer( float DeltaTime)
 
 simulated function CacheFlag()
 {
-	local Texture Tex;
-
 	if ( bFlagCached || (Asc(CountryPrefix) == 42) ) //* character
 		return;
 	

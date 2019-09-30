@@ -403,7 +403,6 @@ simulated function TweenDown()
 
 function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNormal, Vector X, Vector Y, Vector Z)
 {
-	local int i;
 	local PlayerPawn PlayerOwner;
 
 	if (Other==None)
@@ -431,7 +430,7 @@ function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNormal, Vect
 
 simulated function SpawnEffect(vector HitLocation, vector SmokeLocation)
 {
-	local ShockBeam Smoke,shock;
+	local ShockBeam Smoke;
 	local Vector DVector;
 	local int NumPoints;
 	local rotator SmokeRotation;

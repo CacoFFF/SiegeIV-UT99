@@ -20,8 +20,7 @@ var float RUinvested;
 var sgPRI OwnerPRI;
 var sgBuildingVolume MyVolume;
 var vector InitialLocation;
-var array<int> BlockedReachSpecs;
-var int iBlockPoll;
+var float BaseEnergy;
 var int TimerCount;
 var int PackedFlags;
 // Flags:
@@ -75,8 +74,8 @@ var(BuildingAttributes) bool bDragable;
 // Building's Apperance
 var(BuildingApperance) float SpriteScale;
 var(BuildingApperance) Mesh Model;
-var(BuildingApperance) texture SkinRedTeam, SkinBlueTeam, SkinGreenTeam, SkinYellowTeam;
-var(BuildingApperance) texture SpriteRedTeam, SpriteBlueTeam, SpriteGreenTeam, SpriteYellowTeam;
+var(BuildingApperance) Texture SkinRedTeam, SkinBlueTeam, SkinGreenTeam, SkinYellowTeam;
+var(BuildingApperance) Texture SpriteRedTeam, SpriteBlueTeam, SpriteGreenTeam, SpriteYellowTeam;
 var(BuildingApperance) float             DSofMFX;
 var(BuildingApperance) int               NumOfMFX;
 var(BuildingApperance) rotator           MFXrotX;
@@ -207,8 +206,6 @@ simulated event Tick(float DeltaTime)
 			bBuildInitialized = True;
 			PostBuild();
 		}
-		if ( iBlockPoll >= 0 )
-			PollBlock();
 	}
 
 	//TickRate independant, keep sane timer values if tickrate gets messed up
@@ -250,8 +247,6 @@ function string GetPlayerNetworkAddres()
 
 simulated event Timer()
 {
-	local Actor d;
-	local sgParticle pt;
     local int i;
 
 	TimerCount++;
@@ -619,6 +614,7 @@ function PostBuild()
 {
 	SetTeam( Team);
 	InitialLocation = Location;
+	BaseEnergy = MaxEnergy;
 	if ( !DoneBuilding )
 	{
 		Energy = MaxEnergy/5;
@@ -726,10 +722,18 @@ function BackToNormal()
 	}
 }
 
+
+function SetMaxEnergy( float NewMaxEnergy)
+{
+	Energy = (Energy / MaxEnergy) * NewMaxEnergy;
+	MaxEnergy = NewMaxEnergy;
+}
+
+
 //Higor, use this function to alter the NetUpdateFrequency on net games
 function AlterNetRate()
 {
-	if ( Class'SiegeMutator'.default.bDropNetRate  )
+	if ( Class'SiegeMutator'.default.bDropNetRate )
 		NetUpdateFrequency = 4;
 	else
 		NetUpdateFrequency = 8;
@@ -812,126 +816,6 @@ function LeechRU( float LeechAmount)
 
 
 
-
-//============================================================================//
-//							Path Blocker functions
-//============================================================================//
-
-//XC_GameEngine and U227 opcodes
-native(640) static final function int Array_Length_Int( out array<int> Ar, optional int SetSize);
-native(641) static final function bool Array_Insert_Int( out array<int> Ar, int Offset, optional int Count );
-native(642) static final function bool Array_Remove_Int( out array<int> Ar, int Offset, optional int Count );
-
-function PollBlock()
-{
-	local int PollCounter, iBlock;
-	local Actor Start, End;
-	local int ReachFlags, Distance, Count;
-	local vector Q;
-	
-	iBlock = Array_Length_Int( BlockedReachSpecs);
-
-	POLL_NAVIG:
-	if ( PollCounter++ >= 20 ) //20 or more loops maximum to ensure stable framerate
-		return;
-	if ( N != none )
-	{
-		if ( VSize(N.Location - Location) <= BlockScanDist )
-		{
-			if ( iBlockPoll == 0 && PathInBuilding() ) //Block all incoming paths
-			{
-				PollCounter += 3;
-				//Remove all upstream paths
-				For ( iBlockPoll=0 ; iBlockPoll<16 ; iBlockPoll++ )
-				{
-					if ( N.upstreamPaths[iBlockPoll] >= 0 )
-					{
-						N.describeSpec( N.upstreamPaths[iBlockPoll], Start, End, ReachFlags, Distance);
-						BlockedReachSpecs[iBlock++] = N.upstreamPaths[iBlockPoll];
-						//Remove path from Start
-						if ( NavigationPoint(Start) != none )
-							class'SiegeStatics'.static.RemovePath( NavigationPoint(Start), N.upstreamPaths[iBlockPoll] );
-						N.upstreamPaths[iBlockPoll] = -1;
-					}
-				}
-				iBlockPoll = 0;
-			}
-			else if ( (iBlockPoll < 16) && (N.Paths[iBlockPoll] >= 0) )
-			{
-				N.describeSpec( N.Paths[iBlockPoll], Start, End, ReachFlags, Distance);
-				PollCounter += 4;
-				if ( (End != none) && (VSize(End.Location - Location) < BlockScanDist) && BlockingLine( N.Location, End.Location) )
-				{
-					BlockedReachSpecs[iBlock++] = N.Paths[iBlockPoll];
-					if ( NavigationPoint(End) != none )
-						class'SiegeStatics'.static.RemoveUsPath( NavigationPoint(End), N.Paths[iBlockPoll] );
-					class'SiegeStatics'.static.RemovePath( N, N.Paths[iBlockPoll], iBlockPoll);
-					PollCounter++;
-				}
-				iBlockPoll++;
-				Goto POLL_NAVIG;
-			}
-			else
-				iBlockPoll = 0;
-		}
-		N = N.nextNavigationPoint;
-		Goto POLL_NAVIG;
-	}
-	iBlockPoll = -1;
-}
-
-function bool PathInBuilding()
-{
-	local vector aVec;
-	aVec = Location - N.Location;
-	if ( VSize(aVec * vect(1,1,0)) > CollisionRadius + 10 )
-		return false;
-	if ( aVec.Z > CollisionHeight + 40 ) //Not above path, it is reachable
-		return false;
-	return -aVec.Z < CollisionHeight + 10; //Barely above path, count it as reachable
-}
-
-function bool BlockingLine( vector A, vector B)
-{
-	local Actor Act;
-	local vector HitLocation, HitNormal;
-	
-	//Extent trace
-	ForEach Level.TraceActors (class'Actor', Act, HitLocation, HitNormal, B, A )
-		if ( Act == self ) //Building was hit
-			return true;
-}
-
-function DeInitBlock()
-{
-	local Actor Start, End;
-	local int ReachFlags, Distance, i, iBlock, Count;
-	
-	if ( Level.NavigationPointList == none )
-	{
-		Log("Something broke the Navigation point list!",'SiegeIV');
-		return;
-	}
-
-	iBlock = Array_Length_Int( BlockedReachSpecs);
-	For ( i=0 ; i<iBlock ; i++ )
-	{
-		Level.NavigationPointList.describeSpec( BlockedReachSpecs[i], Start, End, ReachFlags, Distance);
-		// For deletable path support (FerBotz)
-		if ( (NavigationPoint(Start) != none) && !Start.bDeleteMe )
-		{
-			if ( !SGS.static.AddPath( NavigationPoint(Start), BlockedReachSpecs[i]) )
-			{}
-		}
-		if ( (NavigationPoint(End) != none) && !End.bDeleteMe )
-		{
-			if ( !SGS.static.AddUsPath( NavigationPoint(End), BlockedReachSpecs[i]) )
-			{}
-		}
-	}
-	Array_Length_Int( BlockedReachSpecs, 0);
-}
-
 defaultproperties
 {
      NetUpdateFrequency=15
@@ -972,5 +856,4 @@ defaultproperties
      LightRadius=1
      LightPeriod=16
      BuildDistance=45
-     iBlockPoll=-1
 }

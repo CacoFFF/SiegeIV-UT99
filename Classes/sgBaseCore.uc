@@ -130,7 +130,6 @@ simulated final function int AddRuToPlayers_XC( float SetRU, float MaxRU)
 
 simulated function Timer()
 {
-	local sgPRI a;
 	local float SetRU;
 	local float MaxRU;
 	local bool bRemoveFromStore;
@@ -328,21 +327,13 @@ simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, V
 		myFX.RotationRate.Yaw = Energy;
 
 	if ( Energy <= 0 )
-		HandleDestruction( instigatedBy);
+	{
+		Energy = 0;
+		class'SiegeStatics'.static.AnnounceAll( self, "Game Over! "@instigatedBy.PlayerReplicationInfo.PlayerName@"killed the BaseCore!");
+		Destruct( instigatedBy);
+	}
 
 	UpdateScore();
-}
-
-function HandleDestruction( pawn instigatedBy)
-{
-	local int i, j;
-	local sgBaseCore Winner;
-	local SiegeGI aGame;
-	
-	aGame = SiegeGI(Level.Game);
-	Energy = 0;
-	class'SiegeStatics'.static.AnnounceAll( self, "Game Over! "@instigatedBy.PlayerReplicationInfo.PlayerName@"killed the BaseCore!");
-	Destruct( instigatedBy);
 }
 
 function UpdateScore()

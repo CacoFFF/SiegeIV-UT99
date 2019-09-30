@@ -119,7 +119,7 @@ simulated function Destroyed()
 simulated function Tick(float DeltaTime)
 {
 	local int DeltaYaw, DeltaPitch;
-	local int YawDiff, PitchDiff;
+	local int YawDiff;
 	local SavedMove NewMove;
 
 	if ( Level.NetMode == NM_Client )
@@ -264,8 +264,6 @@ simulated function ClientAdjustPosition
 simulated function ClientUpdatePosition()
 {
 	local SavedMove CurrentMove;
-	local int realbRun, realbDuck;
-	local bool bRealJump;
 
 	bUpdatePosition = false;
 	CurrentMove = SavedMoves;

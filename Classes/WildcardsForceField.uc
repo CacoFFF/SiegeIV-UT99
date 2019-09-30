@@ -28,8 +28,6 @@ simulated event Timer()
 
 function Upgraded()
 {	
-	local float Percent;
-
 	bDragable = false;
 	
 	//Adjust the forcefield properties
@@ -40,9 +38,7 @@ function Upgraded()
 	AmbientGlow=255/(6-Grade);
 
 	//Keep energy proportion
-	Percent = Energy/MaxEnergy;
-	MaxEnergy = default.MaxEnergy * (Grade+1);
-	Energy = Percent * MaxEnergy;
+	SetMaxEnergy( BaseEnergy * (Grade+1) );
 }
 
 /*

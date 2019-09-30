@@ -69,9 +69,10 @@ static final function ffSwap( out private int U, out private int H)
 //*********************************
 static final function int ffRevertByte( private int nani2)
 {
-	local private int nani, HackMe;
-	For ( HackMe=0 ; HackMe<32 ; HackMe++ )
-		nani = nani | ( ((nani2 >>> HackMe) & 1) << (31-HackMe));
+	local private int nani, i;
+	For ( i=0 ; i<32 ; i++ )
+		nani = nani | ( ((nani2 >>> i) & 1) << (31-i));
+	return nani;
 }
 
 
@@ -305,7 +306,7 @@ static final function Info FindNexgenClient( PlayerPawn Player)
 }
 
 //***************************************
-//Find the sgPlayerData element of a pawn
+//Find specific Siege Actors
 //***************************************
 static final function sgPlayerData GetPlayerData( Pawn Other)
 {
@@ -320,10 +321,6 @@ static final function sgPlayerData GetPlayerData( Pawn Other)
 	}
 	return Result;
 }
-
-//******************************************
-//Find the SiegeStatPlayer element of a pawn
-//******************************************
 static final function SiegeStatPlayer GetPlayerStat( Pawn Other)
 {
 	if ( Other != None )
@@ -333,6 +330,21 @@ static final function SiegeStatPlayer GetPlayerStat( Pawn Other)
 		//TODO: Add more ways
 	}
 	return None;
+}
+static final function GameReplicationInfo GetGRI( Pawn Other)
+{
+	local GameReplicationInfo GRI;
+	if ( Other != None )
+	{
+		if ( (Other.Level.Game != None) && (Other.Level.Game.GameReplicationInfo != None) )
+			GRI = Other.Level.Game.GameReplicationInfo;
+		else if ( (PlayerPawn(Other) != None) && (PlayerPawn(Other).GameReplicationInfo != None) ) 
+			GRI = PlayerPawn(Other).GameReplicationInfo;
+		else
+			ForEach Other.AllActors( class'GameReplicationInfo', GRI)
+				break;
+	}
+	return GRI;
 }
 
 

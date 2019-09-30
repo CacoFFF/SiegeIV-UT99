@@ -24,8 +24,6 @@ function CompleteBuilding()
 function BufferAndShoot()
 {
 	local byte TargetTeam;
-	local Pawn P;
-	local ScriptedPawn S;
 	local float StartDist;
 	
 	ScanCycle = ((ScanCycle+1) % 4);
@@ -259,7 +257,7 @@ function AlterNetRate()
 //Rate self on AI teams, using category variations
 static function float AI_Rate( sgBotController CrtTeam, sgCategoryInfo sgC, int cSlot)
 {
-	local float aStorage, aCost;
+	local float aCost;
 
 	if ( Super.AI_Rate(CrtTeam, sgC, cSlot) < 0 ) //Forbidden
 		return -1;

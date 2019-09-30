@@ -144,9 +144,6 @@ simulated function CheckBeam(vector X, float DeltaTime)
 
 simulated function UpdateBeam(sgPBolt ParentBolt, vector Dir, float DeltaTime)
 {
-	local actor HitActor;
-	local vector HitLocation, HitNormal;
-
 	SpriteFrame = ParentBolt.SpriteFrame;
 	Skin = SpriteAnim[SpriteFrame];
 	SetLocation(ParentBolt.Location + BeamSize * Dir);

@@ -5,7 +5,6 @@
 class XC_AntiGravityPlatform expands sgBuilding;
 
 var sgBuildingCH myCollision;
-var float BaseEnergy;
 var float RepairTimer;
 
 var Pawn rPlayers[16];
@@ -63,7 +62,6 @@ simulated event PostBeginPlay()
 
 simulated event PostNetBeginPlay()
 {
-	local info I;
 	Super.PostNetBeginPlay();
 	if ( myCollision != none )
 		myCollision.MyBuild = self;
@@ -85,7 +83,6 @@ simulated function FinishBuilding()
 		myCollision=Spawn(class'sgBuildingCH',Self,'',Location,Rotation);
 		myCollision.Setup( Self, 62, 8, vect(0,0,-1));
 	}
-	BaseEnergy = MaxEnergy;
 	Texture = None;
 	if (myFX!=None)
 	{
@@ -203,11 +200,7 @@ simulated function bool InPushZone( pawn Other)
 
 function Upgraded()
 {
-	local float percent, scale;
-
-	percent = Energy/BaseEnergy;
-	MaxEnergy = BaseEnergy * (1 + Grade/5);
-	Energy = percent * MaxEnergy;
+	SetMaxEnergy( BaseEnergy * (1 + Grade/5));
 }
 
 // Bring the building back to normal

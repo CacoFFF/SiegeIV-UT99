@@ -32,7 +32,7 @@ var XBlock World;
 
 function CalcTerritory()
 {
-	local int i, j, iP;
+	local int /*i,*/ j, iP;
 	local PlayerReplicationInfo PRI;
 	local Pawn P[64];
 
@@ -47,8 +47,7 @@ function CalcTerritory()
 
 function GetValues()
 {
-	local int x, y, z;
-	local TeamBlock CurT;
+	local int x, y;
 
 	For ( x=World.Min ; x<=World.Max ; x++ )
 	{

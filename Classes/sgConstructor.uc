@@ -175,20 +175,19 @@ exec function SaveBuildMap()
 
 exec function AntiLeech()
 {
-	local pawn HitActor;
-	local vector HitLocation, HitNormal, start, end;
+	local vector HitLocation, HitNormal, Start, End;
 	local sgBuilding sgActor, sgBest;
 	local sgPri OwnerPRI;
 	local sgRemoveProt sgRP;
 	local int i;
 
 	Start = Owner.Location + vect(0,0,1) * Pawn(Owner).BaseEyeHeight;
-	end =  start + vector(Pawn(Owner).ViewRotation) * 90;
+	End =  Start + vector(Pawn(Owner).ViewRotation) * 90;
 	ownerPRI = sgPRI(Pawn(Owner).PlayerReplicationInfo);
 
-	ForEach Owner.TraceActors ( class'sgBuilding', sgActor, HitLocation, HitNormal, end, start)
+	ForEach Owner.TraceActors ( class'sgBuilding', sgActor, HitLocation, HitNormal, End, Start)
 	{
-		if ( sgActor == level )
+		if ( sgActor == Level )
 			break;
 		if ( !sgActor.IsA('sgBuilding') )
 			continue;
@@ -375,7 +374,6 @@ exec simulated function SimSetCat( int CatMode)
 
 exec simulated function SelectBuild( string BuildToSelect)
 {
-	local int i;
 	local class<sgBuilding> sgB;
 	local string pkg;
 
@@ -489,7 +487,7 @@ simulated function CycleForward()
 //Old method, client version of the function
 exec simulated function SetMode(int newCategory, int newSelection)
 {
-	local int i, j;
+	local int i;
 
 	if ( newCategory < 4 )
 		newSelection = -1;
@@ -521,7 +519,7 @@ exec simulated function SetMode(int newCategory, int newSelection)
 
 function ClientSetMode(int newCategory, int newSelection, optional bool bBound) //Server version of the function
 {
-	local int i, j;
+	local int i;
 
 	if ( !FindCatActor() )
 		return;
@@ -570,8 +568,6 @@ simulated function PrimaryFunc( optional float Code)
 	local sgPRI ownerPRI;
 	local sg_XC_Orb aOrb;
 	local float Delta;
-	local bool bResult;
-
 
 	if ( Code == 333 )
 	{
@@ -896,6 +892,7 @@ State ClientActive
 {
 	simulated function bool ClientFire(float Value)
 	{
+		return false;
 	}
 
 	simulated function bool ClientAltFire(float Value)
@@ -904,7 +901,10 @@ State ClientActive
 		return bForceAltFire;
 	}
 
-	simulated function AnimEnd()	{ Global.AnimEnd();	}
+	simulated function AnimEnd()
+	{
+		Global.AnimEnd();
+	}
 
 	simulated function BeginState()
 	{
@@ -936,11 +936,8 @@ simulated function Pawn BestUpgradeCandidate( byte Team)
 	ForEach Owner.TraceActors ( class'Pawn', P, HitLocation, HitNormal, End, Start)
 	{
 		if ( !P.IsA('Pawn') ) //TraceActors has a bug!!! (level is last, therefore autobreak)
-		{
-			if ( P.bBlockActors ) //Solid
-				break;
 			continue;
-		}
+
 		sgB = sgBuilding(P);
 		if ( sgB != none )
 		{
@@ -984,11 +981,8 @@ simulated function Pawn BestRepairCandidate( byte Team)
 	ForEach Owner.TraceActors ( class'Pawn', P, HitLocation, HitNormal, End, Start)
 	{
 		if ( !P.IsA('Pawn') ) //TraceActors has a bug!!! (level is last, therefore autobreak)
-		{
-			if ( P.bBlockActors ) //Solid
-				break;
 			continue;
-		}
+
 		sgB = sgBuilding(P);
 		if ( sgB != none )
 		{
@@ -1039,11 +1033,8 @@ simulated function sgBuilding BestRemoveCandidate( byte Team)
 	ForEach Owner.TraceActors ( class'sgBuilding', sgB, HitLocation, HitNormal, End, Start)
 	{
 		if ( !sgB.IsA('sgBuilding') ) //TraceActors has a bug!!! (level is last, therefore autobreak)
-		{
-			if ( sgB.bBlockActors ) //Solid
-				break;
 			continue;
-		}
+
 		if ( (sgB.Team != Pawn(Owner).PlayerReplicationInfo.Team) || sgB.bNoRemove )
 			continue;
 		fPri = 1;
@@ -1068,25 +1059,26 @@ simulated function sgBuilding BestDragCandidate( byte Team)
 	local vector HitLocation, HitNormal, Start, End;
 	local sgBuilding sgB, sgBest;
 	local float Priority, fPri;
+	local sgGameReplicationInfo GRI;
+	local bool bTeamDrag;
 
 	Start = Owner.Location + vect(0,0,1) * Pawn(Owner).BaseEyeHeight;
 	End =  start + vector(Pawn(Owner).ViewRotation) * 90;
-
+	GRI = sgGameReplicationInfo( class'SiegeStatics'.static.GetGRI( Pawn(Owner)) );
+	bTeamDrag = bCanRemoveWithImpunity || (GRI != None && GRI.bTeamDrag);
+	
 	ForEach Owner.TraceActors ( class'sgBuilding', sgB, HitLocation, HitNormal, End, Start)
 	{
 		if ( !sgB.IsA('sgBuilding') ) //TraceActors has a bug!!! (level is last, therefore autobreak)
-		{
-			if ( sgB.bBlockActors ) //Solid
-				break;
 			continue;
-		}
+
 		if ( !sgB.bDragable || (sgB.Team != Pawn(Owner).PlayerReplicationInfo.Team) )
 			continue;
 
 		fPri = 1;
 		if ( !BuildingOwned(sgB) )
 		{
-			if ( !bCanRemoveWithImpunity )
+			if ( !bTeamDrag )
 				continue;
 			fPri = 0.8;
 		}
@@ -1221,8 +1213,7 @@ function bool UpgradeFunction( float DeltaRep)
 
 function bool RemoveFunction()
 {
-	local sgBuilding sgActor, sgBest;
-	local float Priority, fPri;
+	local sgBuilding sgBest;
 	local string sMessage;
 	local sgRemoveProt sgRP;
 
@@ -1268,7 +1259,7 @@ function bool RemoveFunction()
 			}
 		}
 	}
-	if ( sgBest.RemovedBy( pawn(Owner)) )
+	if ( sgBest.RemovedBy( Pawn(Owner)) )
 	{
 		SpecialPause = 1;
 		return true;
@@ -1575,7 +1566,6 @@ simulated function PostRender( canvas Canvas)
 	local float XL, YL, Scale, X, YOffset;
 	local string aStr, aStr2, RuleString;
 	local byte DenyBuild;
-	local int Cycles;
 
 	if ( MyFonts == none )
 	{
@@ -1660,11 +1650,7 @@ simulated function PostRender( canvas Canvas)
 
 		Canvas.bCenter = false;
  		Canvas.Style = ERenderStyle.STY_Translucent;
-
-
 	}
-
-	//Draw GUI
 }
 
 simulated function DrawWheel( Canvas C)
@@ -1742,7 +1728,7 @@ function ClientCloseGui()
 
 simulated function DrawGui( canvas Canvas)
 {
-	local float XL, YL, aX, aY, aScale, tH, tV, cX, cY, cZ;
+	local float XL, YL, aX, aY, tH, tV, cX, cY, cZ;
 	local int i, j, k;
 
 	if ( !FindClientActor() )
@@ -2081,10 +2067,12 @@ simulated function AnimEnd()
 
 simulated function bool ClientFire( float Value )
 {
+	return false;
 }
 
 simulated function bool ClientAltFire( float Value )
 {
+	return false;
 }
 
 function Fire( float Value )
@@ -2227,8 +2215,6 @@ simulated function HandleTimers( float DeltaTime, Pawn P)
 
 simulated function Tick(float DeltaTime)
 {
-	local String Info;
-	local float Speed2D;
 	local name aState;
 	local Pawn P;
 
@@ -2534,6 +2520,7 @@ simulated function bool OnHand()
 		return false;
 	return (Pawn(Owner).Weapon == self);
 }
+
 
 /*--- Stat control. ------------------------------------------------------------*/
 

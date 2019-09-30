@@ -10,8 +10,6 @@ class SiegeInstaGibRifle expands TournamentWeapon;
 #exec TEXTURE IMPORT NAME=UseINSTA FILE=Graphics\UseINSTA.PCX GROUP="HUD" MIPS=OFF
 
 var() int HitDamage;
-var Projectile Tracked;
-var bool bBotSpecialMove;
 var float TapTime;
 
 
@@ -62,18 +60,8 @@ function TraceFire( float Accuracy )
 	EndTrace = StartTrace + Accuracy * (FRand() - 0.5 )* Y * 1000
 		+ Accuracy * (FRand() - 0.5 ) * Z * 1000 ;
 
-	if ( bBotSpecialMove && (Tracked != None)
-		&& (((Owner.Acceleration == vect(0,0,0)) && (VSize(Owner.Velocity) < 40)) ||
-			(Normal(Owner.Velocity) Dot Normal(Tracked.Velocity) > 0.95)) )
-		EndTrace += 10000 * Normal(Tracked.Location - StartTrace);
-	else
-	{
-		AdjustedAim = pawn(owner).AdjustAim(1000000, StartTrace, 2.75*AimError, False, False);	
-		EndTrace += (10000 * vector(AdjustedAim)); 
-	}
-
-	Tracked = None;
-	bBotSpecialMove = false;
+	AdjustedAim = pawn(owner).AdjustAim(1000000, StartTrace, 2.75*AimError, False, False);	
+	EndTrace += (10000 * vector(AdjustedAim)); 
 
 	Other = Pawn(Owner).TraceShot(HitLocation,HitNormal,EndTrace,StartTrace);
 	ProcessTraceHit(Other, HitLocation, HitNormal, vector(AdjustedAim),Y,Z);
@@ -87,13 +75,8 @@ simulated function PlayFiring()
 
 function float RateSelf( out int bUseAltMode )
 {
-	local Pawn P;
-	local bool bNovice;
-
 	if ( AmmoType.AmmoAmount <=0 )
 		return -2;
-
-	P = Pawn(Owner);
 
 	bUseAltMode = 0;
 	return AIRating;
@@ -133,43 +116,12 @@ function Finish()
 {
 	if ( (Pawn(Owner).bFire!=0) && (FRand() < 0.6) )
 		Timer();
-	if ( !bChangeWeapon && (Tracked != None) && !Tracked.bDeleteMe && (Owner != None) 
-		&& (Owner.IsA('Bot')) && (Pawn(Owner).Enemy != None) && (FRand() < 0.3 + 0.35 * Pawn(Owner).skill)
-		&& (AmmoType.AmmoAmount > 0) ) 
-	{
-		if ( (Owner.Acceleration == vect(0,0,0)) ||
-			(Abs(Normal(Owner.Velocity) dot Normal(Tracked.Velocity)) > 0.95) )
-		{
-			bBotSpecialMove = true;
-			GotoState('ComboMove');
-			return;
-		}
-	}
 
-	bBotSpecialMove = false;
-	Tracked = None;
 	Super.Finish();
 }
 
 ///////////////////////////////////////////////////////
 
-function Projectile ProjectileFire(class<projectile> ProjClass, float ProjSpeed, bool bWarn)
-{
-	local Vector Start, X,Y,Z;
-	local PlayerPawn PlayerOwner;
-
-	Owner.MakeNoise(Pawn(Owner).SoundDampening);
-	GetAxes(Pawn(owner).ViewRotation,X,Y,Z);
-	Start = Owner.Location + CalcDrawOffset() + FireOffset.X * X + FireOffset.Y * Y + FireOffset.Z * Z; 
-	AdjustedAim = pawn(owner).AdjustAim(ProjSpeed, Start, AimError, True, bWarn);	
-
-	PlayerOwner = PlayerPawn(Owner);
-	if ( PlayerOwner != None )
-		PlayerOwner.ClientInstantFlash( -0.4, vect(450, 190, 650));
-	Tracked = Spawn(ProjClass,,, Start,AdjustedAim);
-	if ( Level.Game.IsA('DeathMatchPlus') && DeathmatchPlus(Level.Game).bNoviceMode )
-		Tracked = None; //no combo move
-}
 
 simulated function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNormal, Vector X, Vector Y, Vector Z)
 {
@@ -189,7 +141,7 @@ simulated function ProcessTraceHit(Actor Other, Vector HitLocation, Vector HitNo
 
 simulated function SpawnEffect(vector HitLocation, vector SmokeLocation)
 {
-	local KoalasShockBeam Smoke,shock;
+	local KoalasShockBeam Smoke;
 	local Vector DVector;
 	local int NumPoints;
 	local rotator SmokeRotation;

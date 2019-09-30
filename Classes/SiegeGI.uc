@@ -135,17 +135,11 @@ function FinishBMaps()
 
 function InitGame(string options, out string error)
 {
-	local Actor f;
-	local Inventory SuperItem;
+	local vector MidSpawnLocation;
+	local Inventory Item;
 	local sgBaseCore b;
-	local int team;
 	local string opt;
-	local int i, j, k, Redeemers, DamageAmps, ShieldBelts, Invisibilitys, BigKegOfHealths;
-	local WarheadLauncher WLT;
-	local UDamage UDT;
-	local UT_Shieldbelt SBT;
-	local UT_Invisibility IVT;
-	local HealthPack HPK;
+	local int i, j, k;
 	local Info aInfo;
 	local string sParse;
 	local flagBase FlagList[5], aFlg, fList[5];
@@ -288,33 +282,7 @@ function InitGame(string options, out string error)
 	}
 
 	ModifyCores();
-
-    foreach AllActors( class'Inventory', SuperItem)
-    {
-		if ( WarheadLauncher(SuperItem) != None )
-			Redeemers++;
-		else if ( UDamage(SuperItem) != None )
-			DamageAmps++;
-		else if ( UT_Shieldbelt(SuperItem) != None )
-			ShieldBelts++;
-		else if ( UT_Invisibility(SuperItem) != None )
-			Invisibilitys++;
-		else if ( HealthPack(SuperItem) != None )
-			BigKegOfHealths++;
-		else if ( (WildcardsResources(SuperItem) != none) || (ScubaGear(SuperItem) != none) )
-			continue;
-		else
-			SuperItem.Destroy();
-
-		if ( !SuperItem.bDeleteMe ) //I haven't destroyed these items (stated above, except resources)
-		{
-			SuperItem.Inventory = Inventory;
-			Inventory = SuperItem; //Build a temporary inv chain in this actor
-		}
-	}
-
 	InsertRU();
-//	Tester( 0);
 
 	if ( GameProfile == '' )
 		GameProfile = 'SiegeDefault';
@@ -343,48 +311,51 @@ function InitGame(string options, out string error)
 
     StatPool = Spawn(class'SiegeStatPool');
 
-	// Spawn Random Item Spawner
-	if ( Redeemers == 1 && !SpawnedRandomItemSpawner )
-		foreach AllActors( class'WarheadLauncher',WLT)
-		{
-			SpawnedRandomItemSpawner = true;
-			Spawn(class'WeightedItemSpawner',,,WLT.Location);
-		}
-	if ( DamageAmps == 1 && !SpawnedRandomItemSpawner )
-		foreach AllActors( class'UDamage',UDT)
-		{
-			SpawnedRandomItemSpawner = true;
-			Spawn(class'WeightedItemSpawner',,,UDT.Location);
-		}
-	if ( BigKegOfHealths == 1 && !SpawnedRandomItemSpawner )
-		foreach AllActors( class'HealthPack',HPK)
-		{
-			SpawnedRandomItemSpawner = true;
-			Spawn(class'WeightedItemSpawner',,,HPK.Location);
-		}
-	if ( ShieldBelts == 1 && !SpawnedRandomItemSpawner )
-		foreach AllActors( class'UT_Shieldbelt',SBT)
-		{
-			SpawnedRandomItemSpawner = true;
-			Spawn(class'WeightedItemSpawner',,,SBT.Location);
-		}
-	if ( Invisibilitys == 1 && !SpawnedRandomItemSpawner )
-		foreach AllActors( class'UT_Invisibility',IVT)
-		{
-			SpawnedRandomItemSpawner = true;
-			Spawn(class'WeightedItemSpawner',,,IVT.Location);
-		}
-
-	//Delete saved inventory chain
-	For ( SuperItem=Inventory ; SuperItem!=none ; SuperItem=SuperItem.Inventory )
-		SuperItem.Destroy();
-	Inventory = none;
-
+	if ( !SpawnedRandomItemSpawner &&
+	(  UniqueActorLocation( class'WarheadLauncher', MidSpawnLocation)
+	|| UniqueActorLocation( class'UDamage',         MidSpawnLocation)
+	|| UniqueActorLocation( class'HealthPack',      MidSpawnLocation)
+	|| UniqueActorLocation( class'UT_Shieldbelt',   MidSpawnLocation)
+	|| UniqueActorLocation( class'UT_Invisibility', MidSpawnLocation)) )
+	{
+		SpawnedRandomItemSpawner = true;
+		Spawn( class'WeightedItemSpawner',,, MidSpawnLocation);
+	}
+	
+	ForEach AllActors( class'Inventory', Item)
+    {
+		if ( (WildcardsResources(Item) != none) || (ScubaGear(Item) != none) )
+			continue;
+		Item.Destroy();
+	}
+	
 	//Clear defaults transferred from previous map
 	class'sgSupplier'.static.ClearWeaponClasses();
 	class'sgSupplierX'.static.ClearWeaponClasses();
 	class'sgSupplierXXL'.static.ClearWeaponClasses();
 }
+
+
+function bool UniqueActorLocation( class<Actor> ActorClass, out vector ActorLocation)
+{
+	local Actor A, Found;
+	
+	ForEach AllActors( ActorClass, A)
+	{
+		if ( Found != None )
+			return false;
+		Found = A;
+	}
+
+	if ( Found != None )
+	{
+		ActorLocation = Found.Location;
+		return true;
+	}
+	
+	return false;
+}
+
 
 function InsertRU()
 {
@@ -392,10 +363,10 @@ function InsertRU()
 	local PathNode P;
 	local Light L;
 	local WRU50 R;
-	local NavigationPoint N, aS, aE;
+	local NavigationPoint N;
 	local float cCount[4], aDist;
 	local float RUsLeft[4];
-	local int i, j, iCount;
+	local int i, iCount;
 
 	if ( Level.NavigationPointList == none )
 		return;
@@ -536,10 +507,10 @@ function InsertRU()
 //We're using this to swarm various RU crystals around the core
 static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iCount) //iCount is our ID, to prevent endless loops
 {
-	local int i, j, h, k, n;
+	local int i, n;
+	local int ReachFlags, Distance;
 	local NavigationPoint nCur, nLast, Cached[16];
 	local actor nS, nE;
-	local bool bLog;
 
 	//Negative costed paths are out of choice!!!
 	nCur = Base;
@@ -555,7 +526,7 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 			nCur.Cost = iCount;
 			For ( i=0 ; (i<16) && (nCur.Paths[i]>=0) ; i++ )
 			{
-				nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k);
+				nCur.describeSpec( nCur.Paths[ i ], nS, nE, ReachFlags, Distance);
 				if ( NavigationPoint(nE).Cost == 0 )
 					Cached[n++] = NavigationPoint(nE);
 			}
@@ -573,7 +544,7 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 		nCur.Cost = -iCount; //Go negative for non-bounce back paths
 		For ( i=0 ; (i<16) && (nCur.Paths[i]>=0) ; i++ )
 		{
-			nCur.describeSpec( nCur.Paths[ i ], nS, nE, h, k);
+			nCur.describeSpec( nCur.Paths[ i ], nS, nE, ReachFlags, Distance);
 			if ( (abs(NavigationPoint(nE).Cost) != iCount) && !nE.bMeshCurvy )
 				Cached[n++] = NavigationPoint(nE);
 		}
@@ -635,7 +606,6 @@ function EndGame( string Reason)
 function StartMatch()
 {
 	local WeightedItemSpawner ExistingSpawner;
-	local actor A;
 	local int i;
 
 	bMatchStarted = true;
@@ -647,6 +617,8 @@ function StartMatch()
 		if ( Cores[i] != none )
 			Cores[i].bCoreDisabled = false;
 
+	sgGameReplicationInfo(GameReplicationInfo).bTeamDrag = bTournament;
+			
 	Super.StartMatch();
 }
 
@@ -694,19 +666,22 @@ event PostBeginPlay()
 
 function bool AddBot()
 {
+	local bool bAdded;
+
     // Ugly hack to spawn the correct type of PRI
 	class'Bot'.default.PlayerReplicationInfoClass = class'sgPRI';
 	SetHulls( false);
-	Super.AddBot();
+	bAdded = Super.AddBot();
 	SetHulls( true);
     class'Bot'.default.PlayerReplicationInfoClass = class'BotReplicationInfo';
 
+	return bAdded;
 }
 
 event PlayerPawn Login( string portal, string options, out string error, class<PlayerPawn> spawnClass)
 {
 	local PlayerPawn newPlayer;
-    local class<PlayerReplicationInfo> priClass;
+//    local class<PlayerReplicationInfo> priClass;
 
     // Ugly hack to spawn the correct type of PRI ===> MOVED TO SIEGEMUTATOR
 //	priClass = spawnClass.default.PlayerReplicationInfoClass;
@@ -903,18 +878,16 @@ function PostLogin(playerpawn NewPlayer)
 
 function AddDefaultInventory(Pawn playerPawn)
 {
-    local int i;
-    local Weapon newWeapon;
-	local inventory inv, previnv;
+	local int i;
 
-    if ( PlayerPawn.IsA('Spectator') || (bRequireReady && (CountDown > 0)) )
-         return;
+	if ( PlayerPawn.IsA('Spectator') || (bRequireReady && (CountDown > 0)) )
+		return;
 
-    GivePlayerWeapon(playerPawn, WeaponClasses[12]);
+	GivePlayerWeapon(playerPawn, WeaponClasses[12]);
 
-    for ( i = 0; i < 12; i++ )
-        if ( WeaponClasses[i] != None )
-            GivePlayerWeapon(playerPawn, WeaponClasses[i]);
+	For ( i=0 ; i<12 ; i++ )
+		if ( WeaponClasses[i] != None )
+			GivePlayerWeapon(playerPawn, WeaponClasses[i]);
 	PlayerPawn.SwitchToBestWeapon(); //Now weapon priority is a thing
 	BaseMutator.ModifyPlayer(PlayerPawn);
 }
@@ -926,14 +899,14 @@ function bool PickupQuery( Pawn Other, Inventory item )
 
 	bIsMidSpawn = Item.LightEffect == LE_Rotor && Item.LightType == LT_Steady && Item.LightHue == 85;
 	Result = Super.PickupQuery( Other, Item); //This may destroy the item!
-	if ( bIsMidSpawn && (Other != None) ) {
+	if ( bIsMidSpawn && (Other != None) )
+	{
 		LastMidSpawnToucher = sgPRI( Other.PlayerReplicationInfo);
-		if(Item.ItemName == "")
+		if( Item.ItemName == "" )
 			LastMidSpawnItemName = Item.default.ItemName;
 		else
 			LastMidSpawnItemName = Item.ItemName;
 	}
-
 
 	return Result;
 }
@@ -1134,7 +1107,6 @@ function ScoreKill( Pawn killer, Pawn other)
 
 function int ReduceDamage( int damage, name damageType, Pawn injured,  Pawn instigatedBy)
 {
-	local string sMessage;
 	local bool bPlayerInstigated;
 
 	//Fast condition
@@ -1342,36 +1314,6 @@ function bool IsOnTeam(Pawn other, int teamNum)
         return (other.PlayerReplicationInfo.Team == teamNum);
 }
 
-function int PickTeam(Pawn defeated)
-{
-    local int       i,
-                    j;
-    local TeamInfo  small[3],
-                    lowScore[3];
-    local int       numSmall,
-                    numLow;
-
-    // Find smallest teams
-    for ( i = 0; i < 4; i++ )
-        if ( Cores[i] != None )
-        {
-            if ( numSmall == 0 || Teams[i].Size == small[0].Size )
-            {
-                small[numSmall] = Teams[i];
-                numSmall++;
-            }
-            else if ( Teams[i].Size < small[0].Size )
-            {
-                small[0] = Teams[i];
-                numSmall = 1;
-            }
-        }
-
-    i = int(FRand() * (numSmall-1));
-
-    return i;
-}
-
 function bool RestartPlayer(Pawn p)
 {
     local NavigationPoint
@@ -1465,9 +1407,8 @@ function bool ChangeTeam(Pawn other, int newTeam)
 
     return true;*/
 
-    local int i, smallest, desiredTeam;
-	local Pawn aPlayer, p;
-	local TeamInfo SmallestTeam;
+    local int i, smallest;
+	local Pawn P;
 
 	if ( bRatedGame && Other.PlayerReplicationInfo.Team != 255 )
 		return false;
@@ -1522,15 +1463,15 @@ function bool ChangeTeam(Pawn other, int newTeam)
 		if ( NumBots == 1 )
 		{
 			// join bot's team if sizes are equal, because he will leave
-			for ( p = Level.PawnList; p != None; p = p.NextPawn )
+			for ( P=Level.PawnList; P!=None; P=P.NextPawn )
 				if ( p.IsA('Bot') )
 					break;
 
-			if ( p != None && p.PlayerReplicationInfo != None &&
-              p.PlayerReplicationInfo.Team != 255 &&
-              Teams[p.PlayerReplicationInfo.Team].Size ==
+			if ( P != None && P.PlayerReplicationInfo != None &&
+              P.PlayerReplicationInfo.Team != 255 &&
+              Teams[P.PlayerReplicationInfo.Team].Size ==
               Teams[smallest].Size )
-				newTeam = p.PlayerReplicationInfo.Team;
+				newTeam = P.PlayerReplicationInfo.Team;
 		}
 	}
 
@@ -1654,7 +1595,6 @@ final function DebugShout(String DebugMessage)
 function CheckRandomSpawner()
 {
     local int i;
-	local actor a;
 	local WeightedItemSpawner ExistingSpawner;
 	local bool OverideLocation;
 	local bool MapIsInList;
@@ -1704,13 +1644,10 @@ function CheckRandomSpawner()
 	CheckedRandomSpawner = true;
 }
 
-simulated Event Timer()
+simulated event Timer()
 {
 	local PlayerPawn ThisPawn;
 	local Bot ThisBot;
-	local int BestCore, i;
-	local bool bTied;
-	local Pawn P;
 
 	Super.Timer();
 	if ( !CheckedRandomSpawner )
@@ -1738,7 +1675,6 @@ function NetworthTimerProc()
 	local float OldMaximum[4];
 	local float Maximum[4];
 	local float BiggestMaximum;
-	local Ammo Ammo;
 	
 	if ( NetworthTimer-- <= 0 )
 	{
@@ -1995,9 +1931,9 @@ function MutateWeapons()
 {
 	local class<Weapon> BaseWeapons[32];
 	local class<Weapon> MutatedWeapons[32]; //I doubt we're mutating more than this
-	local class<Weapon> W;
+//	local class<Weapon> W;
 	local int i, j, iM;
-	local WeightedItemSpawner RND;
+//	local WeightedItemSpawner RND;
 	local Weapon aWeapon;
 
 //Let's create our main list

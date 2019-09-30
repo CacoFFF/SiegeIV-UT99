@@ -12,8 +12,6 @@
 //=============================================================================
 class WildcardsPoisonGuardian expands sgGuardian;
 
-var() byte MFXFatness;
-
 //Higor: faster than RADIUSACTORS
 var PoisonPlayer Poisoned[16];
 var int iPoisoned;

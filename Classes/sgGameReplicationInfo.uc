@@ -19,13 +19,17 @@ var string Nukers_Blue;
 var string Nukers_Green;
 var string Nukers_Yellow;
 
+//Global game settings
+var bool bTeamDrag;
+
 replication
 {
 	reliable if ( Role==ROLE_Authority )
 		Cores;
 	reliable if ( !bNetInitial && Role==ROLE_Authority )
 		MaxRUs,
-		StatTop_Name, StatTop_Team, StatTop_Value;
+		StatTop_Name, StatTop_Team, StatTop_Value,
+		bTeamDrag;
 		
 	// Reverendously ugly but secure.
 	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(0) )

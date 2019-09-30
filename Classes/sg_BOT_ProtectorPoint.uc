@@ -26,7 +26,7 @@ function bool CheckPending()
 function int SelectBuilding()
 {
 	local sgCategoryInfo sgC;
-	local int i, j, cc, iBest;
+	local int i, cc, iBest;
 	local float fCur, fBest;
 
 	sgC = SiegeGI(Level.Game).CategoryInfo[Team];
@@ -67,7 +67,6 @@ function int SelectBuilding()
 function float RateUpgrade( sgBuilding Other)
 {
 	local float Factor;
-	local int Project;
 
 	if ( Other.Energy < Other.MaxEnergy ) //No risks
 		return -1;

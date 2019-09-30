@@ -71,8 +71,6 @@ simulated function AffectMovement( float DeltaTime)
 	local float CurrentTimer;
 	local float SpeedMult;
 
-	local string S;
-	
 	P = Pawn(Owner);
 	if ( P == none )
 	{

@@ -168,7 +168,6 @@ function sgArmor SpawnArmor( Pawn Other)
 
 function bool Supply( Pawn Other, sgSupplierQueuer Accumulator, float SupplyFactor)
 {
-	local int Supplied;
 	local sgPRI PRI;
 
 	if ( bProtected && (sgPRI(Other.PlayerReplicationInfo) != none) )

@@ -99,8 +99,7 @@ replication
 
 simulated function PostRender( canvas Canvas)
 {
-	local float XL, YL, Scale, X, YOffset;
-	local string aStr, aStr2;
+	local float XL, YL, Scale, YOffset;
 	local int i, j;
 	local sg_GLAmmo GLAmmo;
 

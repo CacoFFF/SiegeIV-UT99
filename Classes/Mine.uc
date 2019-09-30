@@ -227,8 +227,6 @@ function Damage()
 
 simulated function CompleteBuilding()
 {
-	local Pawn p;
-	
 	if ( Level.NetMode == NM_Client )
 		Assert( LocalPlayer != none );
 
@@ -256,10 +254,8 @@ simulated function CompleteBuilding()
 
 simulated function FinishBuilding()
 {
-    local int i;
-    local sgMeshFX newFX;
 	local PlayerPawn P;
-	local Rotator R;
+	local rotator R;
 	
 	Texture=Texture'Botpack.FLAKAMMOLEDbase';
 

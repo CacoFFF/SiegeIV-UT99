@@ -365,7 +365,6 @@ function UpgradeSupplier()
 //Keep one extra gatherer... unless theres visible RU
 function KeepGatherer()
 {
-	local sgAIqueuer sA;
 	if ( AIlist.AssignByNearbyRU( AIcount) > 0 )
 		return;
 	if ( AIlist.RUgatherers() < AIcount * 0.3 )
@@ -386,19 +385,19 @@ function bool TeamRequiresCapacity()
 
 function TaskCapacity()
 {
-	local sgAIqueuer CapBuilder; //Already assigned
+//	local sgAIqueuer CapBuilder; //Already assigned
 }
 
-function sgBuilding ContainerToUpgrade()
+function sgBuilding ContainerToUpgrade() //TODO: Bot AI
 {
 	local sgContainer aCont;
-	local WildcardsSuperContainer sCont;
-	local sgBuilding Best;
-	local float fBest, weight;
+/*	local sgBuilding Best;
+	local float fBest, weight;*/
 
 	ForEach AllActors (class'sgContainer', aCont)
 	{
 	}
+	return None;
 }
 
 //Find what suppliers team can build, then find best locations
@@ -600,7 +599,6 @@ function TaskToContainer()
 
 function TaskToUpgrade()
 {
-	local float Factor;
 	local sg_BOT_BuildingBase sgBest;
 	local int i, Times, MaxRole;
 	local sgAIqueuer Bot;

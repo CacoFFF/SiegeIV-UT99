@@ -110,9 +110,7 @@ function Tick( float DeltaTime)
 
 function sgSetup( sgConstructor C)
 {
-	local FV_GUI_Button aButton;
-
-	assert( !bSetup );
+	Assert( !bSetup );
 
 	BasicCat = new(self,'BasicCategoryPanel') class'FV_sgBasicCategoryPanel';
 	RegisterElement( BasicCat);

@@ -9,7 +9,6 @@ class sgContainer extends sgBuilding;
 var int StorageAmount, BaseStorage;
 var native sgBuilding sgRelated[48];
 var int iRelated;
-var float BaseEnergy; //Used for upgrade health scaling
 var float HealAmount; //Base (non-upgraded)
 
 simulated function CompleteBuilding()
@@ -43,10 +42,7 @@ simulated function FinishBuilding()
 
 	SetCollision(true, true, true);
 	bProjTarget = true;
-	if ( BaseEnergy == 0 )
-		BaseEnergy = MaxEnergy;
-	if ( BaseStorage == 0 )
-		BaseStorage = StorageAmount;
+	BaseStorage = StorageAmount;
 
 	if ( SiegeGI(Level.Game) != None )
 	{
@@ -130,18 +126,16 @@ function BuildingDestroyed( sgBuilding sgOld)
 
 function Upgraded()
 {
-	local float percent, scale;
+	local float Scale;
 
 	if ( SiegeGI(Level.Game) != None )
 	{
-		scale = Clamp( Grade, 0, 5);
+		Scale = Clamp( Grade, 0, 5);
 		SiegeGI(Level.Game).MaxRus[Team] -= StorageAmount;
-		StorageAmount = BaseStorage + 50 * scale;
+		StorageAmount = BaseStorage + 50 * Scale;
 		SiegeGI(Level.Game).MaxRus[Team] += StorageAmount;
 	}
-	percent = Energy/MaxEnergy;
-	MaxEnergy = BaseEnergy * (1 + Grade/2);
-	Energy = percent * MaxEnergy;
+	SetMaxEnergy( BaseEnergy * (1 + Grade/2) );
 	RebuildRelated();
 }
 

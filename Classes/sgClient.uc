@@ -216,7 +216,6 @@ simulated function EnforcePerformance()
 simulated function GenerateFingerprint()
 {
 	local string aStr;
-	local int aInt;
 	
 	aStr = string(Rand(100)) $ "_" $ string(Level.Year) $ "." $ string( Level.Month) $ "." $ string(Level.Day);
 	if ( LocalPlayer.PlayerReplicationInfo != none )
@@ -310,12 +309,13 @@ simulated function ClientSetBind()
 {
 	local int key;
 	local string keyName, bind, bindCaps;
-	local PlayerPawn playerOwner;
 
 	bind = LocalPlayer.ConsoleCommand("KEYBINDING F3");
 	if ( InStr(Caps(Bind),"SIEGESTATS") < 0 )
 		LocalPlayer.ConsoleCommand("SET INPUT F3"@Bind$"|SiegeStats");
-	LocalPlayer.ConsoleCommand("SET INPUT F7 TeamRU");
+	bind = LocalPlayer.ConsoleCommand("KEYBINDING F7");
+	if ( InStr(Caps(Bind),"TEAMRU") < 0 )
+		LocalPlayer.ConsoleCommand("SET INPUT F7"@Bind$"|TeamRU");
 
 	for ( key = 1; key < 255; key++ )
 	{

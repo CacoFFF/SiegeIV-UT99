@@ -4,8 +4,6 @@
 //=============================================================================
 class NukeSiren2 expands NukeSiren;
 
-const SecsBeforeSpam = 5;
-
 //Called on server
 function CheckForNukers()
 {

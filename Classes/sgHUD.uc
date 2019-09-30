@@ -126,7 +126,6 @@ simulated function PostBeginPlay()
 simulated final function FixInventoryChain( optional bool bOnlyBreak)
 {
 	local Inventory Inv, Last, Lone;
-	local int LoopCount;
 	local float fTag;
 
 	//Do not run this routine on authoritary session
@@ -499,12 +498,11 @@ simulated function RenderNukers( Canvas C, String Src, byte Team, out int yPos)
 simulated function DrawSiegeStats( Canvas C)
 {
 	local float FontSizeDirective;
-	local float XL, YL, X1, Y1, Height, Width;
+	local float YL, Y1, Height, Width;
 	local float TinyFontHeight, SmallFontHeight, BigFontHeight, HugeFontHeight;
-	local int X, OldX ,Y,i, nBuildings,Rows, Col, R;
-	local string s1, s2;
+	local int X, i;
+	local string s1;
 	local int MaxPerColumn;
-	local int Columns;
 
 	local string sInfo[8];
 
@@ -634,15 +632,12 @@ simulated function DrawSiegeStats( Canvas C)
 
 simulated function PostRender( canvas Canvas )
 {
-	local float XL, YL, XPos, YPos, FadeValue;
-	local string Message;
-	local int M, i, j, k, XOverflow;
-	local float OldOriginX, l;
+	local float XL, YL, YPos, FadeValue;
+	local int M, i, j, k;
+	local float OldOriginX;
 
 	local bool bWatchingTV;
-	local int count;
 
-	local PlayerPawn PP;
 	local Actor A;
 
 	///////////////////////
@@ -1329,15 +1324,13 @@ simulated function DrawGameSynopsis(canvas Canvas)
     local float         XL,XL2,
                         YL,YL2,
                         WeapScale,
-                        XOffset,
                         YOffset,
                         Fade;
     local int           i, j,
-                        X, AmpCharge;
-    local string        text;
+                        AmpCharge;
 
 	// Percents
-    local float fuelPercent, DashPercent;
+    local float fuelPercent;
 
     local sgPRI		PRI;
     local Jetpack       pack;
@@ -1701,17 +1694,17 @@ simulated function DrawStatus(Canvas Canvas)
 {
 	local float StatScale, ChestAmount, ThighAmount, H1, H2, X, Y, DamageTime;
 	Local int ArmorAmount,SuitAmount,CurAbs,i,OverTime;
-	Local inventory Inv,BestArmor;
+//	Local inventory Inv,BestArmor;
 	local bool bChestArmor, bShieldbelt, bThighArmor, bJumpBoots, bHasDoll;
 	local Bot BotOwner;
 	local TournamentPlayer TPOwner;
 	local texture Doll, DollBelt;
-	local float XL,YL;
+	local float XL;
 
 	ArmorAmount = 0;
 	CurAbs = 0;
 	i = 0;
-	BestArmor=None;
+//	BestArmor=None;
 
 	bShieldBelt = (CachedShield > 0);
 	bThighArmor = (CachedThigs > 0);
@@ -2071,46 +2064,9 @@ simulated function LocalizedMessage( class<LocalMessage> Message, optional int S
 // ANOTHER Entry point for string messages.
 simulated function SpecialMessage( PlayerReplicationInfo PRI, coerce string Msg, color SMC )
 {
-	local int i;
-	local Class<LocalMessage> MessageClass;
-
 	SpecialMessageColor = SMC;
-	MessageClass = class'CriticalEventPlus';
-	LocalizedMessage(MessageClass, 0, None, None, None, Msg );
+	LocalizedMessage( class'CriticalEventPlus', 0, None, None, None, Msg );
 	return;
-/*
-	for (i=0; i<4; i++)
-	{
-		if ( ShortMessageQueue[i].Message == None )
-		{
-			// Add the message here.
-			ShortMessageQueue[i].Message = MessageClass;
-			ShortMessageQueue[i].Switch = 0;
-			ShortMessageQueue[i].RelatedPRI = PRI;
-			ShortMessageQueue[i].OptionalObject = None;
-			ShortMessageQueue[i].EndOfLife = MessageClass.Default.Lifetime + Level.TimeSeconds;
-			if ( MessageClass.Default.bComplexString )
-				ShortMessageQueue[i].StringMessage = Msg;
-			else
-				ShortMessageQueue[i].StringMessage = MessageClass.Static.AssembleString(self,0,PRI,Msg);
-			return;
-		}
-	}
-
-	// No empty slots.  Force a message out.
-	for (i=0; i<3; i++)
-		CopyMessage(ShortMessageQueue[i], ShortMessageQueue[i+1]);
-
-	ShortMessageQueue[3].Message = MessageClass;
-	ShortMessageQueue[3].Switch = 0;
-	ShortMessageQueue[3].RelatedPRI = PRI;
-	ShortMessageQueue[3].OptionalObject = None;
-	ShortMessageQueue[3].EndOfLife = MessageClass.Default.Lifetime + Level.TimeSeconds;
-	if ( MessageClass.Default.bComplexString )
-		ShortMessageQueue[3].StringMessage = Msg;
-	else
-		ShortMessageQueue[3].StringMessage = MessageClass.Static.AssembleString(self,0,PRI,Msg);
-*/
 }
 
 // Entry point for string messages.

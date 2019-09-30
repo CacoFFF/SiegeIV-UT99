@@ -9,7 +9,6 @@ function AnimationControl( float DeltaTime);
 
 event PostBeginPlay()
 {
-	local PlayerPawn P;
 	local int Team;
 
 	if ( Owner == None )
@@ -32,11 +31,8 @@ event PostBeginPlay()
 		MultiSkins[Team] = Skin;
 }
 
-//========== Tick (global) - begin ==========//
-//
 event Tick( float DeltaTime)
 {
-	local Rotator R;
 	if ( Owner == None || Owner.bDeleteMe || PlayerData == None || PlayerData.bDeleteMe )
 	{
 		Destroy();
@@ -47,12 +43,9 @@ event Tick( float DeltaTime)
 	DrawScale = Owner.DrawScale;
 	AnimationControl( DeltaTime);
 }
-//========== Tick (global) - end ==========//
 
 
 
-//========== Destroyed (global) - begin ==========//
-//
 event Destroyed()
 {
 	if ( PlayerData != None )
@@ -62,11 +55,9 @@ event Destroyed()
 		PlayerData = None;
 	}
 }
-//========== Destroyed (global) - end ==========//
 
 
 
-//========== AdjustDrawOffset - begin ==========//
 //
 // Adds a small offset to the effect's location so that
 // the renderer doesn't draw it behind the player owner
@@ -84,7 +75,6 @@ function vector AdjustDrawOffset()
 	}
 	return Offset;
 }
-//========== AdjustDrawOffset - begin ==========//
 
 
 

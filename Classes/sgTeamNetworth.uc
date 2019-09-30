@@ -48,7 +48,6 @@ simulated event PostNetBeginPlay()
 	local sgHUD HUD;
 
 	SetGraphTexture();
-	Log("PostNetBeginPlay"@Self@GraphTexture);
 	ForEach AllActors( class'sgHUD', HUD)
 		HUD.NetworthStat[Team] = self;
 }
@@ -182,7 +181,6 @@ simulated event RenderTexture( ScriptedTexture T)
 //Player already passed sgPRI and Team check
 function EvaluatePlayer( Pawn P)
 {
-	local Ammo Ammo;
 	local int i;
 	
 	i = CurrentIndex % 120;

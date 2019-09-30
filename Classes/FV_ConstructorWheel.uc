@@ -46,7 +46,7 @@ var bool bLastAltFire;
 function Tick( float DeltaTime)
 {
 	local bool bFire, bAltFire;
-	local byte HitAccumulator, HoldAccumulator, ReleaseAccumulator;
+	local byte HitAccumulator, HoldAccumulator;
 	local float moveX, moveY;
 	local vector LastMPos;
 	
@@ -534,7 +534,6 @@ function SetupCategory( sgCategoryInfo CatActor, int CatIndex)
 function SetupSettings()
 {
 	local int i, NumSettings;
-	local Color C;
 	
 	//Buttons should already have been created here (4 actions in action fake category)
 	NumSettings = 2;

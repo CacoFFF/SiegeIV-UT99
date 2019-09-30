@@ -119,31 +119,29 @@ function PickupFunction(Pawn Other)
 }
 
 
-function bool HandlePickupQuery( inventory Item )
+function bool HandlePickupQuery( Inventory Item )
 {
-	local inventory S;
-
-	if (item.class == class) //Restock up to 200%
+	if ( Item.class == class ) //Restock up to 200%
 	{
-			Charge = Default.Charge + Charge/2;
+		Charge = Min( Charge + Item.Charge, Default.Charge * 2);
 
-			if (Level.Game.LocalLog != None)
-				Level.Game.LocalLog.LogPickup(Item, Pawn(Owner));
-			if (Level.Game.WorldLog != None)
-				Level.Game.WorldLog.LogPickup(Item, Pawn(Owner));
-			if ( Item.PickupMessageClass == None )
-				Pawn(Owner).ClientMessage(item.PickupMessage, 'Pickup');
-			else
-				Pawn(Owner).ReceiveLocalizedMessage( item.PickupMessageClass, 0, None, None, item.Class );
-			Item.PlaySound (item.PickupSound,,2.0);
-			Item.SetReSpawn();
-			return true;
+		if (Level.Game.LocalLog != None)
+			Level.Game.LocalLog.LogPickup(Item, Pawn(Owner));
+		if (Level.Game.WorldLog != None)
+			Level.Game.WorldLog.LogPickup(Item, Pawn(Owner));
+		if ( Item.PickupMessageClass == None )
+			Pawn(Owner).ClientMessage(Item.PickupMessage, 'Pickup');
+		else
+			Pawn(Owner).ReceiveLocalizedMessage( Item.PickupMessageClass, 0, None, None, item.Class );
+		Item.PlaySound( Item.PickupSound,, 2.0);
+		Item.SetReSpawn();
+		return true;
 	}
 
 	if ( Inventory == None )
 		return false;
 
-	return Inventory.HandlePickupQuery(Item);
+	return Inventory.HandlePickupQuery( Item );
 }
 
 final function Pawn GetOwner()

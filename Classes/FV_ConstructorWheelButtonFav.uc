@@ -40,9 +40,6 @@ LOOP:
 //Fixed setup
 function Setup( float sX, float sY, float mySlot, float numSlots, string aName, optional string aDescription, optional string ButtonCode)
 {
-	local int i;
-	local string aStr;
-	
 	SizeX = sX;
 	SizeY = sY;
 	ButtonID = 31; //This crap had better not fail

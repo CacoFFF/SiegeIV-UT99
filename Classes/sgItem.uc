@@ -31,7 +31,6 @@ replication
 simulated function CompleteBuilding()
 {
     local Pawn P;
-    local Inventory Inv;
 
 	if ( bTakeProductVisual && ((myFX == None)||myFX.bDeleteMe) && (Level.NetMode != NM_DedicatedServer) )
 		SetupProductFX();
@@ -184,7 +183,7 @@ function ModifyProduct( Inventory I, int Idx)
 //Make sure ALL items can be given
 function bool GiveItems( Pawn Other)
 {
-	local Inventory Discarded, I, inv;
+	local Inventory I, inv;
 	local bool bReject;
 	
 	if ( (sgPRI(Other.PlayerReplicationInfo) != none) && (sgPRI(Other.PlayerReplicationInfo).ProtectCount > 0) ) 

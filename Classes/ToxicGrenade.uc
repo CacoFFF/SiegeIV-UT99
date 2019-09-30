@@ -8,11 +8,7 @@ var bool bExplodeOnHit;
 
 function Explosion(vector HitLocation)
 {
-	local FlameExplosion F;
-
-
 	HurtRadius( damage, 270, MyDamageType, MomentumTransfer, Location );
-
 	Spawn(class'ToxicSpawner');
 	Destroy();
 }

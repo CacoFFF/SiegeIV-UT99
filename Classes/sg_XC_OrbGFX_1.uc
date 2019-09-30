@@ -80,10 +80,9 @@ function SmoothToPoint( vector SmoothDest, float DeltaTime)
 	Slave.SetLocation( Smooth - CalcViewOff() );
 }
 
-function UpgradeBuildPosition (float delta)
+function UpgradeBuildPosition( float delta)
 {
 	local float aF;
-	local vector aV;
 
 	SwerveTimer -= Delta;
 	if ( SwerveTimer < 0 )

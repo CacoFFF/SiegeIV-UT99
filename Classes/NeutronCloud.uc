@@ -5,8 +5,6 @@ class NeutronCloud extends AnimSpriteEffect;
 
 simulated function PostBeginPlay()
 {
-	local actor a;
-
 	Super.PostBeginPlay();
 	if ( !Level.bHighDetailMode ) 
 		Drawscale = 16;	

@@ -3,10 +3,9 @@
 //=============================================================================
 class DashTrail expands Effects;
 
+//TODO: USE FOR SPEED ITEM
 simulated function PostBeginPlay()
 {
-	local int i;
-
 	Mesh = Owner.Mesh;
 	AnimFrame = Owner.AnimFrame;
 	AnimSequence = Owner.AnimSequence;

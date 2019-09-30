@@ -42,7 +42,6 @@ function bool CheckPending()
 function float RateUpgrade( sgBuilding Other)
 {
 	local float Factor;
-	local int Project;
 
 	if ( SiegeGI(Level.Game).BotControllers[Team].MainSupplier == Other )
 		Factor = 10;

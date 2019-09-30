@@ -4,29 +4,17 @@
 //=============================================================================
 class sxMotionAlarm expands sgBuilding;
 
-var bool bOwnsCrossHair;
-var sgHUD AlarHud;
-var() texture TextureRed;
-var() texture TextureBlue;
-var() texture TextureGreen;
-var() texture TextureYellow;
-var String AlarmLocation;
+var string AlarmLocation;
 var() int DetectionRange;
-var int ShortestRange;
-var bool StopSpamming;
-var bool EnemyIsStillPresent;
-var int AccSpam; //Accumulated spam, HIGOR: Accumulate 8 units and sound again, prevents exploits
+var int BaseRange;
+var float EmitWarningAgain;
 
 
 simulated event PostBeginPlay()
 {
-	local Pawn p;
-
 	if ( SiegeGI(Level.Game) != none )
 		DetectionRange = SiegeGI(Level.Game).BaseMotion;
-	ShortestRange = DetectionRange;
-	StopSpamming = false;
-	EnemyIsStillPresent = false;
+	BaseRange = DetectionRange;
 
 	if ( Level.NetMode != NM_Client )
 	{
@@ -40,104 +28,66 @@ simulated event PostBeginPlay()
 	}
 }
 
-simulated event Timer()
+function CompleteBuilding()
 {
-	local Pawn p;
-	Super.Timer();
+	local Pawn P;
 
-	if ( SCount > 0 || Role != ROLE_Authority )
-        	return;
-
-	if ( AccSpam > 50)
-	{
-		StopSpamming = False;
-		AccSpam = 0;
-	}
-
-	foreach RadiusActors(class'Pawn', p,DetectionRange)
-		if ( p.bIsPlayer && p.Health > 0 &&
-			p.PlayerReplicationInfo != None &&
-			p.PlayerReplicationInfo.Team != Team && !p.PlayerReplicationInfo.bIsSpectator)
+	if ( Level.TimeSeconds < EmitWarningAgain || bDisabledByEMP )
+		return;
+	
+	if ( LightType != LT_None )
+		AlertLight( false);
+	
+	ForEach RadiusActors(class'Pawn', P, DetectionRange)
+		if ( P.bIsPlayer && (P.Health > 0) &&
+			P.PlayerReplicationInfo != None &&
+			P.PlayerReplicationInfo.Team != Team && !P.PlayerReplicationInfo.bIsSpectator)
 			{
-				if (p != None) // if an enemy is present.
-				{
-					EnemyIsStillPresent = true;
-					if ( !StopSpamming )
-					{
-						StopSpamming = true;
-						TeamAlarm();
-					}
-					AccSpam++;
-					break;
-				}
+				EmitWarningAgain = Level.TimeSeconds + 3.5 * Level.TimeDilation;
+				TeamAlarm();
+				break;
 			}
-
-	if ( p == none )
-	{
-		AccSpam = 0;
-		if ( !EnemyIsStillPresent )
-		{
-			StopSpamming = false;
-			AlertLight(false);
-		}
-	}
-
-	EnemyIsStillPresent = false;
 }
 
 function TeamAlarm()
 {
+	local PlayerPawn P;
 
-	local pawn p;
-
-	if (!bDisabledByEMP)
-	{
-		AnnounceTeam("ENEMY INTRUSION DETECTED!!"@AlarmLocation, Team);
-		AlertLight(true);
-		Self.PlaySound(Sound'IntrusionAlarm',, 4.0);
-		for ( p = Level.PawnList; p != None; p = p.nextPawn )
-			if ( p.IsA('TournamentPlayer' ) && p.PlayerReplicationInfo.Team == Team && !p.PlayerReplicationInfo.bIsSpectator )
-		        TournamentPlayer(P).ReceiveLocalizedMessage(Class'TeamMotionAlarmAlert');
-	}
+	AnnounceTeam("ENEMY INTRUSION DETECTED!!"@AlarmLocation, Team);
+	AlertLight(true);
+	PlaySound( Sound'IntrusionAlarm',, 4.0);
+	ForEach AllActors( class'PlayerPawn', P)
+		if ( (P.PlayerReplicationInfo != None) && (P.PlayerReplicationInfo.Team == Team) && !P.PlayerReplicationInfo.bIsSpectator )
+	        P.ReceiveLocalizedMessage(Class'TeamMotionAlarmAlert');
 }
 
-function AlertLight(bool on)
+function AlertLight( bool bEnable)
 {
-	if ( on == true && !bDisabledByEMP)
-		{
-			LightEffect=LE_SearchLight;
-			LightBrightness=255;
-			LightPeriod=1;
+	if ( bEnable && !bDisabledByEMP )
+	{
+		LightEffect=LE_SearchLight;
+		LightBrightness=255;
+		LightPeriod=1;
 
-			if ( Team == 0 )
-				LightHue=0;
-			else
-				LightHue=170;
+		if ( Team == 0 )
+			LightHue=0;
+		else
+			LightHue=170;
 
-			LightRadius=32;
-			LightSaturation=0;
-			LightType=LT_Steady;
-		}
+		LightRadius=32;
+		LightSaturation=0;
+		LightType=LT_Steady;
+	}
     else
 		LightType=LT_None;
 }
 
 function Upgraded()
 {
-//	if ( SiegeGI(Level.Game) != None )
-		DetectionRange = (ShortestRange*(1+Grade));
+	DetectionRange = (BaseRange*(1+Grade));
 }
 
 simulated function FinishBuilding()
-{
-	MultiSkins[4] = TextureRed;
-	MultiSkins[5] = TextureBlue;
-	MultiSkins[6] = TextureGreen;
-	MultiSkins[7] = TextureYellow;
-    JustFinishBuilding();
-}
-
-simulated function JustFinishBuilding()
 {
     local int i;
     local WildcardsMeshFX newFX;
@@ -171,10 +121,10 @@ simulated function JustFinishBuilding()
 defaultproperties
 {
      bOnlyOwnerRemove=True
-     TextureRed=Texture'MotionAlarmSkinT0'
-     TextureBlue=Texture'MotionAlarmSkinT1'
-     TextureGreen=Texture'MotionAlarmSkinT2'
-     TextureYellow=Texture'MotionAlarmSkinT3'
+     SkinRedTeam=Texture'MotionAlarmSkinT0'
+     SkinBlueTeam=Texture'MotionAlarmSkinT1'
+     SkinGreenTeam=Texture'MotionAlarmSkinT2'
+     SkinYellowTeam=Texture'MotionAlarmSkinT3'
      DetectionRange=64
      BuildingName="Motion Alarm"
      BuildCost=400

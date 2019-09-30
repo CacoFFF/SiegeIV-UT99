@@ -110,7 +110,6 @@ simulated function ProcessTouch(Actor Other, Vector HitLocation)
 
 function BurnNear()
 {
-	local sgBuilding building;
 	local int MyTeam;
 
 	if ( Instigator == none || Instigator.PlayerReplicationInfo == none )

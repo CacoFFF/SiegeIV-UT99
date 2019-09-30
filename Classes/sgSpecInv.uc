@@ -148,7 +148,6 @@ exec function JumpOutOfPlayer()
 exec function TeamName( name aTeam, string aName)
 {
 	local byte TheTeam;
-	local TeamInfo T;
 
 	if ( (PlayerPawn(Owner) == none) || (!SpecialRights() && !PlayerPawn(Owner).bAdmin) )
 	{

@@ -182,8 +182,6 @@ simulated event Timer()
 
 simulated function vector NextWeaponOffset()
 {
-	local vector aLoc;
-
 	if ( MaxWeapons == 3 )
 	{
 		if ( DispWeapons == 0 )

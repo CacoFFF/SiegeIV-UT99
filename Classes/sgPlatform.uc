@@ -6,10 +6,6 @@
 class sgPlatform expands sgBuilding;
 
 var sgBuildingCH TCH;
-var float BaseEnergy;
-
-var pawn rPlayers[16];
-var int iP;
 
 replication
 {
@@ -48,7 +44,6 @@ simulated event PostNetBeginPlay()
 		TCH.MyBuild = self;
 }
 
-
 simulated function FinishBuilding()
 {
 	Super.FinishBuilding();
@@ -58,7 +53,6 @@ simulated function FinishBuilding()
 		TCH.Setup( Self, 60, 15, vect(0,0,0));
 	}
 
-	BaseEnergy = MaxEnergy;
 	Texture = None;
 	if (myFX!=None)
 	{
@@ -80,11 +74,7 @@ simulated function Destruct( optional pawn instigatedBy)
 
 function Upgraded()
 {
-	local float percent, scale;
-
-	percent = Energy/BaseEnergy;
-	MaxEnergy = BaseEnergy * (1 + Grade/5);
-	Energy = percent * MaxEnergy;
+	SetMaxEnergy( BaseEnergy * (1 + Grade/5));
 }
 
 // Bring the building back to normal
