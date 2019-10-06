@@ -272,6 +272,7 @@ defaultproperties
 {
      bDragable=true
      bOnlyOwnerRemove=True
+     bExpandsTeamSpawn=True
      FireSound=Sound'sgMedia.SFX.sgProtShot'
      ProjectileType=Class'sgProtProj'
      BuildingName="Protector"

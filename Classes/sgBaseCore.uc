@@ -362,6 +362,7 @@ defaultproperties
 	 StoredRU=10
      RuMultiplier=1
      bOnlyOwnerRemove=True
+     bExpandsTeamSpawn=True
      RuRewardScale=1
      BuildingName="Base Core"
      UpgradeCost=80

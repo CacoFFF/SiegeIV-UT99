@@ -11,6 +11,8 @@ class sgHUD extends ChallengeTeamHUD config;
 #exec Texture Import File=Graphics\HUD_sgBoots.pcx Name=HUD_sgBoots Mips=Off Group=HUD Flags=2
 #exec Texture Import File=Graphics\HUD_UDamT.pcx Name=HUD_UDamT Mips=Off Group=HUD Flags=2
 #exec Texture Import File=Graphics\HUD_UDamM.pcx Name=HUD_UDamM Mips=Off Group=HUD Flags=64
+#exec Texture Import File=Graphics\HUD_BersT.pcx Name=HUD_BersT Mips=Off Group=HUD Flags=2
+#exec Texture Import File=Graphics\HUD_BersM.pcx Name=HUD_BersM Mips=Off Group=HUD Flags=64
 #exec Texture Import File=Graphics\HUD_sgRubber.bmp Name=HUD_sgRubber Mips=Off Group=HUD Flags=2
 #exec Texture Import File=Graphics\HUD_sgMetal.bmp Name=HUD_sgMetal Mips=Off Group=HUD Flags=2
 #exec Texture Import File=Graphics\HUD_sgAsbestos.bmp Name=HUD_sgAsbestos Mips=Off Group=HUD Flags=2
@@ -76,24 +78,36 @@ var bool bTeamRU;
 var bool bEnforceHealth;
 var bool bShowNukers;
 
-//Item caching for faster Inventory chain searches
-var() byte HasCached[11];
-var() UT_Invisibility CachedInvis; //0
-var() Dampener CachedDamp; //1
-var() UT_JumpBoots CachedBoots; //2
-var() UDamage CachedAmp; //3
-var() sgSpeed CachedSpeed; //4
-var() SCUBAGear CachedScuba; //5
-var() sgSuit CachedSuit; //6
-var() Suits CachedSuits; //7
-var() sgTeleNetwork CachedTelenet; //8
-var() sgVisor CachedVisor; //9
-var() sgConstructor CachedConstructor; //10
-var() int CachedArmor, CachedThigs, CachedShield, HiddenArmor;
 
-var() class<Inventory> CacheInvs[11];
-var() int CacheTypes[11];
-var() int iCacheInvs;
+const IC_Telenet      =  0;
+const IC_Visor        =  1;
+const IC_Dampener     =  2;
+const IC_Scuba        =  3;
+const IC_Suits        =  4;
+const IC_Invisibility =  5;
+const IC_Boots        =  6;
+const IC_UDamage      =  7;
+const IC_Speed        =  8;
+const IC_Suit         =  9;
+const IC_Berserk      = 10;
+const IC_Constructor  = 11;
+
+const IC_GENERIC      =  0;
+const IC_GENERIC_MAX  =  2;
+const IC_PICKUP       =  2;
+const IC_PICKUP_MAX   =  5;
+const IC_UTPICKUP     =  5;
+const IC_UTPICKUP_MAX = 11;
+const IC_WEAPON       = 11;
+const IC_WEAPON_MAX   = 12;
+const IC_MAX          = 12;
+
+
+//Item caching for faster Inventory chain searches
+var() int CachedArmor, CachedThighs, CachedShield, HiddenArmor;
+var() Inventory I_Cache[12];
+var() class<Inventory> I_Type[12];
+
 
 
 //UTPure sets enemy health to random values
@@ -105,6 +119,9 @@ simulated function PostBeginPlay()
 
 	bEnforceHealth = (Owner != None) && Owner.IsA('bbPlayer');  //UTPure being gay as usual
 	bShowNukers = Spectator(Owner) != None;
+
+//	MyFonts.Destroy();
+//	MyFonts = Spawn( class'FontInfoSiege');
 		
 	if ( SiegeGI(Level.Game) != None )
 	{
@@ -194,135 +211,93 @@ simulated final function FixInventoryChain( optional bool bOnlyBreak)
 		}
 }
 
+simulated function TryCacheItem( Inventory Inv, int Start, int Top)
+{
+	local int i;
+	
+	for ( i=Start ; i<Top ; i++ )
+		if ( ClassIsChildOf( Inv.Class, I_Type[i]) )
+		{
+			I_Cache[i] = Inv;
+			return;
+		}
+}
+
 simulated function CacheInventory()
 {
 	local Inventory Inv;
 	local int LoopCount, i;
 	local Pawn P;
-	local bool bFoundWeaponInChain, bFoundAmmoInChain;
+	local bool bNeedWeapon, bNeedAmmo;
 
 	CachedArmor = 0;
-	CachedThigs = 0;
+	CachedThighs = 0;
 	CachedShield = 0;
 	HiddenArmor = 0;
-	bFoundWeaponInChain = Pawn(Owner).Weapon != none; //We have a weapon to find
-	bFoundAmmoInChain = !bFoundWeaponInChain || (Pawn(Owner).Weapon.AmmoType == none); //We have ammo to find
+	bNeedWeapon = (Pawn(Owner).Weapon != none);
+	bNeedAmmo = bNeedWeapon && (Pawn(Owner).Weapon.AmmoType != none);
 	P = Pawn(Owner);
 	if ( PawnOwner != None )
 		P = PawnOwner;
 
-	For ( inv=P.Inventory ; inv!=none ; inv=inv.Inventory )
+	for ( i=0 ; i<IC_MAX ; i++ )
+		if ( (I_Cache[i] != None) && I_Cache[i].bDeleteMe )
+			I_Cache[i] = None;
+
+	For ( Inv=P.Inventory ; Inv!=none ; Inv=Inv.Inventory )
 	{
 		if ( ++LoopCount > 100 )
 		{
 			FixInventoryChain( true);
-			break;
+			return;
 		}
-		if ( Ammo(Inv) != none ) //Optimize
+		
+		if ( Pickup(Inv) != None )
 		{
-			if ( !bFoundAmmoInChain && (Pawn(Owner).Weapon.AmmoType == Inv) )
-				bFoundAmmoInChain = true;
-			continue;
-		}
-		if ( Weapon(Inv) != none )
-		{
-			if ( Inv == Pawn(Owner).Weapon )
-				bFoundWeaponInChain = true;
-			if ( sgConstructor(Inv) == none )
-				continue;
-		}
-		if ( Inv.bIsAnArmor )
-		{
-			if ( UT_ShieldBelt(inv) != none )
-				CachedShield += inv.Charge;
-			else if ( ThighPads(inv) != none )
-				CachedThigs += inv.Charge;
+			if ( Ammo(Inv) != None )
+				bNeedAmmo = bNeedAmmo && (Pawn(Owner).Weapon.AmmoType != Inv);
 			else
-				CachedArmor += inv.Charge;
-		}
-		For ( i=iCacheInvs ; i<ArrayCount(CacheInvs) ; i++ )
-			if ( ClassIsChildOf( inv.Class, CacheInvs[i]) )
 			{
-				AddToCache( inv, i);
-				break;
+				if ( Inv.bIsAnArmor )
+				{
+					if ( Inv.ArmorAbsorption >= 100 )
+						CachedShield += Inv.Charge;
+					else if ( ThighPads(Inv) != none )
+						CachedThighs += Inv.Charge;
+					else
+						CachedArmor += Inv.Charge;
+				}
+				
+				if ( TournamentPickup(Inv) != None )
+					TryCacheItem( Inv, IC_UTPICKUP, IC_UTPICKUP_MAX);
+				else
+					TryCacheItem( Inv, IC_PICKUP, IC_PICKUP_MAX);
 			}
+		}
+		else if ( Weapon(Inv) != None )
+		{
+			bNeedWeapon = bNeedWeapon && (Inv != Pawn(Owner).Weapon);
+			TryCacheItem( Inv, IC_WEAPON, IC_WEAPON_MAX);
+		}
+		else
+			TryCacheItem( Inv, IC_GENERIC, IC_GENERIC_MAX);
 	}
 
-	if ( CachedSuits != none )
-		HiddenArmor += CachedSuits.Charge;
-	if ( CachedSuit != none && CachedSuit.bIsAnArmor )
-		HiddenArmor += CachedSuit.Charge;
+	if ( I_Cache[IC_Suits] != none && I_Cache[IC_Suits].bIsAnArmor )
+		HiddenArmor += I_Cache[IC_Suits].Charge;
+	if ( I_Cache[IC_Suit] != none && I_Cache[IC_Suit].bIsAnArmor )
+		HiddenArmor += I_Cache[IC_Suit].Charge;
 	CachedArmor -= HiddenArmor;
 
-	if ( !bFoundWeaponInChain || !bFoundAmmoInChain )
+	if ( bNeedWeapon || bNeedWeapon )
 		FixInventoryChain();
 }
 
-
-
-simulated function CacheIntegrity()
-{
-	if ( (HasCached[0] > 0) && (CachedInvis == none || CachedInvis.bDeleteMe) )	{	RemoveFromCache( Class'UT_Invisibility');	CachedInvis=none;	}
-	if ( (HasCached[1] > 0) && (CachedDamp == none || CachedDamp.bDeleteMe) )	{	RemoveFromCache( Class'Dampener');	CachedDamp=none;	PlayerOwner.SoundDampening=1;	}
-	if ( (HasCached[2] > 0) && (CachedBoots == none || CachedBoots.bDeleteMe) )	{	RemoveFromCache( Class'UT_JumpBoots');	CachedBoots=none;	}
-	if ( (HasCached[3] > 0) && (CachedAmp == none || CachedAmp.bDeleteMe) )	{	RemoveFromCache( Class'UDamage');	CachedAmp=none;	}
-	if ( (HasCached[4] > 0) && (CachedSpeed == none || CachedSpeed.bDeleteMe) )	{	RemoveFromCache( Class'sgSpeed');	CachedSpeed=none;	}
-	if ( (HasCached[5] > 0) && (CachedScuba == none || CachedScuba.bDeleteMe) )	{	RemoveFromCache( Class'SCUBAGear');	CachedScuba=none;	}
-	if ( (HasCached[6] > 0) && (CachedSuit == none || CachedSuit.bDeleteMe) )	{	RemoveFromCache( Class'sgSuit');	CachedSuit=none;	}
-	if ( (HasCached[7] > 0) && (CachedSuits == none || CachedSuits.bDeleteMe) )	{	RemoveFromCache( Class'Suits');	CachedSuits=none;	}
-	if ( (HasCached[8] > 0) && (CachedTelenet == none || CachedTelenet.bDeleteMe) )	{	RemoveFromCache( Class'sgTeleNetwork');	CachedTelenet=none;	}
-	if ( (HasCached[9] > 0) && (CachedVisor == none || CachedVisor.bDeleteMe) )	{	RemoveFromCache( Class'sgVisor');	CachedVisor=none;	}
-	if ( (HasCached[10]> 0) && (CachedConstructor == none || CachedConstructor.bDeleteMe) )	{	RemoveFromCache( Class'sgConstructor');	CachedConstructor=none;	}
-}
-
-simulated function AddToCache( Inventory toAdd, int iCache)
-{
-	if ( iCache != iCacheInvs )
-		SwapCaches( iCache, iCacheInvs);
-	HasCached[ CacheTypes[iCacheInvs] ] = 1;
-	Switch ( CacheTypes[iCacheInvs] )
-	{
-		case 0:		CachedInvis			= UT_Invisibility( toAdd);			break;
-		case 1:		CachedDamp			= Dampener( toAdd);	PlayerOwner.SoundDampening=0.1;		break;
-		case 2:		CachedBoots			= UT_JumpBoots( toAdd);				break;
-		case 3:		CachedAmp			= UDamage( toAdd);					break;
-		case 4:		CachedSpeed			= sgSpeed( toAdd);					break;
-		case 5:		CachedScuba			= SCUBAGear( toAdd);				break;
-		case 6:		CachedSuit			= sgSuit( toAdd);					break;
-		case 7:		CachedSuits			= Suits( toAdd);					break;
-		case 8:		CachedTelenet		= sgTeleNetwork( toAdd);			break;
-		case 9:		CachedVisor			= sgVisor( toAdd);					break;
-		case 10:	CachedConstructor	= sgConstructor( toAdd);			break;
-		default: Log("BUG IN SGHUD'S AddToCache");	break;
-	}
-	iCacheInvs++;
-}
-simulated final function RemoveFromCache( Class<Inventory> toRemove)
-{
-	local int i;
-	For ( i=0 ; i<iCacheInvs ; i++ )
-		if ( CacheInvs[i] == toRemove )
-		{
-			HasCached[ CacheTypes[i] ] = 0;
-			if ( i == --iCacheInvs )
-				return;
-			SwapCaches( i, iCacheInvs);
-			return;
-		}
-}
-simulated final function SwapCaches( int i, int j)
-{
-	local int iType;	local Class<Inventory> iInv;
-	iInv = CacheInvs[i];	iType = CacheTypes[i];
-	CacheInvs[i] = CacheInvs[j];	CacheTypes[i] = CacheTypes[j];
-	CacheInvs[j] = iInv;	CacheTypes[j] = iType;
-}
 
 simulated function DrawTeam(Canvas Canvas, TeamInfo TI)
 {
 	local float XL, YL, Spacing;
 	local sgGameReplicationInfo sgGRI;
-
 
 	if ( (TI != None) && (TI.Size > 0) )
 	{
@@ -643,7 +618,7 @@ simulated function PostRender( canvas Canvas )
 	///////////////////////
 	//Thermal Visor Stuff//
 	///////////////////////
-	if (!bVisorDeActivated && CachedVisor != None )
+	if (!bVisorDeActivated && (I_Cache[IC_Visor] != None) )
 		{
 			globalint=0;
 
@@ -681,7 +656,6 @@ simulated function PostRender( canvas Canvas )
 		return;
 	}
 
-	CacheIntegrity();
 	CacheInventory();
 
 	Canvas.Font = MyFonts.GetSmallFont( Canvas.ClipX );
@@ -1075,7 +1049,7 @@ exec function ToggleVisor()
 {
 	local int i;
 
-	if ( CachedVisor != None)
+	if ( I_Cache[IC_Visor] != None)
 	{
 		if (!bVisorDeActivated)
 		{
@@ -1106,26 +1080,27 @@ exec function ShowNukers()
 
 simulated function bool TraceIdentify(canvas Canvas)
 {
-	local Actor         other;
+	local Actor         Other;
 	local vector        hitLocation,
                         hitNormal,
                         startTrace,
                         endTrace;
 
-	if ( (CachedConstructor != none) && (CachedConstructor.HitPawn != none) )
-		other = CachedConstructor.HitPawn;
-	else
+	if ( I_Cache[IC_Constructor] != none )
+		Other = sgConstructor(I_Cache[IC_Constructor]).HitPawn;
+
+	if ( Other == None )
 	{
 		startTrace = Owner.Location;
 		startTrace.Z += PawnOwner.BaseEyeHeight;
 		endTrace = startTrace + vector(PawnOwner.ViewRotation) * 10000.0;
-		other = Trace(hitLocation, hitNormal, endTrace, startTrace, true);
+		Other = Trace(hitLocation, hitNormal, endTrace, startTrace, true);
 	}
 
-	if ( Pawn(other) != None && !other.bHidden )
+	if ( Pawn(Other) != None && !Other.bHidden )
 	{
-		IdentifyTarget = Pawn(other).PlayerReplicationInfo;
-		IdentifyPawn = Pawn(other);
+		IdentifyTarget = Pawn(Other).PlayerReplicationInfo;
+		IdentifyPawn = Pawn(Other);
 		IdentifyFadeTime = 3.0;
 	}
 
@@ -1380,7 +1355,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 
 
 	//////////////////////// JUMPBOOTS ////////////////////////////////
-	if ( CachedBoots != None )
+	if ( I_Cache[IC_Boots] != None )
 	{
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor; //SolidHUDcolor?
@@ -1390,12 +1365,12 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.CurY = YOffset + Canvas.CurX;
 		Canvas.Style = ERenderStyle.STY_Normal;
 		Canvas.DrawColor = GoldColor;
-		Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(CachedBoots.Charge % 10), 0, 25.0, 64.0);
+		Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(I_Cache[IC_Boots].Charge % 10), 0, 25.0, 64.0);
 		Canvas.Style = aStyle;
 	}
 
 	//////////////////////// INVISIBLE ////////////////////////////////
-	if ( CachedInvis != None )
+	if ( I_Cache[IC_Invisibility] != None )
 	{
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor; //SolidHUDcolor?
@@ -1404,7 +1379,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 
 		Canvas.Style = ERenderStyle.STY_Normal;
 		Canvas.DrawColor = GoldColor;
-		j = CachedInvis.Charge / 2;
+		j = I_Cache[IC_Invisibility].Charge / 2;
 		if ( j >= 10 )
 		{
 			Canvas.SetPos( 79 * WeapScale, YOffset + 20 * WeapScale);
@@ -1415,10 +1390,10 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.Style = aStyle;
 	}
 
-	//////////////////////// AMPLIFIER/////////////////////////
-	if ( CachedAmp != None )
+	//////////////////////// AMPLIFIER /////////////////////////
+	if ( I_Cache[IC_UDamage] != None )
 	{
-		AmpCharge = 0.1 * CachedAmp.Charge;
+		AmpCharge = 0.1 * I_Cache[IC_UDamage].Charge;
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor; //SolidHUDcolor?
 		Canvas.SetPos(0,YOffset);
@@ -1437,11 +1412,34 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(AmpCharge % 10), 0, 25.0, 64.0);
 		Canvas.Style = aStyle;
 	}
+	
+	//////////////////////// BERSERK /////////////////////////
+	if ( I_Cache[IC_Berserk] != None )
+	{
+		YOffset -= 63.9 * WeapScale;
+		Canvas.DrawColor = HUDColor;
+		Canvas.SetPos(0,YOffset);
+		Canvas.DrawIcon(Texture'HUD_BersT', WeapScale);
+		Canvas.SetPos(0,YOffset);
+		Canvas.Style = ERenderStyle.STY_Modulated;
+		Canvas.DrawIcon(Texture'HUD_BersM', WeapScale);
+		Canvas.Style = ERenderStyle.STY_Normal;
+		Canvas.DrawColor = GoldColor;
+		j = I_Cache[IC_Berserk].Charge;
+		if ( j >= 10 )
+		{
+			Canvas.SetPos( 79 * WeapScale, YOffset + 20 * WeapScale);
+			Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(j/10), 0, 25.0, 64.0);
+		}
+		Canvas.SetPos( 96 * WeapScale, YOffset + 20 * WeapScale);
+		Canvas.DrawTile(Texture'BotPack.HudElements1', 17 * WeapScale, 36 * WeapScale, 25*(j%10), 0, 25.0, 64.0);
+		Canvas.Style = aStyle;
+	}
 
 	//////////////////////// DAMPENER ////////////////////////
-	if ( CachedDamp != None )
+	if ( I_Cache[IC_Dampener] != None )
 	{
-		AmpCharge = 0.1 * CachedDamp.Charge;
+		AmpCharge = 0.1 * I_Cache[IC_Dampener].Charge;
 		YOffset -= 63.9 * WeapScale;
 		Canvas.SetPos(0,YOffset);
 		Canvas.Style = ERenderStyle.STY_Modulated;
@@ -1450,7 +1448,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 		Canvas.SetPos(0,YOffset);
 		Canvas.Style = ERenderStyle.STY_Translucent;
 		Canvas.DrawColor = HUDColor;
-		if ( CachedDamp.bActive && (AmpCharge > 0) )
+		if ( I_Cache[IC_Dampener].bActive && (AmpCharge > 0) )
 		{
 			Canvas.DrawIcon(Texture'HUD_DampenerON', WeapScale);
 			Canvas.DrawColor = GoldColor;
@@ -1472,7 +1470,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	}
 
 	//////////////////////// TELENETWORK /////////////////////////
-	if ( CachedTelenet != None )
+	if ( I_Cache[IC_Telenet] != None )
 	{
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor; //SolidHUDcolor?
@@ -1488,13 +1486,13 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	}
 
 	//////////////////////// SCUBAGEAR /////////////////////////
-	if ( CachedScuba != None )
+	if ( I_Cache[IC_Scuba] != None )
 	{
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor;
 		Canvas.SetPos(0,YOffset);
 		Canvas.DrawIcon(Texture'HUD_Scuba', WeapScale);
-		j = CachedScuba.Charge / 10;
+		j = I_Cache[IC_Scuba].Charge / 10;
 		Canvas.DrawColor = GoldColor;
 		Canvas.Style = ERenderStyle.STY_Normal;
 		if ( j >= 10 )
@@ -1514,24 +1512,24 @@ simulated function DrawGameSynopsis(canvas Canvas)
 	}
 
 	//////////////////////// SUITS //////////////////////////////
-	if ( CachedSuits != none )
+	if ( I_Cache[IC_Suits] != none )
 	{
 		YOffset -= 63.9 * WeapScale;
 		Canvas.DrawColor = HUDColor; //SolidHUDcolor?
 		Canvas.SetPos(0,YOffset);
-		if ( ToxinSuit(CachedSuits) != none )
+		if ( ToxinSuit(I_Cache[IC_Suits]) != none )
 			Canvas.DrawIcon(Texture'HUD_sgToxin', WeapScale);
-		else if ( AsbestosSuit(CachedSuits) != none ) //INCLUDE KEVLAR LATER!
+		else if ( AsbestosSuit(I_Cache[IC_Suits]) != none ) //INCLUDE KEVLAR LATER!
 			Canvas.DrawIcon(Texture'HUD_sgAsbestos', WeapScale);
 	}
 
 	//////////////////////// JETPACK / Super JETPACK //////////////
-	if ( CachedSuit != none )
+	if ( I_Cache[IC_Suit] != none )
 	{
-		if ( JetPack(CachedSuit) != None )
+		if ( JetPack(I_Cache[IC_Suit]) != None )
 		{
 			YOffset -= HudItemSlotSpace;
-			pack = JetPack(CachedSuit);
+			pack = JetPack(I_Cache[IC_Suit]);
 			Canvas.Style = ERenderStyle.STY_Normal;
 			Canvas.DrawColor = GreyColor;
 			Canvas.SetPos(4 * Scale,YOffset);
@@ -1549,7 +1547,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 				Canvas.DrawTile(texture'IconJetpackFrame', 128, 32, 0, 0, 128, 32);
 			}
 		}
-		else if ( SpySuit(CachedSuit) != none )
+		else if ( SpySuit(I_Cache[IC_Suit]) != none )
 		{
 			YOffset -= 63.9 * WeapScale;
 			Canvas.DrawColor = HUDColor; //SolidHUDcolor?
@@ -1561,27 +1559,27 @@ simulated function DrawGameSynopsis(canvas Canvas)
 			Canvas.Style = ERenderStyle.STY_Translucent;
 			Canvas.DrawColor = WhiteColor;
 			Canvas.SetPos( 13*WeapScale, YOffset+14*WeapScale);
-			Canvas.DrawTile( Texture'HUD_SpyEyes', 64*WeapScale,40*WeapScale,63*SpySuit(CachedSuit).Spying,0,64,40);
+			Canvas.DrawTile( Texture'HUD_SpyEyes', 64*WeapScale,40*WeapScale,63*SpySuit(I_Cache[IC_Suit]).Spying,0,64,40);
 		}
-		else if ( CachedSuit.HUD_Icon != none )
+		else if ( sgSuit(I_Cache[IC_Suit]).HUD_Icon != none )
 		{
 			YOffset -= 63.9 * WeapScale;
 			Canvas.DrawColor = HUDColor; //SolidHUDcolor?
 			Canvas.SetPos(0,YOffset);
-			Canvas.DrawIcon( CachedSuit.HUD_Icon, WeapScale);
+			Canvas.DrawIcon( sgSuit(I_Cache[IC_Suit]).HUD_Icon, WeapScale);
 		}
 		Canvas.Style = aStyle;
 	}
 
 	//////////////////////// SPEED ////////////////////////////////
-	if ( CachedSpeed != None && CachedSpeed.bActive )
+	if ( I_Cache[IC_Speed] != None && I_Cache[IC_Speed].bActive )
 	{
 		YOffset -= HudItemSlotSpace;
 		Canvas.Style = ERenderStyle.STY_Normal;
 		Canvas.DrawColor = GreyColor;
 		Canvas.SetPos(4 * Scale,YOffset);
 		//Canvas.SetPos(4, YOffset - YL*2 + 26);
-		Canvas.DrawTile(texture'IconSpeed', 128, 32, 0, 0, 128, 32);
+		Canvas.DrawTile( Texture'IconSpeed', 128, 32, 0, 0, 128, 32);
 	}
 
 	//////////////////////// HUD ITEM //////////////////////////////////////
@@ -1695,25 +1693,21 @@ simulated function DrawStatus(Canvas Canvas)
 	local float StatScale, ChestAmount, ThighAmount, H1, H2, X, Y, DamageTime;
 	Local int ArmorAmount,SuitAmount,CurAbs,i,OverTime;
 //	Local inventory Inv,BestArmor;
-	local bool bChestArmor, bShieldbelt, bThighArmor, bJumpBoots, bHasDoll;
+	local bool bHasDoll;
 	local Bot BotOwner;
 	local TournamentPlayer TPOwner;
 	local texture Doll, DollBelt;
-	local float XL;
+	local float Amount, XL;
 
 	ArmorAmount = 0;
 	CurAbs = 0;
 	i = 0;
 //	BestArmor=None;
 
-	bShieldBelt = (CachedShield > 0);
-	bThighArmor = (CachedThigs > 0);
-	ThighAmount = CachedThigs;
+	ThighAmount = CachedThighs;
 	SuitAmount = HiddenArmor;
-	bChestArmor = (CachedArmor > 0);
 	ChestAmount = CachedArmor;
-	bJumpBoots = CachedBoots != none;
-	ArmorAmount = CachedThigs + HiddenArmor + CachedArmor + CachedShield;
+	ArmorAmount = CachedThighs + HiddenArmor + CachedArmor + CachedShield;
 
 	if ( !bHideStatus )
 	{
@@ -1747,33 +1741,33 @@ simulated function DrawStatus(Canvas Canvas)
 			else
 				Canvas.DrawColor = HUDColor;
 			Canvas.DrawTile(Doll, 128*StatScale, 256*StatScale, 0, 0, 128.0, 256.0);
-			Canvas.DrawColor = HUDColor;
-			if ( bShieldBelt )
+			if ( CachedShield > 0 )
 			{
+				Amount = fClamp( 195 - float(CachedShield) * 1.30, 0, 195);
 				Canvas.DrawColor = BaseColor;
 				Canvas.DrawColor.B = 0;
-				Canvas.SetPos(X, 0);
-				Canvas.DrawIcon(DollBelt, StatScale);
+				Canvas.SetPos(X, Amount*StatScale);
+				Canvas.DrawTile( DollBelt, 128.0 * StatScale, (256.0 - Amount)*StatScale, 0, Amount, 128, 256-Amount );
 			}
-			if ( bChestArmor )
+			if ( CachedArmor > 0 )
 			{
 				ChestAmount = FMin(0.01 * ChestAmount,1);
 				Canvas.DrawColor = HUDColor * ChestAmount;
 				Canvas.SetPos(X, 0);
-				Canvas.DrawTile(Doll, 128*StatScale, 64*StatScale, 128, 0, 128, 64);
+				Canvas.DrawTile( Doll, 128*StatScale, 64*StatScale, 128, 0, 128, 64);
 			}
-			if ( bThighArmor )
+			if ( CachedThighs > 0 )
 			{
 				ThighAmount = FMin(0.02 * ThighAmount,1);
 				Canvas.DrawColor = HUDColor * ThighAmount;
 				Canvas.SetPos(X, 64*StatScale);
-				Canvas.DrawTile(Doll, 128*StatScale, 64*StatScale, 128, 64, 128, 64);
+				Canvas.DrawTile( Doll, 128*StatScale, 64*StatScale, 128, 64, 128, 64);
 			}
-			if ( bJumpBoots )
+			if ( I_Cache[IC_Boots] != None )
 			{
 				Canvas.DrawColor = HUDColor;
 				Canvas.SetPos(X, 128*StatScale);
-				Canvas.DrawTile(Doll, 128*StatScale, 64*StatScale, 128, 128, 128, 64);
+				Canvas.DrawTile( Doll, 128*StatScale, 64*StatScale, 128, 128, 128, 64);
 			}
 			Canvas.Style = Style;
 			if ( (PawnOwner == PlayerOwner) && Level.bHighDetailMode && !Level.bDropDetail )
@@ -1841,7 +1835,7 @@ simulated function DrawStatus(Canvas Canvas)
 	}
 	Canvas.SetPos(X, Y);
 	Canvas.DrawTile(Texture'BotPack.HudElements1', 128*Scale, 64*Scale, 0, 192, 128.0, 64.0);
-	if ( bHideStatus && bShieldBelt )
+	if ( bHideStatus && (CachedShield > 0) )
 		Canvas.DrawColor = GoldColor;
 	else
 		Canvas.DrawColor = WhiteColor;
@@ -2163,10 +2157,10 @@ simulated function TimerDecimal()
 {
 	if ( Level.NetMode == NM_Client )
 	{
-		if ( CachedDamp != None && CachedDamp.bActive && (CachedDamp.Charge > 0) )
-			CachedDamp.Charge--;
-		if ( CachedAmp != None && CachedAmp.bActive && (CachedAmp.Charge > 0) )
-			CachedAmp.Charge--;
+		if ( (I_Cache[IC_Dampener] != None) && I_Cache[IC_Dampener].bActive && (I_Cache[IC_Dampener].Charge > 0) )
+			I_Cache[IC_Dampener].Charge--;
+		if ( (I_Cache[IC_UDamage] != None) && I_Cache[IC_UDamage].bActive && (I_Cache[IC_UDamage].Charge > 0) )
+			I_Cache[IC_UDamage].Charge--;
 	}
 }
 
@@ -2195,38 +2189,27 @@ defaultproperties
      RedColour=128
      TheWhiteStuff=(R=255,G=255,B=255)
      nHUDDecPlaces=1
-
-     CacheInvs(0)=Class'UT_Invisibility'
-     CacheInvs(1)=Class'Dampener'
-     CacheInvs(2)=Class'UT_JumpBoots'
-     CacheInvs(3)=Class'UDamage'
-     CacheInvs(4)=Class'sgSpeed'
-     CacheInvs(5)=Class'SCUBAGear'
-     CacheInvs(6)=Class'sgSuit'
-     CacheInvs(7)=Class'Suits'
-     CacheInvs(8)=Class'sgTeleNetwork'
-     CacheInvs(9)=Class'sgVisor'
-	 CacheInvs(10)=Class'sgConstructor'
-     CacheTypes(0)=0
-     CacheTypes(1)=1
-     CacheTypes(2)=2
-     CacheTypes(3)=3
-     CacheTypes(4)=4
-     CacheTypes(5)=5
-     CacheTypes(6)=6
-     CacheTypes(7)=7
-     CacheTypes(8)=8
-     CacheTypes(9)=9
-	 CacheTypes(10)=10
+     I_Type(0)=Class'sgTeleNetwork'
+     I_Type(1)=Class'sgVisor'
+     I_Type(2)=Class'Dampener'
+     I_Type(3)=Class'SCUBAGear'
+     I_Type(4)=Class'Suits'
+     I_Type(5)=Class'UT_Invisibility'
+     I_Type(6)=Class'UT_JumpBoots'
+     I_Type(7)=Class'UDamage'
+     I_Type(8)=Class'sgSpeed'
+     I_Type(9)=Class'sgSuit'
+     I_Type(10)=Class'Berserk'
+     I_Type(11)=Class'sgConstructor'
      TeamIcons(0)=Texture'IconCoreRed'
      TeamIcons(1)=Texture'IconCoreBlue'
      TeamIcons(2)=Texture'IconCoreGreen'
      TeamIcons(3)=Texture'IconCoreGold'
-	 bSeeAllHeat=True
-	 bSeeBehindWalls=True
-	 bVisorDeActivated=True
-	 AffectedActorsClass=Class'Pawn'
-	 ExcludedClass=StationaryPawn
-	 HeatClass=Class'sgHeatBlue'
-	 HeatSensingRange=16384.000000
+     bSeeAllHeat=True
+     bSeeBehindWalls=True
+     bVisorDeActivated=True
+     AffectedActorsClass=Class'Pawn'
+     ExcludedClass=StationaryPawn
+     HeatClass=Class'sgHeatBlue'
+     HeatSensingRange=16384.000000
 }

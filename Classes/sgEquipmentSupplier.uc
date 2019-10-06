@@ -209,6 +209,7 @@ defaultproperties
 {
      bDragable=true
      bOnlyOwnerRemove=True
+     bExpandsTeamSpawn=True
 	 SupplySoundFrequency=0
      SupplyRadius=60.000000
      SkinRedTeam=None

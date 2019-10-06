@@ -1,13 +1,13 @@
 //=============================================================================
-// sgItemDamageAmp
+// sgItemBerserk
 //=============================================================================
-class sgItemDamageAmp extends sgItem;
+class sgItemBerserk extends sgItem;
 
 function ModifyProduct( Inventory I, int Idx)
 {
 	Super.ModifyProduct( I, Idx);
-	if ( UDamage(I) != none )
-		I.Charge = 300 + Square(Grade) * 10;
+	if ( Berserk(I) != none )
+		I.Charge = 30 + Square(Grade);
 }
 
 function Upgraded()
@@ -15,24 +15,16 @@ function Upgraded()
 	ModifyProduct( MyProduct, 1);
 }
 
-function bool GiveItems( Pawn Other)
-{
-	if ( Super.GiveItems(Other) )
-	{
-		Other.DamageScaling = 2 + (Grade/10);
-		return true;
-	}
-}
 
 defaultproperties
 {
-     InventoryClass=Class'Botpack.UDamage'
+     InventoryClass=Class'Berserk'
      bTakeProductVisual=True
-     BuildingName="Damage Amplifier"
-     BuildCost=1500
-	 UpgradeCost=100
+     BuildingName="Berserk"
+     BuildCost=800
+	 UpgradeCost=60
      SpriteScale=0.350000
-     Model=LodMesh'Botpack.UDamage'
+     Model=LodMesh'BerserkM'
      SkinRedTeam=Texture'SuperBoosterSkinT0'
      SkinBlueTeam=Texture'SuperBoosterSkinT1'
      SpriteRedTeam=Texture'PlatformSpriteT0'

@@ -595,7 +595,8 @@ function EndGame( string Reason)
 	if ( !bOldOverTime && bOverTime )
 	{
 		for ( i=0 ; i<ArrayCount(Cores); i++ )
-			Cores[i].Energy *= Cores[i].SuddenDeathScale;
+			if ( Cores[i] != None )
+				Cores[i].Energy *= Cores[i].SuddenDeathScale;
 
 		ForEach AllActors (class'sgBuildRuleCount', RuleCounts )
 			if ( RuleCounts.bOverTime )
@@ -1163,147 +1164,132 @@ function int ReduceDamage( int damage, name damageType, Pawn injured,  Pawn inst
 	return damage;
 }
 
-function NavigationPoint FindPlayerStart(Pawn player, optional byte inTeam,
-  optional string incomingName)
+function NavigationPoint FindPlayerStart( Pawn Player, optional byte InTeam, optional string IncomingName)
 {
-	local PlayerStart
-                    dest,
-                    candidate[16],
-                    best;
-	local float     score[16],
-                    bestScore,
-                    nextDist;
-	local Pawn      otherPlayer;
-	local int       i,
-                    num;
-	local Teleporter
-                    tel;
-	local NavigationPoint
-                    n;
-	local byte      team;
-    local bool      spawnNearBase;
+	local PlayerStart Start, StartList[32];
+	local Pawn P;
+	local int i, LowestWeight, StartCount, WeightSum;
+	local Teleporter Tele;
+	local NavigationPoint N;
+	local byte      Team;
+    local bool bSpawnNearBase;
 
-	if ( bStartMatch && Player != None && Player.IsA('TournamentPlayer')
-	  && Level.NetMode == NM_Standalone
-      && TournamentPlayer(Player).StartSpot != None )
+	if ( bStartMatch && (Player != None) && Player.IsA('TournamentPlayer')
+	  && (Level.NetMode == NM_Standalone)
+      && (TournamentPlayer(Player).StartSpot != None) )
 		return TournamentPlayer(Player).StartSpot;
 
-	if ( Player != None && Player.PlayerReplicationInfo != None )
-		team = Player.PlayerReplicationInfo.Team;
+
+
+	if ( IncomingName != "" )
+		ForEach AllActors(class 'Teleporter', Tele)
+			if ( string(Tele.Tag) ~= IncomingName )
+				return Tele;
+
+	if ( (Player != None) && (Player.PlayerReplicationInfo != None) )
+		Team = Player.PlayerReplicationInfo.Team;
 	else
-		team = inTeam;
+		Team = InTeam;
 
-	if ( incomingName != "" )
-		foreach AllActors(class 'Teleporter', tel)
-			if ( string(Tel.Tag) ~= incomingName )
-				return tel;
-
-	if ( team == 255 )
-		team = 0;
-
-	//choose candidates
-	for ( N = Level.NavigationPointList; N != None; N = N.nextNavigationPoint )
+	// Choose candidates
+	for ( N=Level.NavigationPointList ; N!=None ; N=N.nextNavigationPoint )
 	{
-		dest = PlayerStart(N);
-		if ( dest != None && dest.bEnabled &&
-          (!bSpawnInTeamArea || team == dest.TeamNumber) )
+		Start = PlayerStart(N);
+		if ( (Start != None) && Start.bEnabled && (!bSpawnInTeamArea || Team == Start.TeamNumber) )
 		{
-			if ( num < 16 )
-				candidate[num] = dest;
-			else if ( Rand(num) < 16 )
-				candidate[Rand(16)] = dest;
-			num++;
+			if ( StartCount < 32 )
+				StartList[StartCount] = Start;
+			else if ( Rand(StartCount) < 32 )
+				StartList[Rand(32)] = Start;
+			StartCount++;
 		}
 	}
 
-	if ( num == 0 )
+	if ( StartCount == 0 )
 	{
-		log("Didn't find any player starts in list for team"@Team@"!!!");
-		foreach AllActors( class'PlayerStart', dest )
+		if ( Team != 255 )
+			log("Didn't find any player starts in list for team"@Team@"!!!");
+		foreach AllActors( class'PlayerStart', Start )
 		{
-			if ( num < 16 )
-				candidate[num] = dest;
-			else if ( Rand(num) < 16 )
-				candidate[Rand(16)] = dest;
-			num++;
+			if ( StartCount < 32 )
+				StartList[StartCount] = Start;
+			else if ( Rand(StartCount) < 32 )
+				StartList[Rand(32)] = Start;
+			StartCount++;
 		}
-		if ( num == 0 )
+		if ( StartCount == 0 )
 			return None;
 	}
+	StartCount = Min( StartCount, 32); //Cap at 32
 
-	if ( num > 16 )
-		num = 16;
-
-	//assess candidates
-	for ( i = 0; i < num; i++ )
+	// Assess candidates
+	For ( i=0 ; i<StartCount ; i++ )
 	{
-		if ( candidate[i] == LastStartSpot )
-			score[i] = -6000.0;
-		else
-			score[i] = 4000 * FRand(); //randomize
+		StartList[i].visitedWeight = 1000;
+		if ( StartList[i] != LastStartSpot )
+			StartList[i].visitedWeight += Rand(5); //randomize
 	}
+	bSpawnNearBase = FRand() <= 0.85;
 
-    if ( FRand() <= 0.85 )
-        spawnNearBase = true;
-
-	for ( otherPlayer = Level.PawnList; otherPlayer != None;
-      otherPlayer = otherPlayer.NextPawn)
-    {
-        if ( otherPlayer.bIsPlayer && otherPlayer.Health > 0 &&
-          !otherPlayer.IsA('Spectator') )
-        {
-            for ( i = 0; i < num; i++ )
-				if ( otherPlayer.Region.Zone == candidate[i].Region.Zone )
+	for ( P=Level.PawnList ; P!=None ; P=P.nextPawn )
+	{
+		if ( P.bIsPlayer && P.bCollideActors && (P.Health > 0) && (P.PlayerReplicationInfo != None) ) //bCollideActors discards dead and spectators
+		{
+			for ( i=0 ; i<StartCount ; i++ )
+			{
+				StartList[i].visitedWeight -= 10000 * int(SGS.static.ActorsTouchingExt( P, StartList[i], 10, 20)); //This spawn should not be used
+				StartList[i].visitedWeight -= int( P.Region.Zone == StartList[i].Region.Zone);
+				if ( P.PlayerReplicationInfo.Team != Team ) //Reduce chance of selecting spawn in presence of enemies
 				{
-					score[i] -= 1500;
-					nextDist = VSize(otherPlayer.Location -
-                      candidate[i].Location);
-					if ( nextDist < 2 * (CollisionRadius + CollisionHeight) )
-						Score[i] -= 1000000.0;
-					else if ( NextDist < 2000 &&
-                      otherPlayer.PlayerReplicationInfo.Team != team &&
-                      FastTrace(candidate[i].Location, otherPlayer.Location) )
-						score[i] -= 10000.0 - nextDist;
+					StartList[i].visitedWeight -= 1 * int(VSize( P.Location - StartList[i].Location) < 2000);
+					StartList[i].visitedWeight -= 2 * int(VSize( P.Location - StartList[i].Location) < 1000);
+					StartList[i].visitedWeight -= 2 * int(P.FastTrace( StartList[i].Location));
 				}
+			}
         }
-        else if ( spawnNearBase &&
-          (sgEquipmentSupplier(otherPlayer) != None ||
-          sgBaseCore(otherPlayer) != None ||
-          sgProtector(otherPlayer) != None) &&
-          sgBuilding(otherPlayer).Team == team )
-        {
-            for ( i = 0; i < num; i++ )
-            {
-                nextDist = VSize(otherPlayer.Location - candidate[i].Location);
-                if ( nextDist < 1200 )
-                {
-                    if ( FastTrace(candidate[i].Location,
-                      otherPlayer.Location) )
-                        score[i] += 6000.0 * FRand() *
-                          (sgBuilding(otherPlayer).Grade + 1)/3;
-                    else
-                        score[i] += (20000.0 - nextDist) * FRand() *
-                          (sgBuilding(otherPlayer).Grade + 1)/3;
-                }
-                else if ( FastTrace(candidate[i].Location,
-                  otherPlayer.Location) )
-                    score[i] += 15000.0 * FRand() *
-                    (sgBuilding(otherPlayer).Grade + 1)/3;
-            }
-        }
+        else if ( bSpawnNearBase && (sgBuilding(P) != None) && sgBuilding(P).bExpandsTeamSpawn && (sgBuilding(P).Team == Team) )
+		{
+			for ( i=0 ; i<StartCount ; i++ )
+			{
+				//Buildings that have taken damage have a chance to deny the spawn expansion
+				StartList[i].visitedWeight += int( (FRand() < sgBuilding(P).EnergyScale()) && (VSize( P.Location - StartList[i].Location) < 1000) );
+				StartList[i].visitedWeight += int( (FRand() < sgBuilding(P).EnergyScale()) && P.FastTrace(StartList[i].Location) );
+			}
+		}
     }
 
-	bestScore = score[0];
-	best = candidate[0];
-	for ( i = 1; i < num; i++)
-		if (score[i] > bestScore)
+	// Normalize weights to have a minimum of 2
+	LowestWeight = MaxInt;
+	for ( i=0 ; i<StartCount ; i++ )
+		if ( StartList[i].visitedWeight >= 0 )
+			LowestWeight = Min( StartList[i].visitedWeight - 2, LowestWeight);
+	WeightSum = 0;
+	for ( i=0 ; i<StartCount ; i++ )
+		if ( StartList[i].visitedWeight >= 0 )
 		{
-			bestScore = score[i];
-			best = candidate[i];
+			StartList[i].visitedWeight -= LowestWeight;
+			WeightSum += StartList[i].visitedWeight;
 		}
-	LastStartSpot = best;
 
-	return best;
+	// Select one Player start
+	if ( WeightSum <= 0 )
+		LastStartSpot = StartList[Rand(StartCount)];
+	else
+	{
+		LowestWeight = 0;
+		WeightSum = Rand(WeightSum); //Pick one weight value (this will select the start point)
+		for ( i=0 ; i<StartCount ; i++ )
+			if ( StartList[i].visitedWeight >= 0 )
+			{
+				if ( WeightSum < LowestWeight + StartList[i].visitedWeight )
+				{
+					LastStartSpot = StartList[i];
+					break;
+				}
+				LowestWeight += StartList[i].visitedWeight;
+			}
+	}
+	return LastStartSpot;
 }
 
 function bool IsOnTeam(Pawn other, int teamNum)

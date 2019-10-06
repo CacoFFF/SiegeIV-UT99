@@ -13,6 +13,7 @@ struct PreciseVector
 
 var Pawn POwner;
 var float BaseEyeHeight;
+var float SoundDampening;
 var int OwnerID;
 var sgPRI OwnerPRI;
 var SiegeGI SiegeGame;
@@ -37,6 +38,8 @@ replication
 		BaseEyeHeight;
 	unreliable if ( !bNetOwner && bReplicateHealth && Role==ROLE_Authority )
 		RealHealth;
+	unreliable if ( bNetOwner && Role==ROLE_Authority )
+		SoundDampening;
 	reliable if ( Role==ROLE_Authority )
 		OwnerID, bSpawnProtected;
 
@@ -74,7 +77,6 @@ simulated event SetInitialState()
 
 
 
-//========== Tick (authority) - begin ==========//
 //
 // Process tick on servers and standalone games
 // This is called before state code execution
@@ -89,7 +91,6 @@ event Tick( float DeltaTime)
 	SpawnProtEffectStatus();
 	AffectMovement( DeltaTime);
 }
-//========== Tick (authority) - end ==========//
 
 
 // Run on Siege servers
@@ -117,6 +118,7 @@ WaitForReady:
 	RemoteRole = ROLE_SimulatedProxy; //Init replication
 CheckPlayer:
 	BaseEyeHeight = POwner.BaseEyeHeight;
+	SoundDampening = POwner.SoundDampening;
 	if ( POwner.bHidden )
 		NetUpdateFrequency = 1.5;
 	else
@@ -182,6 +184,8 @@ state OwnerClient
 	{
 		SpawnProtEffectStatus();
 		AffectMovement( DeltaTime);
+		if ( POwner != None )
+			POwner.SoundDampening = SoundDampening;
 	}
 }
 
@@ -277,7 +281,6 @@ simulated function XC_MovementAffector FindMAffector( class<XC_MovementAffector>
 			return Aff;
 }
 
-//========== AffectMovement - begin ==========//
 //
 // Alters a player's movement variables.
 // This is done in a way that various movement buffs/debuffs
@@ -303,10 +306,8 @@ simulated function AffectMovement( float DeltaTime)
 		}
 	}
 }
-//========== AffectMovement - end ==========//
 
 
-//========== SpawnProtEffectStatus - begin ==========//
 //
 // Controls the visibility of spawn protection
 //
@@ -332,7 +333,6 @@ simulated function SpawnProtEffectStatus()
 		}
 	}
 }
-//========== SpawnProtEffectStatus - end ==========//
 
 
 
@@ -356,4 +356,5 @@ defaultproperties
 	RemoteRole=ROLE_None
 	OwnerID=-1
 	RealHealth=-1337
+	SoundDampening=1
 }

@@ -70,6 +70,7 @@ var(BuildingAttributes) bool bNoRemove; //Cannot be removed
 var(BuildingAttributes) bool bStandable; //Used to prevent translocators from bouncing here
 var(BuildingAttributes) bool bBlocksPath; //Blocks pathing
 var(BuildingAttributes) bool bDragable;
+var(BuildingAttributes) bool bExpandsTeamSpawn; //Increases PlayerStart's chance of being used
 
 // Building's Apperance
 var(BuildingApperance) float SpriteScale;
@@ -722,6 +723,11 @@ function BackToNormal()
 	}
 }
 
+
+function float EnergyScale()
+{
+	return fMax(Energy,0) / fMax(MaxEnergy,1);
+}
 
 function SetMaxEnergy( float NewMaxEnergy)
 {

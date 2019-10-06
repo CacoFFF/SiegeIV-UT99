@@ -448,6 +448,7 @@ defaultproperties
 {
      bNoUpgrade=True
      bOnlyOwnerRemove=True
+     bExpandsTeamSpawn=True
      BuildingName="Teleporter"
      BuildCost=500
      UpgradeCost=0
