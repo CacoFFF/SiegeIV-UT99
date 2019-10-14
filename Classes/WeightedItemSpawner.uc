@@ -8,7 +8,7 @@
 class WeightedItemSpawner expands SiegeActor;
 
 var class<SpawnFX> SpawnEffect;
-var sound RespawnSound;
+var Sound RespawnSound;
 
 var int InitialSeconds;
 var int BaseSeconds;
@@ -32,6 +32,9 @@ var string NextProps;
 var Inventory MyItem;
 var WeightedSpawnerRules MyRules;
 
+var vector SpawnLocations[4];
+var int SpawnLocationCount;
+
 function SpawnItem( class<Inventory> NewInvClass)
 {
 	local InventorySpot aI;
@@ -39,12 +42,11 @@ function SpawnItem( class<Inventory> NewInvClass)
 	if ( NewInvClass == none )
 		return;
 
-	Spawn(SpawnEffect);
-	PlaySound(RespawnSound);
-
-	MyItem = Spawn( NewInvClass);
+	MyItem = Spawn( NewInvClass,,, SpawnLocations[Rand(SpawnLocationCount)]);
 	if ( MyItem == none )
 		return;
+	MyItem.Spawn(SpawnEffect);
+	MyItem.PlaySound(RespawnSound);
 
 	if ( MyItem.IsA('Weapon') )
 		Weapon(MyItem).bWeaponStay = false;
@@ -59,7 +61,7 @@ function SpawnItem( class<Inventory> NewInvClass)
 	if ( NextProps != "" )
 		SetCustomProperties( MyItem, NextProps);
 
-	ForEach RadiusActors (class'InventorySpot',aI, 70)
+	ForEach MyItem.RadiusActors( class'InventorySpot', aI, 70)
 		if ( aI.MarkedItem == none )
 		{
 			aI.MarkedItem = MyItem;
@@ -122,6 +124,11 @@ Begin:
 
 state Spawning
 {
+	event BeginState()
+	{
+		SpawnLocations[SpawnLocationCount++] = Location;
+	}
+	
 	event Tick( float DeltaTime)
 	{
 		if ( fSecond > 0 )

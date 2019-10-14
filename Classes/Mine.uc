@@ -268,6 +268,8 @@ simulated function FinishBuilding()
 		MyTrigger.SetLocation( Location - vect(0,0,1) );
 		if ( OwnerPRI != none )
 			OwnerPRI.sgInfoSpreeCount += 3;
+		if ( (DeathMatchPlus(Level.Game) != None) && DeathMatchPlus(Level.Game).bTournament )
+			bOnlyOwnerRemove = false;
 	}
 
 	if ( Level.NetMode == NM_DedicatedServer )

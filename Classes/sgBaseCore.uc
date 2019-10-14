@@ -339,7 +339,7 @@ simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, V
 function UpdateScore()
 {
 	if ( SiegeGI(Level.Game) != None )
-		SiegeGI(Level.Game).Teams[Team].Score = (Energy/MaxEnergy)*100;
+		SiegeGI(Level.Game).Teams[Team].Score = EnergyScale() * 100.0;
 }
 
 function string GetHumanName()

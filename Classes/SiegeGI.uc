@@ -281,7 +281,6 @@ function InitGame(string options, out string error)
 		}
 	}
 
-	ModifyCores();
 	InsertRU();
 
 	if ( GameProfile == '' )
@@ -321,13 +320,15 @@ function InitGame(string options, out string error)
 		SpawnedRandomItemSpawner = true;
 		Spawn( class'WeightedItemSpawner',,, MidSpawnLocation);
 	}
-	
+
 	ForEach AllActors( class'Inventory', Item)
     {
 		if ( (WildcardsResources(Item) != none) || (ScubaGear(Item) != none) )
 			continue;
 		Item.Destroy();
 	}
+
+	ModifyLevel();
 	
 	//Clear defaults transferred from previous map
 	class'sgSupplier'.static.ClearWeaponClasses();
@@ -572,7 +573,7 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 	}
 }
 
-function ModifyCores()
+function ModifyLevel()
 {
 	local string LevelName;
 	LevelName = String(Outer.Name);
@@ -581,6 +582,10 @@ function ModifyCores()
 		Spawn(class'sgMapEditor').EditKosov();
 	else if ( LevelName ~= "CTF-DeNovo" )
 		Spawn(class'sgMapEditor').EditDeNovo();
+	else if ( LevelName ~= "CTF-(EoW)Kanjar" )
+		Spawn(class'sgMapEditor').EditKanjar();
+	else if ( LevelName ~= "CTF-BlackRiverUltimateV5" )
+		Spawn(class'sgMapEditor').EditBlackRiverUltimateV5();
 //	else if ( LevelName ~= "CTF-'uK-BraveHeart[REVISED]" )
 }
 

@@ -297,7 +297,7 @@ simulated event Timer()
 	if ( DoneBuilding )
 	{
 		Grade = FClamp(Grade, 0, 5);
-		DrawScale = SpriteScale * (1 - FRand()*0.6*(1 - Energy/MaxEnergy));
+		DrawScale = SpriteScale * (1 - FRand() * 0.6 * (1.0 - EnergyScale()));
 		if ( bIsOnFire && (BurnPerSecond > 0) ) //Super precise burning
 		{
 			AccBurn += BurnPerSecond * 0.1; //Timer rate
@@ -724,14 +724,16 @@ function BackToNormal()
 }
 
 
-function float EnergyScale()
+simulated function float EnergyScale()
 {
-	return fMax(Energy,0) / fMax(MaxEnergy,1);
+	if ( MaxEnergy < 1 )
+		return 0;
+	return Energy / MaxEnergy;
 }
 
 function SetMaxEnergy( float NewMaxEnergy)
 {
-	Energy = (Energy / MaxEnergy) * NewMaxEnergy;
+	Energy = EnergyScale() * NewMaxEnergy;
 	MaxEnergy = NewMaxEnergy;
 }
 

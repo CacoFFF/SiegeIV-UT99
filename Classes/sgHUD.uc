@@ -1335,7 +1335,7 @@ simulated function DrawGameSynopsis(canvas Canvas)
 
     if ( bHideAllWeapons )
 	    YOffset = Canvas.ClipY;
-	else if ( HudScale * WeaponScale * Canvas.ClipX <= Canvas.ClipX - 256 * Scale )
+	else if ( HudScale * WeaponScale * Canvas.ClipX <= Canvas.ClipX - 255 * Scale )
 		YOffset = Canvas.ClipY - 63.9*Scale;
 	else
 		YOffset = Canvas.ClipY - 127.9*Scale;

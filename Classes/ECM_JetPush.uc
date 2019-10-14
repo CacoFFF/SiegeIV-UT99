@@ -79,6 +79,7 @@ function ProcessBoost( PlayerPawn Client, float BaseTimeStamp, float BeforeTimeS
 {
 	local int i, Highest;
 	local float HighestTimeStamp;
+	local vector NewLocation;
 	
 	if ( CurJet == None || ECM == None || ECM.LocalPlayer == None )
 		return;
@@ -96,8 +97,13 @@ function ProcessBoost( PlayerPawn Client, float BaseTimeStamp, float BeforeTimeS
 		}
 		
 		
-	if ( Highest >= 0 )
-		AdjustClientLocation( Client, Client.Location * 0.8 + ClientPosition[Highest] * 0.2 );
+	if ( Highest >= 0 && (class'SiegeStatics'.static.HSize(Client.Location-ClientPosition[Highest]) < 20) )
+	{
+		NewLocation = Client.Location;
+		NewLocation.Z += fClamp( ClientPosition[Highest].Z - Client.Location.Z, -30, 30);
+//		AdjustClientLocation( Client, Client.Location * 0.8 + ClientPosition[Highest] * 0.2 );
+		AdjustClientLocation( Client, NewLocation);
+	}
 }
 
 

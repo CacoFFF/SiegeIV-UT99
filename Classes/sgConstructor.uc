@@ -1449,8 +1449,8 @@ simulated event RenderOverlays( canvas Canvas )
 
 simulated event RenderTexture( ScriptedTexture Tex)
 {
-	local font F, SF;
-	local texture TmpTex;
+	local Font F, SF;
+	local Texture TmpTex;
 	local string RuleString;
 	local byte DenyBuild;
 	local int RUReq, i;
@@ -1465,7 +1465,7 @@ simulated event RenderTexture( ScriptedTexture Tex)
 
 	//Left HAND only for now
 	F = MyFonts.GetBigFont(1280);
-	SF = MyFonts.GetBigFont( 640);
+	SF = MyFonts.GetBigFont( 780);
 
 	For ( i=3+CatActor.NumCats() ; i>=0 ; i-- )
 	{

@@ -70,7 +70,7 @@ var sgAIqueuer AIQueuer;
 
 replication
 {
-	reliable if ( (Role == ROLE_Authority) && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
+	reliable if ( (Role == ROLE_Authority) && (bNetOwner || class'XC_ReplicationNotify'.static.ReplicateVar(Team)) )
 		RU;
 	reliable if ( Role == ROLE_Authority )
 		/*RU,*/ XC_Orb, Orb, sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
