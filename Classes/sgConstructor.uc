@@ -1141,7 +1141,7 @@ function bool UpgradeFunction( float DeltaRep)
 {
 	local pawn HitActor;
 	local sgBuilding sgBest;
-	local float UpgradeAmount, UpgradeCost, ScoreAdd;
+	local float UpgradeAmount, UpgradeCost;
 	local sgPri OwnerPRI;
 	local SiegeStatPlayer Stat;
 
@@ -1160,7 +1160,6 @@ function bool UpgradeFunction( float DeltaRep)
 		DeltaRep = 1;
 		SpecialPause = -1;
 		UpgradeAmount = FMin( fMin(5,int(sgBest.Grade+1.001)) - sgBest.Grade, 1 * DeltaRep);
-		ScoreAdd = UpgradeAmount;
 		
 		if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
 		{
@@ -1170,13 +1169,12 @@ function bool UpgradeFunction( float DeltaRep)
 			UpgradeCost = sgBest.UpgradeCost * int(sgBest.Grade + 1) * UpgradeAmount;
 			OwnerPRI.AddRU( -UpgradeCost );
 			sgBest.RUinvested += UpgradeCost;
-			ScoreAdd += UpgradeCost / 100.0;
+			OwnerPRI.Score += UpgradeCost / 100.0;
 		}
 		else
-			UpgradeCost = ScoreAdd; //Nominal, for freebuild stats
+			OwnerPRI.Score = UpgradeAmount; //Nominal, for freebuild stats
 			
 		sgBest.Grade += UpgradeAmount;
-		OwnerPRI.Score += ScoreAdd;
 		if ( Stat != None )
 			Stat.UpgradeRepairEvent( UpgradeCost);
 

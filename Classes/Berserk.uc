@@ -85,7 +85,10 @@ function SetOwnerLighting()
 		if ( bActiveUDamage )
 			UDamageItem.SetOwnerLighting();
 		else	
+		{
 			Owner.LightType = LT_None;
+			Owner.AmbientGlow = Owner.default.AmbientGlow;
+		}
 	}
 	else
 	{

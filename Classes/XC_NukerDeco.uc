@@ -17,7 +17,7 @@ replication
 		EyeHeight;
 }
 
-simulated event PostBeginPlay()
+simulated event BeginPlay()
 {
 	AmbientGlow = 0;
 	if ( Level.NetMode == NM_Client || Level.NetMode == NM_Standalone )

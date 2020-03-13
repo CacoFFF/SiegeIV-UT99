@@ -3,9 +3,9 @@
 //=============================================================================
 class XC_NukerDecoLS extends XC_NukerDeco;
 
-event PostBeginPlay()
+event BeginPlay()
 {
-	Super(Decoration).PostBeginPlay();
+	Super(Decoration).BeginPlay();
 }
 
 function AntiTweak()

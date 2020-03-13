@@ -132,7 +132,7 @@ simulated function Timer()
 {
 	local float SetRU;
 	local float MaxRU;
-	local bool bRemoveFromStore;
+	local int WithdrawExtra;
 	local int TeamSize, MaxedOut;
 
 	Super.Timer();
@@ -171,14 +171,12 @@ simulated function Timer()
 			StoredRU += SetRU*TeamSize;
 		else
 		{
-			if ( StoredRU > SetRU*TeamSize*2 )
-				bRemoveFromStore = true;
+			WithdrawExtra = int(Sqrt(StoredRU / (SetRU * TeamSize * 2)));
 
-			MaxedOut = AddRuToPlayers( SetRU * (1+2*int(bRemoveFromStore)), MaxRU);
+			MaxedOut = AddRuToPlayers( SetRU * (1+WithdrawExtra), MaxRU);
 			if ( MaxedOut > 0 )
-				StoredRU += SetRU * 0.5 * MaxedOut; //Those maxed out give half their RU to core
-			if ( bRemoveFromStore )
-				StoredRU -= SetRU*2*(TeamSize-MaxedOut); //Those not maxed out have substracted additional RU from store
+				StoredRU += SetRU * 0.75 * MaxedOut; //Those maxed out give 75% their RU to core
+			StoredRU -= SetRU * WithdrawExtra * (TeamSize-MaxedOut); //Those not maxed out have substracted additional RU from store
 
 		}
 	}

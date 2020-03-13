@@ -29,6 +29,7 @@ defaultproperties
      ProjectileType=Class'sgSProtProj'
      BuildingName="Super Protector"
      BuildCost=500
+     UpgradeCost=40
      MaxEnergy=5000.000000
      SpriteScale=0.800000
      Model=LodMesh'Botpack.OctGem'

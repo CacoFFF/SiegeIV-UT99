@@ -22,6 +22,7 @@ var string Nukers_Yellow;
 //Global game settings
 var bool bTeamDrag;
 
+
 replication
 {
 	reliable if ( Role==ROLE_Authority )

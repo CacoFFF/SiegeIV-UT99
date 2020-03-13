@@ -45,7 +45,7 @@ function Damage()
 function Upgraded()
 {
 	AmbientGlow=255/(6-Grade);
-	ShockSize = ((Grade)*24)+120;
+	ShockSize = (Grade*25)+125;
 }
 
 function Effects SpawnParticles()

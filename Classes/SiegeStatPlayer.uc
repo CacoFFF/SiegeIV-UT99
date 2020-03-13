@@ -201,9 +201,12 @@ Begin:
 
 function GiveRUtoTeam( optional bool bForceAll)
 {
+	local SiegeGI Game;
 	local float RUtoGive;
+
 	if ( Team > 3 )
 		return;
+
 	if ( bForceAll )
 		RUtoGive = RU;
 	else
@@ -212,7 +215,8 @@ function GiveRUtoTeam( optional bool bForceAll)
 		if ( RUtoGive > RU )
 			return;
 	}
-	if ( (SiegeGI(Level.Game) != none) && (SiegeGI(Level.Game).Cores[Team] != none) )
+	Game = SiegeGI(Level.Game);
+	if ( (Game != none) && !Game.FreeBuild && (Game.Cores[Team] != none) )
 	{
 		SiegeGI(Level.Game).Cores[Team].StoredRU += RUtoGive;
 		RU -= RUtoGive;

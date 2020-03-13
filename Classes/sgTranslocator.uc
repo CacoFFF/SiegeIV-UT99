@@ -69,12 +69,12 @@ simulated function bool ClientAltFire( float Value )
 	
 	if ( Owner != None )
 	{
-		ForEach AllActors( class'TranslocatorTarget', TT)
+/*		ForEach AllActors( class'TranslocatorTarget', TT)
 			if ( TT.Instigator == Owner )
 			{
 				Spawn( class'ECM_TranslocatorEvent').SetupTranslocation( TT);
 				break;
-			}
+			}*/
 	}
 	
 	return true;

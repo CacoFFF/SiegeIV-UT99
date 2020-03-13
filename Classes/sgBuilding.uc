@@ -441,6 +441,9 @@ simulated function Cloak()
 
 simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
 {
+	// TraceDir is the distance between the shooter and self
+	// The adjustment is an attempt to undo the 1/1000 HitLocation displacement from the engine.
+	HitLocation += TraceDir * 0.001; 
 //	TraceDir = Normal(TraceDir);
 //	HitLocation = HitLocation + 0.4 * CollisionRadius * TraceDir;
 	return true;

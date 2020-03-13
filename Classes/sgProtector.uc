@@ -277,8 +277,8 @@ defaultproperties
      ProjectileType=Class'sgProtProj'
      BuildingName="Protector"
      BuildCost=100
-     UpgradeCost=40
-     MaxEnergy=1200.000000
+     UpgradeCost=20
+     MaxEnergy=1300.000000
      SpriteScale=0.850000
      Model=LodMesh'Botpack.Crystal'
      SkinRedTeam=Texture'ProtectorSkinTeam0'

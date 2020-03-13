@@ -2,9 +2,9 @@
 // WildcardsForceField.
 //
 // Enlarge method revised by Higor
-// Class entirely rewritten.
+// Class entirely rewritten as subclass of SphericShield
 //=============================================================================
-class WildcardsForceField expands sgBuilding;
+class WildcardsForceField expands SphericShield;
 
 var float ClientGrade;
 
@@ -22,7 +22,8 @@ simulated event Timer()
 		SetCollisionSize( 40+20*Grade, 40+20*Grade);
 		SpriteScale = 0.5 + 0.25*Grade;
 		DSofMFX = 1 + 0.5 * Grade;
-		myFX.DrawScale = DSofMFX;
+		myFX.SetSize(DSofMFX);
+		myFX.Timer();
 	}
 }
 
@@ -38,50 +39,27 @@ function Upgraded()
 	AmbientGlow=255/(6-Grade);
 
 	//Keep energy proportion
-	SetMaxEnergy( BaseEnergy * (Grade+1) );
+	SetMaxEnergy( BaseEnergy * (Grade * 0.5 + 1) );
 }
 
-/*
-simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
-{
-	TraceDir = Normal(TraceDir);
-	HitLocation = HitLocation + 0.4 * CollisionRadius * TraceDir;
-	return true;
-}
-*/
-event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
-{
-
-	Super.TakeDamage( damage, instigatedBy, hitLocation, momentum, damageType);
-
-	if ( !bDeleteMe && !bIsOnFire)
-	{
-		Spawn(class'ForceFieldFlash',,,hitlocation);
-		Self.PlaySound(Sound'UnrealShare.General.Expla02',,7.0);
-	}
-}
 
 defaultproperties
 {
-     bDragable=true
      RuRewardScale=0.4
+     bNoUpgrade=False
      MFXFatness=125
      BuildingName="Forcefield"
      BuildCost=1200
      UpgradeCost=30
-     BuildTime=15.000000
-     MaxEnergy=4000.000000
+     MaxEnergy=8000.000000
      SpriteScale=0.500000
+     DSofMFX=1
      Model=LodMesh'Botpack.earth1'
-     SkinRedTeam=WetTexture'ForceFieldT0'
-     SkinBlueTeam=WetTexture'ForceFieldT1'
      SpriteRedTeam=Texture'ForceFieldAuraT0'
      SpriteBlueTeam=Texture'ForceFieldAuraT1'
-     SkinGreenTeam=WetTexture'ForceFieldT2'
-     SkinYellowTeam=WetTexture'ForceFieldT3'
      SpriteGreenTeam=Texture'ForceFieldAuraT2'
      SpriteYellowTeam=Texture'ForceFieldAuraT3'
-     MFXrotX=(Pitch=10000,Yaw=10000,Roll=10000)
+     MFXrotX=(Pitch=8000,Yaw=8000,Roll=8000)
      MultiSkins(0)=Texture'ForceFieldAuraT0'
      MultiSkins(1)=Texture'ForceFieldAuraT1'
      MultiSkins(2)=Texture'ForceFieldAuraT2'

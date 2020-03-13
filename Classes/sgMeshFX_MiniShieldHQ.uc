@@ -40,7 +40,7 @@ function PostBeginPlay()
 event Timer()
 {
 	bHidden = Class'sgClient'.default.bHighPerformance;
-	if ( MiniShield(Owner) != none )
+	if ( Owner != none )
 		DrawScale = Owner.CollisionRadius / 50;
 	if ( NextFX != none )
 		NextFX.bHidden = !bHidden;

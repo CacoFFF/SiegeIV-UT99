@@ -78,10 +78,9 @@ simulated event Tick( float DeltaTime )
 {
 	if ( Level.NetMode != NM_DedicatedServer )
 	{
-		ShockSize = FMax(0.1, 100 - 100 * LifeSpan / default.LifeSpan);
 		ScaleGlow = Lifespan / default.LifeSpan;
 		AmbientGlow = ScaleGlow * 128;
-		DrawScale = ShockSize;
+		DrawScale = FMax(0.1, 100 - 100 * LifeSpan / default.LifeSpan);
 	}
 }
 
@@ -92,9 +91,12 @@ simulated event Timer()
 	local float     Damage, DamageRadius;
     local vector    Dir;
     local int       i;
-	local byte VictimTeam;
+	local byte      VictimTeam;
+	local float     OldDamageRadius;
 
+	OldDamageRadius = ShockSize * 29;
     ShockSize = FMax( 0.1, 100 - 100 * LifeSpan / default.LifeSpan);
+	DamageRadius = ShockSize * 29;
 
 	if ( Level.NetMode != NM_DedicatedServer )
 	{
@@ -110,7 +112,6 @@ simulated event Timer()
 	
 	if ( Role == ROLE_Authority )
 	{
-		DamageRadius = ShockSize * 29;
 		ForEach VisibleCollidingActors( class 'Actor', victim, DamageRadius, Location )
 			if ( Pawn(Victim) != None || Mover(Victim) != None || Projectile(Victim) != None )
 			{
@@ -123,7 +124,14 @@ simulated event Timer()
 						if ( Pawn(Victim).PlayerReplicationInfo != None )
 							VictimTeam = Pawn(Victim).PlayerReplicationInfo.Team;
 						else if ( sgBuilding(Victim) != None )
+						{
 							VictimTeam = sgBuilding(Victim).Team;
+							if (	Mine(Victim) != None 
+								&&	VictimTeam == Team
+								&&	VSize(Victim.Location - Location) >= OldDamageRadius
+								&&	VSize(Victim.Location - Location) < DamageRadius )
+								Mine(Victim).Damage();
+						}
 						else
 							VictimTeam = 254; //Ensure non players can harm each other
 							
