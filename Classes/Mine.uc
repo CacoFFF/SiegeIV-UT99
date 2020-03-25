@@ -170,7 +170,7 @@ function bool ShouldAttack(Pawn enemy)
 }
 
 
-function Damage()
+function Damage( optional bool bNoReward)
 {
 	local int i, j, iP;
 	local Pawn p, pList[16];
@@ -211,7 +211,7 @@ function Damage()
 		j++;
 	}
 
-	if ( SiegeGI(Level.Game) != none )
+	if ( !bNoReward && (SiegeGI(Level.Game) != none) )
 	{
 		if ( Pawn(Owner) == none )
 			SiegeGI(Level.Game).SharedReward( none, Team, Award );

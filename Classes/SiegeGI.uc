@@ -575,7 +575,9 @@ static function NavigationPoint GetLinkedCandidate( navigationPoint Base, int iC
 
 function ModifyLevel()
 {
+	local LavaZone LavaZone;
 	local string LevelName;
+
 	LevelName = String(Outer.Name);
 
 	if ( LevelName ~= "CTF-Kosov" )
@@ -587,6 +589,10 @@ function ModifyLevel()
 	else if ( LevelName ~= "CTF-BlackRiverUltimateV5" )
 		Spawn(class'sgMapEditor').EditBlackRiverUltimateV5();
 //	else if ( LevelName ~= "CTF-'uK-BraveHeart[REVISED]" )
+
+	// Lava Zones no longer destructive.
+	ForEach AllActors( class'LavaZone', LavaZone)
+		LavaZone.bNoInventory = false;
 }
 
 function EndGame( string Reason)
@@ -1574,64 +1580,37 @@ function DefeatTeam( byte aTeam)
 	StatPool.ClearTeamRU( aTeam);
 }
 
-final function DebugShout(String DebugMessage)
-{
-	if ( debug )
-	{
-		log(DebugMessage);
-		class'SiegeStatics'.static.AnnounceAll( self, DebugMessage);
-	}
-}
-
 function CheckRandomSpawner()
 {
-    local int i;
+    local int i, Override;
 	local WeightedItemSpawner ExistingSpawner;
-	local bool OverideLocation;
-	local bool MapIsInList;
+	local string MapName, OtherMap;
 
-	DebugShout("Checking if a random spawner is needed or if an existing one needs to be replaced");
-	DebugShout("Reading the list...");
-
-	for ( i = 0; i != 32; i++ )
+	MapName = string(Outer.Name);
+	Override = -1;
+	for ( i=0; i!=32 && Override!=-1; i++)
 	{
-		DebugShout("RandomSpawnerMap["$string(i)$"]: "$RandomSpawnerMap[i]);
-		DebugShout("GetURLMap("$string(i)$"): "$GetURLMap());
-		if ( GetURLMap() ~= RandomSpawnerMap[i] )
-		{
-			DebugShout("Found a map location in the INI!");
+		OtherMap = Caps(RandomSpawnerMap[i]);
+		if ( InStr(OtherMap,".UNR") >= 0 )
+			OtherMap = Left( OtherMap, InStr(OtherMap,".UNR"));
 
-			MapIsInList = true;
-			OverideLocation = SpawnedRandomItemSpawner;
+		if ( MapName ~= OtherMap )
+			Override = i;
+	}
+
+	if ( Override >= 0 )
+	{
+		ForEach AllActors( class'WeightedItemSpawner', ExistingSpawner)
+		{
+			ExistingSpawner.SetLocation( RandomSpawnerLocation[Override] );
 			break;
 		}
+		if ( ExistingSpawner == None )
+		{
+			Spawn( class'WeightedItemSpawner',,, RandomSpawnerLocation[Override]);
+			SpawnedRandomItemSpawner = true;
+		}
 	}
-
-	if ( OverideLocation && MapIsInList )
-	{
-		// Move the existing random spawner to a better location we define in the INI
-	    foreach AllActors(class'WeightedItemSpawner',ExistingSpawner)
-			ExistingSpawner.SetLocation(RandomSpawnerLocation[i]);
-		DebugShout("Moved the random spawner to a better location defined in the INI!");
-	}
-
-	if ( !SpawnedRandomItemSpawner && !OverideLocation && MapIsInList )
-	{
-		// Make a new RandomSpawneer at location defined in the INI for maps without the RandomSpawneer
-		Spawn(class'WeightedItemSpawner',,,RandomSpawnerLocation[i]);
-		SpawnedRandomItemSpawner = true;
-		DebugShout("Created the random spawner at INI defined location!");
-	}
-	else
-	{
-		if ( !OverideLocation )
-			DebugShout("Random Spawner Cannot Spawn!");
-	}
-
-
-	if ( SpawnedRandomItemSpawner && !OverideLocation )
-		DebugShout("Spawned the random spawner Normally");
-
 	CheckedRandomSpawner = true;
 }
 
@@ -2143,7 +2122,7 @@ defaultproperties
      bCore5AddsEnforcer=True
      BaseMotion=70
      TranslocBaseForce=800
-     TranslocLevelForce=120
+     TranslocLevelForce=130
      SpawnProtSecs=8
      bUseDenied=True
      NumResources=0.500000

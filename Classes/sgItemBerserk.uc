@@ -34,5 +34,5 @@ defaultproperties
      SpriteGreenTeam=Texture'PlatformSpriteT2'
      SpriteYellowTeam=Texture'PlatformSpriteT3'
      MFXrotX=(Yaw=90000)
-     GUI_Icon=Texture'GUI_UDamage'
+     GUI_Icon=Texture'GUI_Berserk'
 }

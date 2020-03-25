@@ -356,14 +356,19 @@ simulated event PostNetBeginPlay()
 simulated function AddRU( float Amount, optional bool bPassiveRU)
 {
 	local float TopRU;
+
 	TopRU = MaxRU();
 	if ( RU <= TopRU )
-		RU = fClamp(RU + Amount, 0, TopRU);
+	{
+		if ( (Level.NetMode != NM_Client) || bPassiveRU )
+			RU = fClamp(RU + Amount, 0, TopRU);
+	}
 	else
 	{
 		if ( Amount > 0 )
 			return;
-		RU = fMax(RU + Amount, 0);
+		if ( (Level.NetMode != NM_Client) || bPassiveRU )
+			RU = fMax(RU + Amount, 0);
 	}
 
 	if ( !bPassiveRU )

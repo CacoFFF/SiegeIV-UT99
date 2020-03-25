@@ -116,6 +116,13 @@ simulated function FinishBuilding()
         }
 }
 
+function Upgraded()
+{
+	AmbientGlow=255/(6-Grade);
+	ShockSize = (Grade*24)+120;
+}
+
+
 defaultproperties
 {
      MFXFatness=255

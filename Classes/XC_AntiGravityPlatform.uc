@@ -218,7 +218,6 @@ defaultproperties
      bDragable=True
      bStandable=True
      bReplicateEMP=True
-     bBlocksPath=True
      BuildingName="Antigravity Platform"
      BuildCost=500
      UpgradeCost=70

@@ -45,7 +45,7 @@ function Damage()
 function Upgraded()
 {
 	AmbientGlow=255/(6-Grade);
-	ShockSize = (Grade*25)+125;
+	ShockSize = (Grade*27)+135;
 }
 
 function Effects SpawnParticles()
@@ -66,7 +66,7 @@ defaultproperties
      bDragable=true
      ShockSize=120
      BuildingName="Guardian"
-     BuildCost=400
+     BuildCost=300
      BuildTime=15.000000
      MaxEnergy=8500.000000
      SpriteScale=0.400000

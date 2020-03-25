@@ -129,6 +129,5 @@ defaultproperties
      CollisionHeight=12.750000
      BuildDistance=50
      bStandable=True
-     bBlocksPath=True
      GUI_Icon=Texture'GUI_Platform'
 }

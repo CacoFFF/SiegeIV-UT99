@@ -167,11 +167,13 @@ simulated function Timer()
 			MaxRU = 9999;
 		SetRU = fMax(0.05, (10-float(TeamSize)) * 0.05) + Grade * 0.85;
 		SetRU *= RuMultiplier * 0.05;
-		if ( (StoredRU < 0) && (SetRU*TeamSize < Abs(StoredRU) ) )
+		if ( SetRU*TeamSize <= 0.0001 ) //Do not substract
+		{}
+		else if ( (StoredRU < 0) && (SetRU*TeamSize < Abs(StoredRU) ) )
 			StoredRU += SetRU*TeamSize;
 		else
 		{
-			WithdrawExtra = int(Sqrt(StoredRU / (SetRU * TeamSize * 2)));
+			WithdrawExtra = int(Sqrt(Abs(StoredRU / (SetRU * TeamSize * 2))));
 
 			MaxedOut = AddRuToPlayers( SetRU * (1+WithdrawExtra), MaxRU);
 			if ( MaxedOut > 0 )

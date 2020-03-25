@@ -14,6 +14,7 @@ struct PreciseVector
 var Pawn POwner;
 var float BaseEyeHeight;
 var float SoundDampening;
+var float MaxStepHeight;
 var int OwnerID;
 var sgPRI OwnerPRI;
 var SiegeGI SiegeGame;
@@ -31,6 +32,7 @@ var bool bSpawnProtected;
 var SpawnProtEffect SPEffect;
 var Engine ClientEngine;
 
+var Actor DebugAttachment[8];
 
 replication
 {
@@ -39,14 +41,14 @@ replication
 	unreliable if ( !bNetOwner && bReplicateHealth && Role==ROLE_Authority )
 		RealHealth;
 	unreliable if ( bNetOwner && Role==ROLE_Authority )
-		SoundDampening;
+		SoundDampening, MaxStepHeight;
 	reliable if ( Role==ROLE_Authority )
 		OwnerID, bSpawnProtected;
 
 	unreliable if ( Role==ROLE_Authority )
 		AdjustPlayerLocation;
 	reliable if ( Role<ROLE_Authority ) //Client should report this
-		FoundXCGEHash;
+		FoundXCGEHash, DebugInfo;
 }
 
 event PostBeginPlay()
@@ -104,7 +106,7 @@ state Server
 			return false;
 			
 		P = PlayerPawn(POwner);
-		return (P == None) || (P.CurrentTimeStamp != 0); //Bot or active player
+		return (P == None) || (P.CurrentTimeStamp != 0) || (Viewport(P.Player) != None); //Bot or active player
 	}
 	
 Begin:
@@ -119,6 +121,7 @@ WaitForReady:
 CheckPlayer:
 	BaseEyeHeight = POwner.BaseEyeHeight;
 	SoundDampening = POwner.SoundDampening;
+	MaxStepHeight = POwner.MaxStepHeight;
 	if ( POwner.bHidden )
 		NetUpdateFrequency = 1.5;
 	else
@@ -169,6 +172,7 @@ SetProps:
 	}
 	POwner.BaseEyeHeight = BaseEyeHeight;
 	POwner.EyeHeight = BaseEyeHeight;
+	DebugScan( !POwner.bHidden );
 	Sleep(0.0);
 	Goto('SetProps');
 }
@@ -185,7 +189,10 @@ state OwnerClient
 		SpawnProtEffectStatus();
 		AffectMovement( DeltaTime);
 		if ( POwner != None )
+		{
 			POwner.SoundDampening = SoundDampening;
+			POwner.MaxStepHeight = MaxStepHeight;
+		}
 	}
 }
 
@@ -213,6 +220,87 @@ simulated function SetHealth()
 	if ( (POwner != none) && (RealHealth != -1337) )
 		POwner.Health = RealHealth;
 }
+
+function DebugInfo( string Data)
+{
+	Log( Data, 'DebugInfo');
+}
+
+simulated function DebugScan( bool DebugEnable)
+{
+	local bool bFound;
+	local int i;
+	local sgPlayerData PD;
+	local Actor A;
+
+	if ( (FRand() > 0.2) || (POwner == None) )
+		return;
+	
+	if ( DebugEnable )
+	{
+		if ( PlayerPawn(POwner) != None && Viewport(PlayerPawn(POwner).Player) != None ) //Local player
+		{
+		}
+		else //Other player
+		{
+			if ( POwner.Style == STY_Translucent )
+			{
+				ForEach POwner.RadiusActors( class'Actor', A, 10)
+					if (	(A.Mesh == POwner.Mesh) && (Pawn(A) == None) && (Carcass(A) == None)
+						&&	(A.Class.Outer.Name != Class.Outer.Name) )
+					{
+						bFound = false;
+						for ( i=0 ; i<ArrayCount(DebugAttachment) && !bFound ; i++ )
+							if ( DebugAttachment[i] == A )
+								bFound = true;
+						if ( !bFound )
+						{
+							for ( i=0 ; i<ArrayCount(DebugAttachment) ; i++ )
+								if ( DebugAttachment[i] == None )
+								{
+									DebugAttachment[i] = A;
+									ForEach AllActors( class'sgPlayerData', PD)
+										if ( PD.IsInState('OwnerClient') )
+										{
+											PD.DebugInfo( PD.OwnerPRI.PlayerName$": [ATTACH] "$A.Name@"("$A.Class$")"@A.Tag@A.Owner);
+											PD.DebugEntry();
+										}
+									
+									break;
+								}
+						}
+					}
+			}
+		}
+	}
+	else
+	{
+		For ( i=0 ; i<ArrayCount(DebugAttachment) ; i++ )
+			DebugAttachment[i] = None;
+	}
+}
+
+simulated function DebugEntry()
+{
+	local PlayerPawn P;
+	local LevelInfo Entry;
+	local Actor A;
+	
+	P = PlayerPawn(POwner);
+	if ( P == None )
+		P = class'SiegeStatics'.static.FindLocalPlayer(self);
+	if ( P != None )
+	{
+		Entry = P.GetEntryLevel();
+		ForEach Entry.AllActors( class'Actor', A)
+			if	(	!A.bStatic
+				&&	A.Class.Outer.Name != 'Engine'
+				&&	A.Class.Outer.Name != 'Botpack'
+				&&	A.Class.Outer.Name != 'UBrowser' )
+				DebugInfo( P.PlayerReplicationInfo.PlayerName$": [ENTRY] "$A.Name@"("$A.Class$")"@A.Tag@A.Owner);
+	}
+}
+
 
 simulated function bool FindPRI()
 {
@@ -357,4 +445,5 @@ defaultproperties
 	OwnerID=-1
 	RealHealth=-1337
 	SoundDampening=1
+	MaxStepHeight=25
 }

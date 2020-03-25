@@ -7,15 +7,15 @@
 //=============================================================================
 class sgBuildingCH expands Mover;
 
+//Should be transient, because Brush cannot be saved to file.
+
 var bool bLocalHull;
 var bool bTransmitDamage;
-var float TransmitScale;
 var sgBuilding MyBuild; //On clients, the build itself is responsible for setting this if replicated late
 
 //No rotation support yet
 var float RelX, RelY, RelZ;
-var private vector RelativePosition;
-var private bool bHasStand;
+var vector RelativePosition;
 
 replication
 {
@@ -65,8 +65,6 @@ simulated event Attach( actor Other)
 {
 	if ( Other.bIsPawn )
 	{
-		if ( PlayerPawn(Other) != none )
-			bHasStand = True;
 		if ( MyBuild != none )
 			MyBuild.CollisionStand( Pawn(Other));
 	}
@@ -97,7 +95,7 @@ event Tick( float DeltaTime)
 		return;
 	}
 
-	if ( VSize( (MyBuild.Location+RelativePosition) - Location) > 2)
+	if ( VSize( (MyBuild.Location+RelativePosition) - Location) > 1)
 	{	
 		//Move will also move attached objects, SetLocation will make sure this remains in a correct position
 		Move( (MyBuild.Location + RelativePosition) - Location );
@@ -106,16 +104,13 @@ event Tick( float DeltaTime)
 		if ( VSize( (MyBuild.Location+RelativePosition) - Location) > 2)
 			SetLocation( MyBuild.Location + RelativePosition);
 
-		if ( bHasStand )
+		if ( StandingCount > 0 )
 		{
-			bHasStand = False;
 			//Eject players if not standing on this structure anymore (crouch bug)
 			ForEach BasedActors (class'PlayerPawn', aPawn )
 			{
 				if ( HSize( aPawn.Location - Location) >= CollisionRadius + aPawn.CollisionRadius )
 					aPawn.AddVelocity( vect(0,0,1) );
-				else
-					bHasStand = True;
 			}
 		}
 	}
@@ -126,16 +121,34 @@ event Tick( float DeltaTime)
 //Forward damage to main actor
 event TakeDamage( int Damage, Pawn EventInstigator, vector HitLocation, vector Momentum, name DamageType)
 {
-	local name aN;
 	if ( bTransmitDamage && bLocalHull )
 	{
-		aN = MyBuild.Tag;
-		MyBuild.Tag = 'ForceDamage';
-		MyBuild.TakeDamage( Damage * TransmitScale, EventInstigator, HitLocation, Momentum, DamageType);
-		MyBuild.Tag = aN;
+		MyBuild.bDamageFromHull = true;
+		MyBuild.TakeDamage( Damage, EventInstigator, HitLocation, Momentum, DamageType);
+		MyBuild.bDamageFromHull = false;
 	}
 }
 
+function SetStaticBrush( Model InBrush, float InScale)
+{
+	local vector NewScale;
+
+	NewScale = vect(1,1,1) * InScale;
+	if ( (Brush == InBrush) && (VSize(NewScale-MainScale.Scale) <= 0.01) )
+		return;
+
+	bStatic = false;
+	SetCollision(false);
+	Brush = InBrush;
+	MainScale.Scale = NewScale;
+	SetCollision(true);
+	if ( Brush != None )
+	{
+		bStatic = true;
+		bLocalHull = true;
+		RemoteRole = ROLE_None;
+	}
+}
 
 static final function float HSize( vector aVec)
 {

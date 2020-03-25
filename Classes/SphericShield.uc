@@ -21,20 +21,45 @@ simulated function FinishBuilding()
 		newFX.NextFX = myFX;
 		myFX = newFX;
 	}
+
+}
+
+simulated function CompleteBuilding()
+{
+	Super.CompleteBuilding();
+	
+	// Experiment was a failure
+	// Mover collision doesn't process well when scaled.
+	// ClientAdjustPosition pushes player outside of sphere.
+/*	if ( CollisionHull == None )
+	{
+		CollisionHull = Spawn( class'sgBuildingCH', self, '', Location, Rotation);
+		CollisionHull.Setup( self, CollisionRadius, CollisionHeight);
+		CollisionHull.bBlockActors = false;
+		CollisionHull.bBlockPlayers = false;
+		CollisionHull.bTransmitDamage = true;
+		CollisionHull.SetStaticBrush( Model'sgSphereBrush', CollisionRadius / 50);
+	}
+	if ( CollisionHull.CollisionRadius != CollisionRadius )
+	{
+		CollisionHull.SetCollisionSize( CollisionRadius, CollisionHeight);
+		CollisionHull.SetStaticBrush( Model'sgSphereBrush', CollisionRadius / 50);
+	}*/
 }
 
 simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
 {
 	local float OffsetDist, discr;
+	local vector HitAdjust;
 
 	Super.AdjustHitLocation( HitLocation, TraceDir);
 	
 	OffsetDist = 3 + CollisionRadius * 0.15;
-	if ( VSize(Location - HitLocation) < CollisionRadius * 0.88)
+/*	if ( VSize(Location - HitLocation) < CollisionRadius * 0.88)
 	{
 		HitLocation += Normal(TraceDir) * OffsetDist;
 		return false;
-	}
+	}*/
 
 	TraceDir = Normal(TraceDir);
 	HitLocation -= Location;
@@ -43,21 +68,39 @@ simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDi
 	if ( discr < 0 )
 	{
 		HitLocation += Location;
-		HitLocation += Normal(TraceDir) * OffsetDist; //This should help prevent infinite recursions
+		HitLocation += TraceDir * OffsetDist; //This should help prevent infinite recursions
 		return false;
 	}
-
-	HitLocation += TraceDir * ( -(HitLocation dot TraceDir) - sqrt(discr)) + Location;
-	return true;
+	
+	// Outside
+	if ( VSize(HitLocation) >= CollisionRadius * 0.88 )
+	{
+		HitLocation += TraceDir * ( -(HitLocation dot TraceDir) - sqrt(discr)) + Location;
+		HitAdjust = HitLocation + TraceDir * (CollisionRadius * 0.12 * discr);
+		// Move explosions inside a bit to deal with campers
+		if ( FastTrace(HitLocation,HitAdjust) )
+			HitLocation = HitAdjust;
+		return true;
+	}
+	// Inside
+	else
+	{
+		HitLocation += Location + TraceDir * OffsetDist;
+		return false;
+	}
 }
 
 event TakeDamage( int Damage, Pawn instigatedBy, Vector HitLocation, Vector Momentum, name damageType )
 {
 	local float Factor;
+	local float ScanRadius;
+	local Pawn P;
+	local byte InstigatorTeam;
+
 	if ( damagetype == 'jolted' || damagetype == 'shot' || damagetype == 'shredded' || damagetype == 'sgSpecial' )
 	{
-		Factor = 1 + fClamp( Normal(Location - HitLocation) dot Normal(Momentum), 0, 1) * 0.8;
-		Damage *= Factor;
+		Factor = fClamp( Normal(Location - HitLocation) dot Normal(Momentum), 0, 1.05);
+		Damage *= 1 + (Factor*Factor);
 	}
 	Super.TakeDamage( Damage, instigatedBy, HitLocation, Momentum, damageType);
 
@@ -66,6 +109,15 @@ event TakeDamage( int Damage, Pawn instigatedBy, Vector HitLocation, Vector Mome
 		Spawn(class'ForceFieldFlash',,,HitLocation).DrawScale *= 0.1 + float(Damage) / 250;
 		PlaySound(Sound'UnrealShare.General.Expla02',,7.0);
 	}
+	
+	ScanRadius = CollisionRadius;
+	if ( int(Level.EngineVersion) < 469 )
+		ScanRadius += 17;
+		
+	InstigatorTeam = class'SiegeStatics'.static.GetTeam(instigatedBy);
+	ForEach VisibleCollidingActors( class'Pawn', P, ScanRadius)
+		if ( (sgBuilding(P) == None) && (class'SiegeStatics'.static.GetTeam(P) != InstigatorTeam) )
+			P.TakeDamage( Damage / 8, instigatedBy, HitLocation, Momentum * -0.5, damageType);
 }
 
 

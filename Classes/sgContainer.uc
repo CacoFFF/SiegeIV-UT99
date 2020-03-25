@@ -193,7 +193,6 @@ defaultproperties
      CollisionRadius=36.000000
      CollisionHeight=36.000000
 	 bCollideWhenPlacing=True
-	 bBlocksPath=True
 	 bNotifyDestroyed=True
 	 bNotifyCreated=True
 	 GUI_Icon=Texture'GUI_Container'

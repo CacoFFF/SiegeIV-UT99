@@ -5,7 +5,6 @@ class sgSuit expands TournamentPickup
 	abstract;
 
 var texture EnviroSkin;
-var float aTimer;
 var bool bNoMines;
 var bool bNoProtectors;
 var Weapon AffectedWeapon;
@@ -99,7 +98,6 @@ event Destroyed()
 {
 	Super.Destroyed();
 	RemoveSkin();
-	aTimer = -99;
 }
 
 function PickupFunction(Pawn Other)
@@ -115,7 +113,6 @@ function PickupFunction(Pawn Other)
 
 	Super.PickupFunction( Other);
 	ApplySkin();
-	aTimer = 0;
 }
 
 

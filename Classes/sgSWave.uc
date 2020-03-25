@@ -130,7 +130,7 @@ simulated event Timer()
 								&&	VictimTeam == Team
 								&&	VSize(Victim.Location - Location) >= OldDamageRadius
 								&&	VSize(Victim.Location - Location) < DamageRadius )
-								Mine(Victim).Damage();
+								Mine(Victim).Damage(true);
 						}
 						else
 							VictimTeam = 254; //Ensure non players can harm each other

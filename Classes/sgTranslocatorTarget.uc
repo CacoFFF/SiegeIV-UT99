@@ -60,15 +60,18 @@ auto state Pickup
 				BounceActor( Other);
 			return;
 		}
-		bMasterTouch = ( Other == Instigator );
+		bMasterTouch = (Other == Instigator) || ((Master != None) && (Other == Master.Owner));
 		
 		if ( Physics == PHYS_None )
 		{
 			if ( bMasterTouch )
 			{
 				PlaySound(Sound'Botpack.Pickups.AmmoPick',,2.0);
-				Master.TTarget = None;
-				Master.bTTargetOut = false;
+				if ( Master != None )
+				{
+					Master.TTarget = None;
+					Master.bTTargetOut = false;
+				}
 				if ( Other.IsA('PlayerPawn') )
 					PlayerPawn(Other).ClientWeaponEvent('TouchTarget');
 				destroy();

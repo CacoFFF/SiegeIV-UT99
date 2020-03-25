@@ -19,6 +19,7 @@ var int iCatTag; //Tag given to build if made from a category
 var float RUinvested;
 var sgPRI OwnerPRI;
 var sgBuildingVolume MyVolume;
+var sgBuildingCH CollisionHull;
 var vector InitialLocation;
 var float BaseEnergy;
 var int TimerCount;
@@ -68,7 +69,6 @@ var(BuildingAttributes) bool bCanTakeOrb;
 var(BuildingAttributes) bool bOnlyOwnerRemove;
 var(BuildingAttributes) bool bNoRemove; //Cannot be removed
 var(BuildingAttributes) bool bStandable; //Used to prevent translocators from bouncing here
-var(BuildingAttributes) bool bBlocksPath; //Blocks pathing
 var(BuildingAttributes) bool bDragable;
 var(BuildingAttributes) bool bExpandsTeamSpawn; //Increases PlayerStart's chance of being used
 
@@ -88,10 +88,17 @@ var bool bNoFractionUpgrade;
 var bool bNoNotify; //Cannot emit destruction/creation notifies (for game shutdown usage)
 var bool bNotifyDestroyed; //Can receive BuildingDestroyed notifies
 var bool bNotifyCreated; //Can receive BuildingCreated notifies
-
+var bool bDamageFromHull; //Damage being received by collision hull.
 
 var bool bSmokeStatus;
 var sgSmokeGenerator MyGen;
+
+// Collision Hull damage
+var Pawn LastDamageInstigator;
+var name LastDamageType;
+var int LastDamageAmount;
+var bool bLastDamageFromHull;
+
 
 //Destruction message
 var enum EAnnounceType{
@@ -180,12 +187,17 @@ function SetTeam( int aTeam)
 }
 
 //WARNING: ALL SUBCLASSES THAT IMPLEMENT DESTROYED() MUST CALL SUPER.DESTROYED()!!!!
-event Destroyed()
+simulated event Destroyed()
 {
-	if ( bBlocksPath )
-	{}
 	if ( !bNoNotify && bBuildInitialized && SiegeGI(Level.Game) != none )
 		SiegeGI(Level.Game).BuildingDestroyed( self);
+		
+	if ( CollisionHull != None )
+	{
+		if ( CollisionHull.bStatic )
+			CollisionHull.SetStaticBrush( None, 0);
+		CollisionHull.Destroy();
+	}
 	Super.Destroyed();
 
 }
@@ -208,12 +220,19 @@ simulated event Tick(float DeltaTime)
 			PostBuild();
 		}
 	}
-
+	
 	//TickRate independant, keep sane timer values if tickrate gets messed up
 	if ( (BuildingTimer += DeltaTime) >= 0.1 )
 	{
 		BuildingTimer = fClamp( BuildingTimer - 0.1, 0.0, 0.1 + FRand() * 0.1);
 		Timer();
+	}
+	
+	if ( (CollisionHull != None) && CollisionHull.bStatic )
+	{
+		CollisionHull.bStatic = false;
+		CollisionHull.Tick( DeltaTime);
+		CollisionHull.bStatic = true;
 	}
 }
 
@@ -280,8 +299,6 @@ simulated event Timer()
 	    {
             FinishBuilding();
             DoneBuilding = true;
-			if ( bBlocksPath )
-			{}
         }
     }
     
@@ -352,9 +369,22 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 	local float tempScore, tmpRU;
 	local SiegeStatPlayer Stat;
 
+	// Only let valid damage pass.
 	if ( Role < ROLE_Authority || Level.Game == None || !bBuildInitialized || instigatedBy == self  )
 		return;
+		
+	// Prevent damage duplication from Collision Hull
+	if (	bDamageFromHull != bLastDamageFromHull
+		&&	LastDamageInstigator == instigatedBy
+		&&	LastDamageAmount == damage
+		&&	LastDamageType == damageType )
+		return;
 
+	bLastDamageFromHull = bDamageFromHull;
+	LastDamageInstigator = instigatedBy;
+	LastDamageAmount = damage;
+	LastDamageType = damageType;
+		
 	actualDamage = Level.Game.ReduceDamage( Damage, DamageType, Self, instigatedBy);
 	if ( XC_Orb != none )
 		actualDamage = (actualDamage * 8) / 10;
@@ -441,9 +471,17 @@ simulated function Cloak()
 
 simulated function bool AdjustHitLocation(out vector HitLocation, vector TraceDir)
 {
-	// TraceDir is the distance between the shooter and self
-	// The adjustment is an attempt to undo the 1/1000 HitLocation displacement from the engine.
-	HitLocation += TraceDir * 0.001; 
+	local int i;
+	
+	// This adjustment is an attempt to undo the 1/1000 HitLocation displacement from the engine.
+	i = Min( int(VSize(TraceDir) * 0.001), 40);
+	while ( i-- > 0 )
+	{
+		if ( class'SiegeStatics'.static.InCylinder( Location-HitLocation, CollisionRadius+1, CollisionHeight+1) )
+			break;
+		HitLocation += Normal(TraceDir);
+	}
+	
 //	TraceDir = Normal(TraceDir);
 //	HitLocation = HitLocation + 0.4 * CollisionRadius * TraceDir;
 	return true;
@@ -466,11 +504,6 @@ simulated function FinishBuilding()
 		SCount = 0;
 		TotalSCount = 0;
 		BuildTime = default.BuildTime; 
-/*		if ( bBlocksPath )
-		{
-			PathBlock = new class'sgPathBlock';
-			PathBlock.Init();
-		}*/
 	}
 
     if ( Level.NetMode == NM_DedicatedServer )
@@ -595,12 +628,7 @@ function Destruct( optional pawn instigatedBy)
 
 //Notifications
 function BuildingCreated( sgBuilding sgNew); //Needs bNotifyCreated
-function BuildingDestroyed( sgBuilding sgOld) //Needs bNotifyDestroyed
-{
-	//Reinitialize path blocking to find new candidates
-//	if ( bBlocksPath && (VSize(Location - sgOld.Location) < BlockScanDist) )
-//		PathBlock.Init();
-}
+function BuildingDestroyed( sgBuilding sgOld); //Needs bNotifyDestroyed
 function OrbReceived( pawn Giver);
 function OrbRemoved( pawn Taker);
 function CollisionStand( pawn Other); //Generic collision reports stand
@@ -824,6 +852,7 @@ function LeechRU( float LeechAmount)
 	iRULeech += int(LeechAmount);
 	fRULeech = LeechAmount % 1;
 }
+
 
 
 

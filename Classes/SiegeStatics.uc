@@ -206,18 +206,25 @@ static final function float HSize( vector aVec)
 	return VSize(aVec * vect(1,1,0));
 }
 
+static final function bool InCylinder( vector aVec, float R, float H)
+{
+	return (Abs(aVec.Z) <= H) && (HSize(aVec) <= R);
+}
+
 static final function bool ActorsTouching( Actor A, Actor B)
 {
-	if ( abs(A.Location.Z - B.Location.Z) > (A.CollisionHeight + B.CollisionHeight) )
-		return false;
-	return HSize( A.Location - B.Location) <= (A.CollisionRadius + B.CollisionRadius);
+	return InCylinder
+		( A.Location - B.Location
+		, A.CollisionRadius + B.CollisionRadius
+		, A.CollisionHeight + B.CollisionHeight);
 }
 
 static final function bool ActorsTouchingExt( Actor A, Actor B, float ExtraR, float ExtraH)
 {
-	if ( abs(A.Location.Z - B.Location.Z) > (A.CollisionHeight + B.CollisionHeight + ExtraH) )
-		return false;
-	return HSize( A.Location - B.Location) <= (A.CollisionRadius + B.CollisionRadius + ExtraR);
+	return InCylinder
+		( A.Location - B.Location
+		, A.CollisionRadius + B.CollisionRadius + ExtraR
+		, A.CollisionHeight + B.CollisionHeight + ExtraH);
 }
 
 //********************************
