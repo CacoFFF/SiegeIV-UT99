@@ -160,7 +160,7 @@ auto state Flying
 
 	function ProcessTouch (Actor Other, Vector HitLocation)
 	{
-		if ( Other != instigator ) 
+		if ( Other != Instigator ) 
 			Explode(HitLocation,Normal(HitLocation-Other.Location));
 	}
 

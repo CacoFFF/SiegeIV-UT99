@@ -12,6 +12,7 @@ class XC_ReplicationNotify expands Info;
 
 var int RepDummy;
 var byte Team;
+var bool bDemo;
 
 replication
 {
@@ -19,13 +20,19 @@ replication
 		RepDummy;
 }
 
-
+// Make server always consider this for replication
 event PostBeginPlay()
 {
 	RepDummy=0;
 }
 
-function bool NotifyReplication()
+// Make client always accept incoming variables.
+simulated event PostNetBeginPlay()
+{
+	default.Team = 255;
+}
+
+simulated function bool NotifyReplication()
 {
 	if ( Owner == None )
 		LifeSpan = 0.001;
@@ -33,13 +40,14 @@ function bool NotifyReplication()
 	{
 		Team = PlayerReplicationInfo(Owner).Team;
 		default.Team = Team;
+		default.bDemo = bDemoRecording;
 	}
 	return false;
 }
 
 static final function bool ReplicateVar( byte OwnerTeam)
 {
-	return default.Team == OwnerTeam || default.Team == 255;
+	return default.Team == OwnerTeam || default.Team == 255 || default.bDemo;
 }
 
 
@@ -51,4 +59,5 @@ defaultproperties
 	NetUpdateFrequency=200
 	Team=100
 	RepDummy=1
+	RemoteRole=ROLE_SimulatedProxy;
 }

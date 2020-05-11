@@ -19,15 +19,6 @@ replication
 		RuleName, Team, AppliedOn;
 }
 
-simulated function sgBaseBuildRule GetByName( string aName)
-{
-	if ( RuleName ~= aName )
-		return self;
-	if ( nextRule != none )
-		return nextRule.GetByName( aName);
-	return none;
-}
-
 function NotifyIn( sgBuilding Other)
 {
 	if ( nextRule != none )

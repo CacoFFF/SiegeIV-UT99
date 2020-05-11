@@ -1239,6 +1239,15 @@ simulated function bool DrawIdentifyInfo(canvas Canvas)
 			Canvas.Font = BigFont;
 			DrawTwoColorID(Canvas,"Built by:", BuilderPRI.PlayerName, YPos);
 		}
+		
+		if ( (sgBaseCore(Building) != None) && sgBaseCore(Building).bLimitRepair )
+		{
+			YPos += 36*Scale;
+			Canvas.Font = BigFont;
+			s = string(sgBaseCore(Building).RepairableEnergy * 100.0 / Building.MaxEnergy);
+			s = Left( s, Len(s)-5);
+			DrawTwoColorID( Canvas, "Repairable % left:", s, YPos);
+		}
 
 		if( !Building.DoneBuilding) //Higor: same here, placing it in this block ensures Building exists and preventes yet another log warning
 		{

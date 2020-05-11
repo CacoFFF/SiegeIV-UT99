@@ -175,9 +175,13 @@ function GiveTo( pawn Other )
 }
 
 //Add decoration if picked a nuke
-function bool HandlePickupQuery( inventory Item )
+function bool HandlePickupQuery( Inventory Item )
 {
 	local bool bResult;
+	
+	if ( (Item.Class == Class) && (AmmoType.AmmoAmount >= AmmoType.MaxAmmo) )
+		return true;
+
 	bResult = Super.HandlePickupQuery( Item);
 	if ( (Item.Class == Class) && (AmmoType.AmmoAmount > 0) )
 		AddDeco();
@@ -233,6 +237,24 @@ function AltFire( float Value )
 		GotoState('Guiding');
 	}
 }
+
+function Projectile ProjectileFire(class<projectile> ProjClass, float ProjSpeed, bool bWarn)
+{
+	local float SavedOffset;
+	local Projectile Result;
+	
+	Result = Super.ProjectileFire( ProjClass, ProjSpeed, bWarn);
+	if ( Result == None )
+	{
+		SavedOffset = FireOffset.X;
+		FireOffset.X = 0;
+		Result = Super.ProjectileFire( ProjClass, ProjSpeed, bWarn);
+		FireOffset.X = SavedOffset;
+	}
+
+	return Result;	
+}
+
 
 simulated function bool ClientAltFire( float Value )
 {
@@ -343,7 +365,7 @@ defaultproperties
      bSplashDamage=True
      bSpecialIcon=True
      FiringSpeed=1.000000
-     FireOffset=(X=14.000000,Z=-8.000000)
+     FireOffset=(X=10.000000,Z=-8.000000)
      ProjectileClass=Class'sgWarShell'
      AltProjectileClass=Class'sgGuidedWarshell'
      shakemag=350.000000

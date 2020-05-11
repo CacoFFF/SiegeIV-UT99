@@ -217,7 +217,6 @@ defaultproperties
      bAlwaysRelevant=True
      bDragable=True
      bStandable=True
-     bReplicateEMP=True
      BuildingName="Antigravity Platform"
      BuildCost=500
      UpgradeCost=70

@@ -10,6 +10,7 @@ var bool bXCGE;
 var bool bXCGE_Octree;
 
 var int XCGE_Version;
+var int EngineVersion;
 var Color BlackColor;
 
 var name TeamBuildingTags[5];
@@ -37,6 +38,12 @@ static function bool DetectXCGE( Actor Other)
 		ReplaceFunction( class'sgBaseCore', class'sgBaseCore', 'AddRuToPlayers', 'AddRuToPlayers_XC');
 		ReplaceFunction( class'sgEquipmentSupplier', class'sgEquipmentSupplier', 'FindTargets', 'FindTargets_XC');
 	}
+	assert( MatchesFilter("CTF-Niven","CTF-Niven") );
+	assert( MatchesFilter("CTF-Niven","*Niven") );
+	assert( MatchesFilter("CTF-Niven","*Niven*") );
+	assert( MatchesFilter("CTF-Niven","*Nive*") );
+	assert( MatchesFilter("CTF-Niven","*N*n*") );
+	
 	return default.bXCGE;
 }
 
@@ -111,30 +118,32 @@ static final function bool TraceStopper( actor Other)
 //*******************************************************************
 static final function string NextParameter( out string Commands, string Delimiter)
 {
-	local string result;
+	local string Result;
 	local int i;
 	
 	if ( Delimiter == "" )
-	{	result = Commands;
+	{
+		Result = Commands;
 		Commands = "";
-		return result;
+		return Result;
 	}
 
+	AGAIN:
 	i = InStr(Commands, Delimiter);
 	if ( i < 0 )
 	{
-		result = Commands;
+		Result = Commands;
 		Commands = "";
-		return result;
+		return Result;
 	}
 	if ( i == 0 ) //Idiot parse
 	{
 		Commands = Mid( Commands, Len(Delimiter));
-		return NextParameter( Commands, Delimiter);
+		goto AGAIN;
 	}
-	result = Left( Commands, i);
+	Result = Left( Commands, i);
 	Commands = Mid( Commands, i + Len(Delimiter) );
-	return result;
+	return Result;
 }
 
 //**************************************************************************************************
@@ -197,6 +206,53 @@ static final function ReplaceText(out string Text, string Replace, string With)
 	}
 	Text = Text $ Input;
 }
+
+//********************************
+//Filter matching
+// * wildcard can be used anywhere
+//********************************
+static final function bool MatchesFilter( string Sample, string Filter)
+{
+	local int i;
+	local bool bStartChop, bEndChop;
+	local string Section;
+		
+	Sample = Caps(Sample);
+	Filter = Caps(ClearSpaces(Filter));
+
+	// Cleanup double asterisks
+	ReplaceText( Filter, "**", "*");
+	
+	// Special case, all allowed.
+	if ( Filter == "*" )
+		return true;
+	
+	// Special case at start
+	bStartChop = (Left (Filter,1) == "*");
+	bEndChop   = (Right(Filter,1) == "*");
+
+	SECTION_AGAIN:
+	if	(	(Filter == "*")                  //END, any text allowed.
+		||	(Filter == "" && Sample == "") ) //END, fully validated.
+		return true;
+	Section = NextParameter( Filter, "*");
+	if ( (Filter == "") && bEndChop )
+		Filter = "*";
+	if ( Section != "" )
+	{
+		i = InStr( Sample, Section);
+		if ( i==0 || (bStartChop && i>0) )
+		{
+			Sample = Mid( Sample, i+Len(Section));
+			bStartChop = true;
+			goto SECTION_AGAIN;
+		}
+		// Fail if section not found in sample.
+	}
+	// Fail if no more sections to find in sample.
+	return false;
+}
+
 
 //*******************************
 //Placement and comparison utils

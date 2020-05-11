@@ -433,7 +433,6 @@ function InsertRU()
 		}
 	}
 
-
 	For ( i=0 ; i<arrayCount(RUsLeft) ; i++ ) //Expensive iterator, unfortunately
 	{
 		if ( RUsLeft[i] <= 0 )
@@ -588,6 +587,10 @@ function ModifyLevel()
 		Spawn(class'sgMapEditor').EditKanjar();
 	else if ( LevelName ~= "CTF-BlackRiverUltimateV5" )
 		Spawn(class'sgMapEditor').EditBlackRiverUltimateV5();
+	else if ( LevelName ~= "CTF-'uK-MiniCivilWarV3]FIXED[" )
+		Spawn(class'sgMapEditor').EditMiniCivilWarV3();
+	else if ( LevelName ~= "CTF-Clarion[SwS]" )
+		Spawn(class'sgMapEditor').EditClarionSwS();
 //	else if ( LevelName ~= "CTF-'uK-BraveHeart[REVISED]" )
 
 	// Lava Zones no longer destructive.
@@ -1001,7 +1004,7 @@ function Killed( pawn Killer, pawn Other, name damageType )
 function ScoreKill( Pawn killer, Pawn other)
 {
     local int NukeAmmo;
-	local float RuMult;
+	local float RuMult, SpamFactor;
 	local bool bTeamKill;
 	local sgPRI aVictim, aKiller;
 	local vector TStart;
@@ -1044,7 +1047,11 @@ function ScoreKill( Pawn killer, Pawn other)
 					
 				ForEach RadiusActors( class'sgEquipmentSupplier', Supplier, 250, Other.Location)
 					if ( Supplier.Team == aVictim.Team )
-						SupplierTicks += 1 + int(Supplier.bProtected);
+					{
+						SpamFactor = 1 + (250 - VSize(Other.Location-Supplier.Location)) / 50; //0 to 5.9
+						SupplierTicks += (1 + int(Supplier.bProtected)) * SpamFactor;
+					}
+				Cores[aVictim.Team].StoredRU += SupplierTicks * Teams[aVictim.Team].Size;
 					
 				if ( (aKiller != none) && (aVictim != none) && aVictim.bReachedSupplier && (aVictim.SupplierTimer > 0) )
 				{
@@ -1409,13 +1416,12 @@ function bool ChangeTeam(Pawn other, int newTeam)
 
 	if ( bRatedGame && Other.PlayerReplicationInfo.Team != 255 )
 		return false;
+
 	if ( Other.IsA('Spectator') )
 	{
 		Other.PlayerReplicationInfo.Team = 255;
-		if (LocalLog != None)
-			LocalLog.LogTeamChange(Other);
-		if (WorldLog != None)
-			WorldLog.LogTeamChange(Other);
+		if (LocalLog != None) LocalLog.LogTeamChange(Other);
+		if (WorldLog != None) WorldLog.LogTeamChange(Other);
 		return true;
 	}
 
@@ -1453,7 +1459,7 @@ function bool ChangeTeam(Pawn other, int newTeam)
 	if ( newTeam == 255 || newTeam >= MaxTeams || Cores[newTeam] == None )
 		newTeam = smallest;
 
-	if ( bPlayersBalanceTeams && Level.NetMode != NM_Standalone )
+	if ( bPlayersBalanceTeams && (Level.NetMode != NM_Standalone) )
 	{
 		if ( Teams[newTeam].Size > Teams[smallest].Size )
 			newTeam = smallest;
@@ -1472,27 +1478,34 @@ function bool ChangeTeam(Pawn other, int newTeam)
 		}
 	}
 
-	if ( (PlayerPawn(other) != none) && (other.PlayerReplicationInfo.Team == newTeam) && (PlayerPawn(other).GameReplicationInfo != none) ) //TESTING, the GRI being none means that this player has just joined
+	//Just rejoined a programmed game, go to smallest team.
+	if ( bMatchStarted && bTournament && (PlayerPawn(Other) != none) && (PlayerPawn(other).GameReplicationInfo == none) )
+	{
+		newTeam = smallest;
+	}
+	
+	if ( (PlayerPawn(Other) != none) && (Other.PlayerReplicationInfo.Team == newTeam) && (PlayerPawn(Other).GameReplicationInfo != none)
+		&& (Other.Health > 0) && Other.bCollideActors && Other.bBlockActors ) //TESTING, the GRI being none means that this player has just joined
 		return false;
 
-	if ( other.PlayerReplicationInfo.Team == newTeam && bNoTeamChanges )
+	if ( Other.PlayerReplicationInfo.Team == newTeam && bNoTeamChanges )
 		return false;
 
-    if ( (other.PlayerReplicationInfo.Team < 5) && (Cores[other.PlayerReplicationInfo.Team] == none) && !other.IsA('Spectator') )
+    if ( (Other.PlayerReplicationInfo.Team < 5) && (Cores[Other.PlayerReplicationInfo.Team] == none) && !Other.IsA('Spectator') )
     {
-        other.PlayerRestartState = 'PlayerWalking';
-	other.Health = -1;
-	bPendingRestart = true;
+        Other.PlayerRestartState = 'PlayerWalking';
+		Other.Health = -1;
+		bPendingRestart = true;
 //        other.GotoState(other.default.PlayerRestartState);
         if ( !other.IsA('Commander') )
             other.GotoState('Dying');
  //       other.RestartPlayer();
     }
 
-	if ( other.IsA('TournamentPlayer') )
+	if ( Other.IsA('TournamentPlayer') )
 		TournamentPlayer(Other).StartSpot = None;
 
-	if ( other.PlayerReplicationInfo.Team != 255 )
+	if ( Other.PlayerReplicationInfo.Team != 255 )
 	{
 		ClearOrders(Other);
 		Teams[Other.PlayerReplicationInfo.Team].Size--;

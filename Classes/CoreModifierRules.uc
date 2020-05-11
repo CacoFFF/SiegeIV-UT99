@@ -7,6 +7,7 @@ var() config float LeechMultiplier;
 var() config float RuMultiplier;
 var() config float BaseUpgradeCost;
 var() config float SuddenDeathScale;
+var() config float MaxRepairAmount;
 
 function ApplyRules( SiegeGI Game)
 {
@@ -20,6 +21,7 @@ function ApplyRules( SiegeGI Game)
 			Game.Cores[i].UpgradeCost = BaseUpgradeCost;
 			Game.Cores[i].RuMultiplier = RuMultiplier;
 			Game.Cores[i].SuddenDeathScale = SuddenDeathScale;
+			Game.Cores[i].SetMaxRepair(MaxRepairAmount);
 		}
 	}
 	if ( !bHasConfig )
@@ -35,4 +37,5 @@ defaultproperties
     RuMultiplier=1
     BaseUpgradeCost=80
 	SuddenDeathScale=1
+	MaxRepairAmount=-1
 }

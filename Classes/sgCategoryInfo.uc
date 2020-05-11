@@ -1,17 +1,22 @@
 ///////////////////////////////////////
 // Category information actor V2
 
+class sgCategoryInfo expands ReplicationInfo
+	DependsOn(SiegeCategoryRules);
 
-class sgCategoryInfo expands ReplicationInfo;
-
+// Native replication tag
+var int NativeReplicationTag;
+	
 var byte Team;
-var byte sgNetDirty; //Native replication tag
 
 var private class<sgBuilding> NetBuild[128];
 var private byte NetCategory[128];
 var private sgBaseBuildRule NetRules[128];
 var private int NetCost[128]; //0 = default
+var private int NetWeight[128];
+var private string NetName[128];
 var private string NetCategories[17], CatLocalized[17]; //Optional localized vars
+var private int NetCategoryWeight[17], NetCategoryMaxWeight[17]; //Group system weight
 var private Texture NetCatIcons[17]; //Optional icons for categories
 var private string NetProperties[128];
 var private byte bCatS[17], bCatE[17]; //Cached end/start indices
@@ -20,7 +25,6 @@ var byte iCat, iBuilds, iRecBuilds;
 
 var float PriorityTimer; //Scan if > 0
 var byte PossiblePriorities[128]; //AI functions
-var byte CurPriItem; //Scan this item currently
 
 var string NewBuild;
 var string NewCategory;
@@ -32,14 +36,16 @@ var SiegeCategoryRules CatObject;
 replication
 {
 	reliable if ( Role == ROLE_Authority )
-		NetBuild, NetCategory, NetCost, NetCategories, NetCatIcons, iBuilds, Team, iCat;
+		NetBuild, NetCategory, NetCost, NetWeight,
+		NetCategories, NetCatIcons, NetCategoryWeight, NetCategoryMaxWeight,
+		iBuilds, Team, iCat;
 }
 
 simulated event PostNetBeginPlay()
 {
 	local sgBaseBuildRule sgB;
 
-	ForEach AllActors (class'sgBaseBuildRule', sgB, class'sgBaseBuildRule'.default.TagList[Team] )
+	ForEach AllActors( class'sgBaseBuildRule', sgB, class'sgBaseBuildRule'.default.TagList[Team] )
 	{
 		sgB.nextRule = RuleList;
 		RuleList = sgB;
@@ -78,7 +84,7 @@ state ServerOp
 			CatObject.SaveConfig();
 		}
 		CatObject.FullParse(self);
-		sgNetDirty++;
+		NativeReplicationTag++;
 	}
 Begin:
 	SetPropertyText("bRelevantToTeam","1");
@@ -95,23 +101,27 @@ function AttachRule( sgBaseBuildRule Other)
 	Other.Team = Team;
 }
 
-function AttachBuild( class<sgBuilding> newB, int newC, optional sgBaseBuildRule aRule, optional float newCost, optional string NewProps)
+function AttachBuild( SiegeCategoryRules.ParseParmsBuild NewBuild)
 {
-	NetBuild[iBuilds] = newB;
-	NetCategory[iBuilds] = newC;
-	NetCost[iBuilds] = newCost;
-	if ( aRule != none )
+	NetBuild   [iBuilds] = NewBuild.BuildClass;
+	NetCategory[iBuilds] = NewBuild.Category;
+	NetCost    [iBuilds] = NewBuild.Cost;
+	NetWeight  [iBuilds] = NewBuild.Weight;
+	NetName    [iBuilds] = NewBuild.Name;
+	if ( NewBuild.Rule != none )
 	{
-		NetRules[iBuilds] = aRule;
-		aRule.AppliedOn[iBuilds/32] = (aRule.AppliedOn[iBuilds/32] | (1<<(iBuilds%32)));
+		NetRules[iBuilds] = NewBuild.Rule;
+		NewBuild.Rule.AppliedOn[iBuilds/32] = (NewBuild.Rule.AppliedOn[iBuilds/32] | (1<<(iBuilds%32)));
 	}
-	NetProperties[iBuilds] = NewProps;
+	NetProperties[iBuilds] = NewBuild.Properties;
 	iBuilds++;
 }
 
-function AttachCategory( string NewCategory)
+function AttachCategory( string NewCategory, optional int MaxWeight)
 {
-	NetCategories[iCat++] = NewCategory;
+	NetCategories[iCat]        = NewCategory;
+	NetCategoryMaxWeight[iCat] = MaxWeight;
+	iCat++;
 /*
 
 	local int i;
@@ -145,22 +155,6 @@ function string ParseProp(byte idx, string Prop)
 		return Result;
 	}
 }
-/*
-event Tick( float DeltaTime)
-{
-	if ( CurPriItem < 128 )
-		ScanPriority(CurPriItem++);
-	else if ( PriorityTimer >= 0 )
-	{
-		PriorityTimer -= DeltaTime / Level.TimeDilation;
-		if ( PriorityTimer < 0 )
-		{
-			PriorityTimer = 5+FRand()*5;
-			CurPriItem = 0;
-		}
-	}
-}
-*/
 
 //Cache starting/end indices to run faster iterations
 simulated event Timer()
@@ -224,7 +218,7 @@ event Trigger( actor Other, Pawn EventInstigator)
 			return;
 	}
 
-	sgNetDirty++;
+	NativeReplicationTag++;
 	For ( i=0 ; i<ArrayCount(NetCategories) ; i++ )
 	{
 		if ( NetCategories[i] == "" )
@@ -241,7 +235,6 @@ event Trigger( actor Other, Pawn EventInstigator)
 			NetCategory[iBuilds] = i;
 			NetBuild[iBuilds] = NewClass;
 			iBuilds++;
-
 			return;
 		}
 	}
@@ -394,11 +387,19 @@ simulated final function int FirstCatBuild( int Category)
 	return -1; //OH SHIT
 }
 
-simulated final function string CatName( int i)
+simulated final function string CatName( int i, optional bool bWeight)
 {
+	local string CategoryString;
+	
 	if ( CatLocalized[i] != "" )
-		return CatLocalized[i];
-	return NetCategories[i];
+		CategoryString = CatLocalized[i];
+	else
+		CategoryString = NetCategories[i];
+		
+	if ( bWeight && (NetCategoryMaxWeight[i] > 0) )
+		CategoryString = CategoryString @ "["$NetCategoryWeight[i]$"/"$NetCategoryMaxWeight[i]$"]";
+		
+	return CategoryString;
 }
 
 simulated final function int NumCats()
@@ -410,6 +411,20 @@ simulated final function int CatIndex( int iIndex)
 {
 	return NetCategory[iIndex];
 }
+
+simulated final function sgBaseBuildRule GetNamedRule( string RuleName)
+{
+	local sgBaseBuildRule Link;
+
+	if ( RuleName != "" )
+	{
+		for ( Link=RuleList; Link!=None; Link=Link.nextRule)
+			if ( Link.RuleName ~= RuleName )
+				return Link;
+	}
+	return None;
+}
+
 
 //Do a graceful destruction
 simulated event Destroyed()
@@ -470,6 +485,4 @@ defaultproperties
     Team=255
 	RemoteRole=ROLE_SimulatedProxy
 	NetUpdateFrequency=0.5
-	PriorityTimer=-0.5
-	CurPriItem=128
 }

@@ -2,8 +2,8 @@
 //**** Rule class for named INI files ****
 //****************************************
 class SiegeCategoryRules expands Object
-	config perobjectconfig;
-
+	config
+	perobjectconfig;
 
 /*
 FACTS:
@@ -25,14 +25,27 @@ as always
 */
 
 /*
-B=class?C=category?RULE?cost=othercost?properties(a=b,c=d,e=f)
-CATEGORY=
+B=class?C=category?RULE?cost=othercost?properties(a=b,c=d,e=f)?weight=weight
+CATEGORY=name?maxweight=weight
 */
 
+/*
+Maps can override a line, N being the line number, OVERRIDE being the line text
+'mapname' can be a single map or multiple maps (in,braces)
 
+MAP=mapname*?N?OVERRIDE
+*/
+
+/*
+Categories without MaxWeight have no weight limit
+Buildings have a default weight of 1
+*/
+
+const SGS = class'SiegeStatics';
 
 var() config bool bHasConfig;
-var() config string Rule[256];
+var() config string Rule[320];
+var string ParsingRule[320];
 var int iNum; //Internal, faster processing
 var string sPkg;
 
@@ -42,205 +55,369 @@ struct ParseParms
 	var bool bOnceOnly, bRequiresFinish, bPersistantTimer, bOverTime;
 	var int BCount;
 	var float LReq, BTimer;
-	var string sName, oNames[8];
-	var byte MinRules;
+	var string Name, oNames[8];
+	var int MinRules;
 };
+
+struct ParseParmsBuild
+{
+	var class<sgBuilding> BuildClass;
+	var string Name;
+	var int Cost;
+	var int Weight;
+	var int Category;
+	var string Properties;
+	var sgBaseBuildRule Rule;
+};
+
+struct ParseParmsCategory
+{
+	var string Name;
+	var int MaxWeight;
+};
+
 
 function FullParse( sgCategoryInfo Other)
 {
 	local string aStr, sParm;
 	local int i, j;
-	local ParseParms P, E;
+	local ParseParms         P       , PDef;
+	local ParseParmsBuild    Build   , BuildDef;
+	local ParseParmsCategory Category, CategoryDef;
 	local sgBuildRuleCount BuildRule;
 	local sgBaseBuildRule aRule[8];
 	local sgBuildRuleNot NotRule;
 	local sgBuildRuleCombo ComboRule;
-	local class<sgBuilding> tmpClass;
-	local float aCost;
-	local string sProps;
+	
+	local int SkippedRules;
+	local int ParsedRules;
 
 	if ( Other == none )
 		return;
 
+	// Defaults
+	PDef.BCount = 1; //Defaults to minimum 1 build in RULES
+	PDef.MinRules = 255; //This will auto adapt to max rule count in combos
+	BuildDef.Weight = 1;
+		
 	sPkg = string(class);
 	sPkg = Left( sPkg, InStr(sPkg,".")+1 );
-	iRuleCtr();
-	E.BCount = 1; //Defaults to minimum 1 build in RULES
-	E.MinRules = 255; //This will auto adapt to max rule count in combos
 
-	For ( i=0 ; i<iNum ; i++ )
-	{
-		if ( Rule[i] == "" )
-			continue;
-
-		if ( Left(Rule[i], 2) ~= "B=" )
+	// Whole list considered
+	iNum = ArrayCount(Rule);
+	
+	// TODO (469): USE DYNAMIC ARRAY FOR RULE SYSTEM
+	
+	// Copy rules to temporary storage
+	For ( i=0; i<ArrayCount(Rule); i++)
+		ParsingRule[i] = Rule[i];
+	
+	// Parse MAP= modifiers
+	For ( i=0; i<iNum; i++)
+		if ( ParseHeader(ParsingRule[i],"MAP=",aStr) )
 		{
-			aStr = Mid( Rule[i], 2);
-			if ( InStr(aStr, " ") >= 0 )
-				class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
-			sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
-			tmpClass = LoadClass(sParm);
-			if ( tmpClass == none )
-				continue;
-			aRule[0] = none;
-			j = 0;
-			aCost = 0;
-			sProps = "";
-			while ( aStr != "" )
+			sParm = SGS.static.NextParameter( aStr, "?");
+			if ( LevelInList( string(Other.Outer.Name), sParm) )
 			{
-				sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
-				if ( Left(sParm, 2) ~= "C=" )
-					j = int(Mid(sParm,2));
-				else if ( Left(sParm,5) ~= "Cost=" )
-					aCost = float( Mid(sParm,5) );
-				else if ( Left(sParm, 11) ~= "Properties(" )
-					sProps = Mid(sParm, 11, Len(sParm)-12 );
-				else //Apply rule
+				sParm = SGS.static.NextParameter( aStr, "?");
+				if ( GetNumber(sParm,j) && j<ArrayCount(ParsingRule) )
 				{
-					aRule[0] = Other.RuleList.GetByName( sParm);
-					if ( aRule[0] == none )
-						Log("SIEGE RULES: No rule "$sParm$" found for "$tmpClass);
+					sParm = SGS.static.NextParameter( aStr, "?");
+					ParsingRule[j] = sParm;
+					Log("PARSE: Setting line"@j@"to"@sParm);
 				}
 			}
-			Other.AttachBuild( tmpClass, j, aRule[0], aCost, sProps);
+			ParsingRule[j] = "";
 		}
-		else if ( Left(Rule[i], 9) ~= "CATEGORY=" )
+
+	// Parse categories
+	j = 0;
+	For ( i=0; i<iNum; i++)
+		if ( ParseHeader(ParsingRule[i],"CATEGORY=",aStr) )
 		{
-			Other.AttachCategory( Mid(Rule[i], 9));
+			Category = CategoryDef;
+			Category.Name      = class'SiegeStatics'.static.NextParameter( aStr, "?");
+			Category.MaxWeight = int(class'SiegeStatics'.static.NextParameter( aStr, "?"));
+			if ( Category.Name != "" )
+				Other.AttachCategory( Category.Name, Category.MaxWeight);
+			ParsingRule[i] = "";
 		}
-		else if ( Left(Rule[i], 5) ~= "RULE(" )
+
+	// Parse base rules
+	For ( i=0; i<iNum; i++)
+		if ( ParseHeader(ParsingRule[i],"RULE(",aStr) )
 		{
-			P = E;
-			aStr = Mid(Rule[i], 5, Len(Rule[i])-6 );
-			if ( InStr(aStr, " ") >= 0 )
-				class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
-			P.sName = class'SiegeStatics'.static.NextParameter( aStr, "?");
-			if ( P.sName == "" )
-				continue;
+			P = PDef;
+			SGS.static.ReplaceText( aStr, " ", "");
+			P.Name = SGS.static.NextParameter( aStr, "?");
 			while ( aStr != "" )
 			{
 				sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
-				if ( sParm ~= "onceonly" )
-					P.bOnceOnly=true;
-				else if ( sParm ~= "finished" )
-					P.bRequiresFinish=true;
-				else if ( sParm ~= "cooldown" )
-					P.bPersistantTimer=true;
-				else if ( sParm ~= "overtime" )
-					P.bOverTime = true;
-				else if ( Left(sParm, 6) ~= "class=" )
-					P.BuildClass = LoadClass( Mid(sParm,6));
-				else if ( Left(sParm, 4) ~= "min=" )
-					P.BCount = int( Mid(sParm,4) );
-				else if ( Left(sParm, 6) ~= "level=" )
-					P.LReq = fClamp(float( Mid(sParm,6) ),0,5);
-				else if ( Left(sParm, 6) ~= "timer=" )
-					P.BTimer = float( Mid(sParm,6));
-				else
+				if ( sParm ~= "onceonly" )              P.bOnceOnly=true;
+				else if ( sParm ~= "finished" )         P.bRequiresFinish=true;
+				else if ( sParm ~= "cooldown" )         P.bPersistantTimer=true;
+				else if ( sParm ~= "overtime" )         P.bOverTime = true;
+				else if ( !ParseBuild( sParm, "class=", P.BuildClass)
+				       && !ParseInt  ( sParm, "min="  , P.BCount)
+				       && !ParseFloat( sParm, "level=", P.LReq)
+				       && !ParseFloat( sParm, "timer=", P.BTimer) )
+				{
 					Log("SIEGE RULES: Extraneous parameter found for rule "$i$": "$sParm);
+				}
 			}
-			if ( P.BCount <= 0 )
-			{
+			if ( P.Name == "" )
+				Log("SIEGE RULES: No rule name for rule "$i);
+			else if ( P.BCount <= 0 )
 				Log("SIEGE RULES: Invalid Build count parameter for rule "$i$": "$P.BCount);
-				continue;
-			}
-			if ( P.BuildClass == none )
-			{
+			else if ( P.BuildClass == none )
 				Log("SIEGE RULES: No build class loaded for rule "$i);
-				continue;
-			}
-			BuildRule = Other.Spawn(class'sgBuildRuleCount',none,,vect(0,0,0) );
-			BuildRule.RuleName = P.sName;
-			BuildRule.RuleString = Rule[i];
-			BuildRule.BuildClass = P.BuildClass;
-			BuildRule.bOnceOnly = P.bOnceOnly;
-			BuildRule.TargetTimer = P.BTimer;
-			BuildRule.TargetCount = P.BCount;
-			BuildRule.bOverTime = P.bOverTime;
-			BuildRule.bPersistantTimer = P.bPersistantTimer;
-			if ( P.LReq > 0 || P.bRequiresFinish )
-				BuildRule.AddRequiresLevel( P.LReq );
-			Other.AttachRule( BuildRule);
-		}
-		else if ( Left(Rule[i],4) ~= "NOT(" )
-		{
-			P = E;
-			aStr = Mid(Rule[i], 4, Len(Rule[i])-5 );
-			if ( InStr(aStr, " ") >= 0 )
-				class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
-			P.sName = class'SiegeStatics'.static.NextParameter( aStr, "?");
-			if ( P.sName == "" )
-				continue;
-			//aStr is the negated RULE, if accessed none, then on rules were set!
-			aRule[0] = Other.RuleList.GetByName( aStr);
-			if ( aRule[0] == none )
+			else
 			{
-				Log("SIEGE RULES: No target rule "$aStr$" defined before "$P.sName);
-				continue;
+				BuildRule = Other.Spawn(class'sgBuildRuleCount',none,,vect(0,0,0) );
+				BuildRule.RuleName = P.Name;
+				BuildRule.RuleString = ParsingRule[i];
+				BuildRule.BuildClass = P.BuildClass;
+				BuildRule.bOnceOnly = P.bOnceOnly;
+				BuildRule.TargetTimer = P.BTimer;
+				BuildRule.TargetCount = P.BCount;
+				BuildRule.bOverTime = P.bOverTime;
+				BuildRule.bPersistantTimer = P.bPersistantTimer;
+				if ( P.LReq > 0 || P.bRequiresFinish )
+					BuildRule.AddRequiresLevel( fClamp( P.LReq, 0, 5) );
+				Other.AttachRule( BuildRule);
 			}
-			NotRule = Other.Spawn(class'sgBuildRuleNot',none,,vect(0,0,0) );
-			NotRule.RuleName = P.sName;
-			NotRule.RuleString = Rule[i];
-			NotRule.ChildName = aStr;
-			NotRule.ChildRule = aRule[0];
-			Other.AttachRule( NotRule);
+			ParsingRule[i] = "";
 		}
-		else if ( Left(Rule[i],6) ~= "COMBO(" )
-		{
-			P = E;
-			aStr = Mid(Rule[i], 6, Len(Rule[i])-7 );
-			if ( InStr(aStr, " ") >= 0 )
-				class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
-			P.sName = class'SiegeStatics'.static.NextParameter( aStr, "?");
-			if ( P.sName == "" )
-				continue;
-			j=0;
-			while ( aStr != "" )
+		
+		
+	SkippedRules = -1;
+	ParsedRules = -1;
+	while ( (SkippedRules != 0) && (ParsedRules != 0) )
+	{
+		SkippedRules = 0;
+		ParsedRules = 0;
+		
+		// Parse negation rules
+		For ( i=0; i<iNum; i++)
+			if ( ParseHeader(ParsingRule[i],"NOT(",aStr) )
 			{
-				sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
-				if ( Left(sParm,4) ~= "req=" )
-					P.MinRules = int( Mid(sParm,4) );
+				P = PDef;
+				class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
+				P.Name = class'SiegeStatics'.static.NextParameter( aStr, "?");
+				aRule[0] = Other.GetNamedRule( aStr);
+				//aStr is the negated RULE, if accessed none, then on rules were set!
+				if ( P.Name == "" )
+				{
+					Log("SIEGE RULES: No rule name for rule "$i);
+					ParsingRule[i] = "";
+				}
+				else if ( aRule[0] == none )
+				{
+					SkippedRules++;
+					continue;
+				}
 				else
 				{
-					aRule[j] = Other.RuleList.GetByName( sParm);
-					if ( aRule[j++] == none )
+					ParsedRules++;
+					NotRule = Other.Spawn(class'sgBuildRuleNot',none,,vect(0,0,0) );
+					NotRule.RuleName = P.Name;
+					NotRule.RuleString = ParsingRule[i];
+					NotRule.ChildName = aStr;
+					NotRule.ChildRule = aRule[0];
+					Other.AttachRule( NotRule);
+					ParsingRule[i] = "";
+				}
+			}
+			
+		// Parse combo rules
+		For ( i=0; i<iNum; i++)
+			if ( ParseHeader(ParsingRule[i],"COMBO(",aStr) )
+			{
+				P = PDef;
+				class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
+				P.Name = class'SiegeStatics'.static.NextParameter( aStr, "?");
+				if ( P.Name == "" )
+				{
+					Log("SIEGE RULES: No rule name for rule "$i);
+					ParsingRule[i] = "";
+					continue;
+				}
+				j=0;
+				while ( aStr != "" )
+				{
+					sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
+					if ( !ParseInt( sParm, "Req=", P.MinRules) )
 					{
-						Log("SIEGE RULES: No target rule "$sParm$" defined before "$P.sName);
-						continue;
+						aRule[j] = Other.GetNamedRule( sParm);
+						if ( aRule[j++] == none )
+						{
+							j = -1;
+							break;
+						}
 					}
 				}
+				if ( j < 0 )
+				{
+					SkippedRules++;
+					continue;
+				}
+				ParsedRules++;
+				ComboRule = Other.Spawn(class'sgBuildRuleCombo',none,,vect(0,0,0) );
+				ComboRule.RuleName = P.Name;
+				ComboRule.RuleString = ParsingRule[i];
+				ComboRule.MinRules = Clamp(P.MinRules,1,j);
+				ComboRule.iChild = j;
+				while ( --j >= 0 )
+				{
+					ComboRule.ChildRules[j] = aRule[j];
+					ComboRule.ChildNames[j] = aRule[j].RuleName;
+				}
+				Other.AttachRule( ComboRule);
 			}
-			ComboRule = Other.Spawn(class'sgBuildRuleCombo',none,,vect(0,0,0) );
-			ComboRule.RuleName = P.sName;
-			ComboRule.RuleString = Rule[i];
-			ComboRule.MinRules = Clamp(P.MinRules,1,j);
-			ComboRule.iChild = j;
-			while ( --j >= 0 )
-			{
-				ComboRule.ChildRules[j] = aRule[j];
-				ComboRule.ChildNames[j] = aRule[j].RuleName;
-			}
-			Other.AttachRule( ComboRule);
-		}
-		else
-			Warn( Rule[i]);
+
 	}
+	
+	// Log leftover rules
+	For ( i=0; i<iNum; i++)
+		if ( ParseHeader(ParsingRule[i],"COMBO(",aStr)
+			|| ParseHeader(ParsingRule[i],"NOT(",aStr) )
+			Log("SIEGE RULES: Rule "$i$" could not locate all referenced rules");
+	
+	// Parse building rules
+	For ( i=0 ; i<iNum ; i++)
+		if ( ParseHeader(ParsingRule[i],"B=",aStr) )
+		{
+			Build = BuildDef;
+			ParsingRule[i] = "";
+			class'SiegeStatics'.static.ReplaceText( aStr, " ", "");
+			sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
+			Build.BuildClass = LoadClass(sParm);
+			if ( Build.BuildClass == none )
+			{
+				Log("SIEGE RULES: No class for rule "$i$": "$sParm);
+				continue;
+			}
+			while ( aStr != "" )
+			{
+				sParm = class'SiegeStatics'.static.NextParameter( aStr, "?");
+				if ( !ParseInt   ( sParm, "C="         , Build.Category)
+				  && !ParseInt   ( sParm, "Cost="      , Build.Cost)
+				  && !ParseInt   ( sParm, "Weight="    , Build.Weight)
+				  && !ParseHeader( sParm, "Properties(", Build.Properties)
+				  && !ParseHeader( sParm, "Name="      , Build.Name) )
+				{
+					//Apply rule
+					Build.Rule = Other.GetNamedRule( sParm);
+					if ( Build.Rule == none )
+						Log("SIEGE RULES: No rule "$sParm$" found for "$Build.BuildClass);
+				}
+			}
+//			Other.AttachBuild( Build.BuildClass, Build.Category, Build.Rule, Build.Name, Build.Cost, Build.Weight, Build.Properties);
+			Other.AttachBuild( Build);
+		}
+		
+	// Log unparsed rules
+	For ( i=0 ; i<iNum ; i++)
+		if ( ParsingRule[i] != "" )
+			Warn( ParsingRule[i] );
 }
 
 
 function class<sgBuilding> LoadClass( string aStr)
 {
-	return class<sgBuilding> ( DynamicLoadObject(sPkg$aStr,class'class')  );
+	local class<sgBuilding> Result;
+	
+	Result = class<sgBuilding>(DynamicLoadObject(sPkg$aStr,class'class'));
+	if ( Result == None )
+		Log("SIEGE RULES: Unable to load building class"@aStr);
+
+	return Result;
 }
 
-//Internal - count rules for faster proc
-function iRuleCtr()
+
+/*--------------------------------------------------------------------
+	Parser Helpers (TODO: Move to global funcs)
+--------------------------------------------------------------------*/
+function bool ParseHeader( string Rule, string InHeader, out string OutRuleData)
 {
 	local int i;
-
-	i = 255;
-	while ( (Rule[i] == "") && (i>=0) )
-		i--;
-	iNum = ++i;
+	
+	i = Len(InHeader);
+	if ( Left(Rule,i) ~= InHeader )
+	{
+		OutRuleData = Mid(Rule,i);
+		if ( (Right(InHeader,1) == "(") && (Right(OutRuleData,1) == ")") )
+			OutRuleData = Left( OutRuleData, Len(OutRuleData)-1);
+		return true;
+	}
+	return false;
 }
+
+function bool ParseInt( string Data, string Parameter, out int OutInt)
+{
+	local int i;
+	
+	i = Len(Parameter);
+	if ( Left( Data, i) ~= Parameter )
+	{
+		OutInt = int(Mid( Data, i));
+		return true;
+	}
+	return false;
+}
+
+function bool ParseFloat( string Data, string Parameter, out float OutFloat)
+{
+	local int i;
+	
+	i = Len(Parameter);
+	if ( Left( Data, i) ~= Parameter )
+	{
+		OutFloat = float(Mid( Data, i));
+		return true;
+	}
+	return false;
+}
+
+function bool ParseBuild( string Data, string Parameter, out class<sgBuilding> OutBuild)
+{
+	local int i;
+	
+	i = Len(Parameter);
+	if ( Left( Data, i) ~= Parameter )
+	{
+		OutBuild = LoadClass(Mid( Data, i));
+		return true;
+	}
+	return false;
+}
+
+function bool LevelInList( string LevelName, string LevelList)
+{
+	local string CurLevel;
+	
+	SGS.static.ReplaceText( LevelList, " ", "");
+	
+	// Multi level
+	if ( (Left(LevelList,1) == "(") && (Right(LevelList,1) == ")") )
+		LevelList = Mid(LevelList,1,Len(LevelList)-2);
+
+	AGAIN:
+	CurLevel = SGS.static.NextParameter( LevelList, ",");
+	if ( CurLevel != "" )
+	{
+		if ( SGS.static.MatchesFilter(LevelName,CurLevel) )
+			return true;
+		goto AGAIN;
+	}
+	return false;
+}
+
+function bool GetNumber( string Param, out int i)
+{
+	SGS.static.ReplaceText( Param, " ", "");
+	i = int(Param);
+	return string(i) == Param;
+}
+
 

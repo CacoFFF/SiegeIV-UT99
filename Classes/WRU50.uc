@@ -8,7 +8,10 @@ var KoalasGemSprite aSprite;
 simulated event BeginPlay()
 {
 	if ( Level.NetMode != NM_DedicatedServer )
+	{
 		aSprite = Spawn(Class'KoalasGemSprite');
+		aSprite.SetBase(self);
+	}
 	if ( Level.NetMode == NM_ListenServer )
 		aSprite.RemoteRole = ROLE_None; //Don't replicate
 	Super.BeginPlay(); //Only called on servers

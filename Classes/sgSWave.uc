@@ -116,7 +116,7 @@ simulated event Timer()
 			if ( Pawn(Victim) != None || Mover(Victim) != None || Projectile(Victim) != None )
 			{
 				Dir = Victim.Location - Location;
-				Damage = 220.0 * (1.0 - VSize(Dir) / DamageRadius);
+				Damage = 220.0 * (1.0 - FMax(VSize(Dir),20) / DamageRadius);
 				if ( Damage >= 1 )
 				{
 					if ( Pawn(Victim) != None )
@@ -154,7 +154,7 @@ simulated event Timer()
 
 defaultproperties
 {
-	Team=255
+     Team=255
      bAlwaysRelevant=True
      Physics=PHYS_Rotating
      RemoteRole=ROLE_SimulatedProxy

@@ -29,7 +29,7 @@ defaultproperties
      InventoryClass=Class'Botpack.UDamage'
      bTakeProductVisual=True
      BuildingName="Damage Amplifier"
-     BuildCost=1500
+     BuildCost=1350
 	 UpgradeCost=100
      SpriteScale=0.350000
      Model=LodMesh'Botpack.UDamage'

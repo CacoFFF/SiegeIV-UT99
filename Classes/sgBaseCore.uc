@@ -6,16 +6,18 @@ class sgBaseCore extends sgBuilding;
 
 var float LastMsgSpam;
 var bool bCoreDisabled;
+var bool bLimitRepair;
 var float RuMultiplier;
 var float StoredRU; //Spare RU in core
 var float SuddenDeathScale;
+var float RepairableEnergy;
 var PlayerPawn LocalClient;
 var TeamInfo MyTeam;
 
 replication
 {
 	reliable if ( !bNetInitial && (Role==ROLE_Authority) )
-		RuMultiplier, StoredRU;
+		RuMultiplier, StoredRU, RepairableEnergy;
 }
 
 event PostBeginPlay()
@@ -200,11 +202,14 @@ function PackStatusFlags()
 	Super.PackStatusFlags();
 	if ( bCoreDisabled )
 		PackedFlags += 0x00000100;
+	if ( bLimitRepair )
+		PackedFlags += 0x00000200;
 }
 simulated function UnpackStatusFlags()
 {
 	Super.UnpackStatusFlags();
 	bCoreDisabled = (PackedFlags & 0x00000100) != 0;
+	bLimitRepair  = (PackedFlags & 0x00000200) != 0;
 }
 
 simulated function FinishBuilding()
@@ -233,9 +238,11 @@ simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float
 		Constructor.SpecialPause = 1;
 		return true;
 	}
-
+	
 	Constructor.SpecialPause = DeltaRep;
 	RepairAmount = FMin( MaxEnergy - Energy, 60.0 * DeltaRep);
+	if ( bLimitRepair && (RepairableEnergy < RepairAmount) )
+		return false;
 	RepairValue = RepairAmount * 0.25;
 	PRI = sgPRI(Other.PlayerReplicationInfo);
 	if ( SiegeGI(Level.Game) == None || !SiegeGI(Level.Game).FreeBuild )
@@ -244,6 +251,7 @@ simulated function bool RepairedBy( Pawn Other, sgConstructor Constructor, float
 			return false;
 		PRI.AddRU( -RepairValue);
 	}
+	RepairableEnergy -= RepairAmount;
 	Energy += RepairAmount;
 	PRI.Score += RepairValue/20;
 	Constructor.AddCoreRepairAmount( RepairAmount);
@@ -342,6 +350,17 @@ function UpdateScore()
 		SiegeGI(Level.Game).Teams[Team].Score = EnergyScale() * 100.0;
 }
 
+function SetMaxRepair( float MaxRepair)
+{
+	if ( MaxRepair >= 0 )
+	{
+		RepairableEnergy = MaxEnergy * MaxRepair / 100.0;
+		bLimitRepair = true;
+	}
+	else
+		bLimitRepair = false;
+}
+
 function string GetHumanName()
 {
 	local TeamGamePlus Game;
@@ -385,6 +404,5 @@ defaultproperties
      MultiSkins(3)=Texture'SKFlare'
      GUI_Icon=Texture'GUI_Core'
      bCollideWorld=True
-     bReplicateEMP=True
      DoneBuilding=True
 }

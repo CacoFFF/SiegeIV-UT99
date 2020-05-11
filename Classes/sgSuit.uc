@@ -4,7 +4,7 @@
 class sgSuit expands TournamentPickup
 	abstract;
 
-var texture EnviroSkin;
+var Texture EnviroSkin;
 var bool bNoMines;
 var bool bNoProtectors;
 var Weapon AffectedWeapon;
@@ -30,6 +30,15 @@ function sgSuit OtherSuit_XC( Pawn P)
 	ForEach InventoryActors( class'sgSuit', sgS, true, P)
 		if ( sgS != self )
 			return sgS;
+}
+
+state Idle2
+{
+Begin:
+	if ( (EnviroSkin != None) && (GetOwner() != None) && !GetOwner().bMeshEnviroMap )
+		ApplySkin();
+	Sleep(0.05);
+	Goto('Begin');
 }
 
 function ChangedWeapon()

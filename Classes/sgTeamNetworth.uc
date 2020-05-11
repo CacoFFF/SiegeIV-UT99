@@ -89,12 +89,15 @@ simulated event RenderTexture( ScriptedTexture T)
 		
 		Y2 = BuildingNetworth[Row] * Scale;
 		Y1 = 126 - Y2;
+//		T.DrawTile( X, Y1, 2, Y2, 31, V, 0, 0, Texture'SiegeStats.STATS_Networth', false);
 		T.DrawTile( X, Y1, 2, Y2, 31, V, 1, 1, Texture'SiegeStats.STATS_Networth', false);
 		Y2 = CarriedNetworth[Row] * Scale;
 		Y1 -= Y2;
+//		T.DrawTile( X, Y1, 2, Y2, 30, V, -1, 0, Texture'SiegeStats.STATS_Networth', false);
 		T.DrawTile( X, Y1, 2, Y2, 30, V, 1, 1, Texture'SiegeStats.STATS_Networth', false);
 		Y2 = ItemNetworth[Row] * Scale;
 		Y1 -= Y2;
+//		T.DrawTile( X, Y1, 2, Y2, 29, V, -1, 0, Texture'SiegeStats.STATS_Networth', false);
 		T.DrawTile( X, Y1, 2, Y2, 29, V, 1, 1, Texture'SiegeStats.STATS_Networth', false);
 
 		//Count events (accumulate every 2 rows)

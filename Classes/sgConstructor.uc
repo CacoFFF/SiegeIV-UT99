@@ -1026,6 +1026,7 @@ simulated function sgBuilding BestRemoveCandidate( byte Team)
 	local vector HitLocation, HitNormal, Start, End;
 	local sgBuilding sgB, sgBest;
 	local float Priority, fPri;
+	local bool bTournament;
 
 	Start = Owner.Location + vect(0,0,1) * Pawn(Owner).BaseEyeHeight;
 	End =  start + vector(Pawn(Owner).ViewRotation) * 90;
@@ -1521,12 +1522,12 @@ simulated event RenderTexture( ScriptedTexture Tex)
 
 		if ( SelectedBuild == none )
 		{
-			Tex.DrawColoredText( 34, 32, CatActor.CatName(Category-4), F, OrangeColor);
+			Tex.DrawColoredText( 34, 32, CatActor.CatName(Category-4,true), F, OrangeColor);
 			Tex.DrawTile( 86, 107, 64, 64, 0, 0, 64, 64, Texture'GUI_UpgradeFront', true);
 		}
 		else
 		{
-			Tex.DrawColoredText( 34, 32, CatActor.CatName(Category-4), F, PurpleColor);
+			Tex.DrawColoredText( 34, 32, CatActor.CatName(Category-4,true), F, PurpleColor);
 			Tex.DrawText( 40, 52, "> "$SelectedBuild.default.BuildingName, F);
 			if ( SelectedBuild.default.GUI_Icon != none )
 			{

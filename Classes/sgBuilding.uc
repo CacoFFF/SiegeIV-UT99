@@ -47,11 +47,10 @@ var float               BuildingTimer;
 var float ScaleBox; //Scale a build'd collision once it's up and working
 
 // vars for fire and EMP stuff
-var bool bReplicateEMP;
 var bool bReplicateMFX;
 var bool bDisabledByEMP;
 var bool bIsOnFire;
-var pawn TehIncinerator;
+var Pawn TehIncinerator;
 var float BurnPerSecond; //Damage to take per second (burning state)
 var float AccBurn;  //Accumulated burn (precise values)
 
@@ -67,10 +66,13 @@ var(BuildingAttributes) float Energy,		 RuRewardScale,        Grade;
 var(BuildingAttributes) float BuildDistance;
 var(BuildingAttributes) bool bCanTakeOrb;
 var(BuildingAttributes) bool bOnlyOwnerRemove;
-var(BuildingAttributes) bool bNoRemove; //Cannot be removed
-var(BuildingAttributes) bool bStandable; //Used to prevent translocators from bouncing here
+var(BuildingAttributes) bool bTournamentTeamRemove;
+var(BuildingAttributes) bool bNoRemove;          // Cannot be removed.
+var(BuildingAttributes) bool bNoUpgrade;         // Cannot be upgraded.
+var(BuildingAttributes) bool bNoFractionUpgrade; // Upgrade happens level by level.
+var(BuildingAttributes) bool bStandable;         // Used to prevent translocators from bouncing here
 var(BuildingAttributes) bool bDragable;
-var(BuildingAttributes) bool bExpandsTeamSpawn; //Increases PlayerStart's chance of being used
+var(BuildingAttributes) bool bExpandsTeamSpawn;  // Increases PlayerStart's chance of being used
 
 // Building's Apperance
 var(BuildingApperance) float SpriteScale;
@@ -83,8 +85,6 @@ var(BuildingApperance) rotator           MFXrotX;
 var(BuildingApperance) byte MFXFatness;
 var Texture GUI_Icon;
 
-var bool bNoUpgrade;
-var bool bNoFractionUpgrade;
 var bool bNoNotify; //Cannot emit destruction/creation notifies (for game shutdown usage)
 var bool bNotifyDestroyed; //Can receive BuildingDestroyed notifies
 var bool bNotifyCreated; //Can receive BuildingCreated notifies
@@ -346,12 +346,11 @@ simulated event Timer()
 function PackStatusFlags()
 {
 	PackedFlags = (Team & 3)
+				|	(0x00000004 * int(bDisabledByEMP))
 				|	(0x00000008 * int(bSmokeStatus))
 				|	(0x00000010 * int(bIsOnFire))
 				|	(0x00000020 * int(bNoRemove))
 				|	(0x00000040 * int(bOnlyOwnerRemove));
-	if ( bReplicateEMP && bDisabledByEMP )
-		PackedFlags += 4;
 }
 simulated function UnpackStatusFlags()
 {
@@ -362,6 +361,7 @@ simulated function UnpackStatusFlags()
 	bNoRemove			= (PackedFlags & 0x00000020) != 0;
 	bOnlyOwnerRemove	= (PackedFlags & 0x00000040) != 0;
 }
+
 
 event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
 {
@@ -431,6 +431,10 @@ event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector mome
 		Destruct( instigatedBy); 
 }
 
+event BaseChange()
+{
+	SetPhysics(PHYS_None);
+}
 
 function AnnounceConstruction()
 {
@@ -629,15 +633,15 @@ function Destruct( optional pawn instigatedBy)
 //Notifications
 function BuildingCreated( sgBuilding sgNew); //Needs bNotifyCreated
 function BuildingDestroyed( sgBuilding sgOld); //Needs bNotifyDestroyed
-function OrbReceived( pawn Giver);
-function OrbRemoved( pawn Taker);
-function CollisionStand( pawn Other); //Generic collision reports stand
-function CollisionBump( actor Other); //Generic collision reports bump
-function CollisionLand( actor Other); //Generic collision reports landing
-function CollisionJump( pawn Other); //Generic collision reports pawn jumping off
-function CollisionDetach( actor Other); //Generic collision reports actor falling off
-function bool VolumeEnter( actor Other); //Generic volume reports actor entering, if return=False volume won't store this actor
-function VolumeExit( actor Other); //Generic volume reports actor leaving
+function OrbReceived( Pawn Giver);
+function OrbRemoved( Pawn Taker);
+function CollisionStand( Pawn Other);    //Generic collision reports stand
+function CollisionBump( Actor Other);    //Generic collision reports bump
+function CollisionLand( Actor Other);    //Generic collision reports landing
+function CollisionJump( Pawn Other);     //Generic collision reports pawn jumping off
+function CollisionDetach( Actor Other);  //Generic collision reports actor falling off
+function bool VolumeEnter( Actor Other); //Generic volume reports actor entering, if return=False volume won't store this actor
+function VolumeExit( Actor Other);       //Generic volume reports actor leaving
 function Upgraded();
 function CompleteBuilding(); //Timer based, called after finishes building
 
@@ -662,6 +666,8 @@ function PostBuild()
 	if ( (sPlayerIP == "") && (Owner != none) && (Pawn(Owner).PlayerReplicationInfo != none) )
 		SetOwnership();
 	Timer();
+	if ( bTournamentTeamRemove && (DeathMatchPlus(Level.Game) != None) && DeathMatchPlus(Level.Game).bTournament )
+		bOnlyOwnerRemove = false;
 	if ( !bNoNotify && SiegeGI(Level.Game) != none )
 		SiegeGI(Level.Game).BuildingCreated( self);
 	if ( Grade > 0 )

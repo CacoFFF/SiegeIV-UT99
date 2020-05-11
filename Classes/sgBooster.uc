@@ -159,6 +159,5 @@ defaultproperties
      MultiSkins(2)=Texture'BoosterSpriteTeam2'
      MultiSkins(3)=Texture'BoosterSpriteTeam3'
      CollisionHeight=30.000000
-     bReplicateEMP=True
      GUI_Icon=Texture'GUI_Booster'
 }

@@ -123,7 +123,7 @@ function RemoveBerserk()
 				TournamentWeapon(BerserkWeapon).Affector = UDamageItem;
 			else
 				TournamentWeapon(BerserkWeapon).Affector = None;
-			TournamentWeapon(BerserkWeapon).FireAdjust /= 3;
+			TournamentWeapon(BerserkWeapon).FireAdjust /= 3.5;
 		}
 		BerserkWeapon = None;
 	}
@@ -149,7 +149,7 @@ function SetBerserkWeapon()
 		if ( BerserkWeapon.IsA('TournamentWeapon') )
 		{
 			TournamentWeapon(BerserkWeapon).Affector = self;
-			TournamentWeapon(BerserkWeapon).FireAdjust *= 3;
+			TournamentWeapon(BerserkWeapon).FireAdjust *= 3.5;
 		}
 
 		if ( Level.bHighDetailMode )
@@ -193,16 +193,20 @@ simulated function CheckAnimation( Weapon W, float DeltaTime)
 	if ( W == None )
 		return;
 	
-	if ( W.LatentFloat > DeltaTime )
-		W.LatentFloat = W.LatentFloat - DeltaTime * 0.8;
-		
+	if ( W.LatentFloat > DeltaTime * 1.1 )
+		W.LatentFloat = W.LatentFloat - DeltaTime;
+	else if ( W.LatentFloat > DeltaTime * 0.8 )
+		W.LatentFloat = W.LatentFloat - DeltaTime * 0.7;
+
+
+			
 	if ( (W.AnimSequence == WAnim) && (W.AnimRate == WRate) )
 		return;
 		
 	if ( bAcquireAnimation )
 		bAcquireAnimation = false;
 	else
-		W.AnimRate *= 2;
+		W.AnimRate *= 2.25;
 	WAnim = W.AnimSequence;
 	WRate = W.AnimRate;
 }
@@ -275,7 +279,7 @@ state Activated
 			A = Ammo(Inv);
 			if ( (A != None) && (A != None) && (A.MaxAmmo >= 20) && (A.AmmoAmount < A.MaxAmmo)
 				&& !A.IsA('APEAmmo') && !A.IsA('BlueGunAmmo') && !A.IsA('InstagibAmmo') && !A.IsA('HyperLeecherAmmo') )
-				A.AmmoAmount = A.MaxAmmo;
+				A.AmmoAmount = A.MaxAmmo * 3 / 2;
 		}
 	}
 }
