@@ -3,7 +3,7 @@
 //=============================================================================
 class sg_GLAmmo expands TournamentAmmo;
 
-#exec MESH IMPORT MESH=sg_GLAmmo ANIVFILE=GLAUNCHER\sg_GLAmmo_a.3d DATAFILE=GLAUNCHER\sg_GLAmmo_d.3d X=0 Y=0 Z=0
+#exec MESH IMPORT MESH=sg_GLAmmo ANIVFILE=GLAUNCHER\sg_GLAmmo_a.3d DATAFILE=GLAUNCHER\sg_GLAmmo_d.3d X=0 Y=0 Z=0 MLOD=0
 
 #exec MESH ORIGIN MESH=sg_GLAmmo X=0 Y=0 Z=50 ROLL=0.59
 
@@ -13,9 +13,8 @@ class sg_GLAmmo expands TournamentAmmo;
 //MISSING THIS TEXTURE!!!!
 #exec TEXTURE IMPORT NAME=JGLauncherSkin FILE=GLauncher\JGLauncherSkin.PCX GROUP=Skins LODSET=2
 
-#exec MESHMAP NEW   MESHMAP=sg_GLAmmo MESH=sg_GLAmmo
-#exec MESHMAP SCALE MESHMAP=sg_GLAmmo X=0.05 Y=0.05 Z=0.1
-
+#exec MESHMAP NEW        MESHMAP=sg_GLAmmo MESH=sg_GLAmmo
+#exec MESHMAP SCALE      MESHMAP=sg_GLAmmo X=0.05 Y=0.05 Z=0.1
 #exec MESHMAP SETTEXTURE MESHMAP=sg_GLAmmo NUM=0 TEXTURE=JGLauncherSkin
 
 //ALSO MISSING!!!!!
@@ -194,5 +193,6 @@ defaultproperties
 	MaxAmmos(2)=15
 	MaxAmmos(3)=20
 	MaxAmmos(4)=30
-
+	Mesh=Mesh'sg_GLAmmo'
+	PickupViewMesh=Mesh'sg_GLAmmo'
 }

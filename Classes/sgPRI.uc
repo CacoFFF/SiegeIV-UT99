@@ -37,7 +37,8 @@ var bool bFlagCached; //Flag cache already attempted
 
 //Spawn protection
 var float ProtectCount;
-var Weapon WhosGun;
+var float SafeProtectTimer;
+var Weapon LastWeapon;
 
 var string VisibleMessage; //Always sHistory[0], for external mods
 var int VisibleMessageNum;
@@ -427,7 +428,7 @@ function Tick(float deltaTime)
 	RU = fMax( RU, 0.f);
 
 	if ( ProtectCount > 0 )
-		ProtTimer( DeltaTime);
+		ProtTimer( DeltaTime / Level.TimeDilation);
 
 	if ( bIpToCountry )
 	{
@@ -470,31 +471,40 @@ TRY_AGAIN:
 
 function ProtTimer( float DeltaTime)
 {
+	local bool bExpired;
 	local Pawn P;
 
 	P = Pawn(Owner);
-	if ( WhosGun == None )
-		WhosGun = P.Weapon;
-	else if ( P.Weapon != WhosGun ) //Weapon changed
-	{
-		ProtectCount -= 2;
-		WhosGun = P.Weapon;
-		if ( WhosGun != None && WhosGun.InventoryGroup > 2 && !WhosGun.IsA('sgConstructor') )
-			ProtectCount = 0;
-	}
+
+	if ( LastWeapon == None )
+		LastWeapon = P.Weapon;
 
 	ProtectCount -= DeltaTime;
-	if ( P.bFire + P.bAltFire > 0 ) //Disallow firing from suppliers
-		ProtectCount -= DeltaTime;
-		
-	if ( ProtectCount <= 0 )
+	SafeProtectTimer -= DeltaTime;
+
+	bExpired = ProtectCount <= 0;
+	if ( SafeProtectTimer < 0 ) //Additionally, expire after 1 sec if player fired or changed weapons.
+		bExpired = bExpired || (P.Weapon != LastWeapon) || (P.bFire + P.bAltFire > 0);
+	
+	LastWeapon = P.Weapon;
+
+	if ( bExpired )
 	{
-		WhosGun = none;
 		Pawn(Owner).ClientMessage("Siege spawn protection off");
+		ProtectCount = 0;
 	}
 	
 	if ( PlayerData != None )
 		PlayerData.bSpawnProtected = ProtectCount > 0.1;
+}
+
+function SetProtection( float NewProtectionTimer)
+{
+	Pawn(Owner).ClientMessage("Siege spawn protection on");
+	ProtectCount = NewProtectionTimer;
+	SafeProtectTimer = 1;
+	bReachedSupplier = false;
+	SupplierTimer = 3.3;
 }
 
 simulated function CacheFlag()

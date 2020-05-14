@@ -1318,66 +1318,59 @@ function bool IsOnTeam(Pawn other, int teamNum)
         return (other.PlayerReplicationInfo.Team == teamNum);
 }
 
-function bool RestartPlayer(Pawn p)
+function bool RestartPlayer( Pawn P)
 {
-    local NavigationPoint
-                    startSpot;
-	local bool      foundStart;
+	local PlayerReplicationInfo PRI;
+    local NavigationPoint startSpot;
+	local bool foundStart;
 
-	if ( (sgPRI(p.PlayerReplicationInfo) != none) && SpawnProtSecs > 0 )
-	{
-		p.ClientMessage("Siege spawn protection on");
-		sgPRI(P.PlayerReplicationInfo).ProtectCount = SpawnProtSecs;
-		sgPRI(P.PlayerReplicationInfo).bReachedSupplier = false;
-		sgPRI(P.PlayerReplicationInfo).SupplierTimer = 3.3;
-	}
+	PRI = P.PlayerReplicationInfo;
+	if ( (sgPRI(PRI) != none) && SpawnProtSecs > 0 )
+		sgPRI(PRI).SetProtection(SpawnProtSecs);
 
-	p.DrawScale = p.default.DrawScale;
-	p.GroundSpeed = p.default.GroundSpeed;
-	p.SetCollisionSize(p.default.CollisionRadius, p.default.CollisionHeight);
+	P.DrawScale = P.default.DrawScale;
+	P.GroundSpeed = P.default.GroundSpeed;
+	P.SetCollisionSize( P.default.CollisionRadius, P.default.CollisionHeight);
 
 	if ( bRestartLevel && Level.NetMode != NM_DedicatedServer && Level.NetMode != NM_ListenServer )
 		return true;
 
-	if ( p.PlayerReplicationInfo != None &&
-      (p.PlayerReplicationInfo.Team < 0 ||
-      p.PlayerReplicationInfo.Team >= MaxSiegeTeams ||
-      Cores[p.PlayerReplicationInfo.Team] == None || Cores[p.PlayerReplicationInfo.Team].bCoreDisabled ) )
-    {
-        if ( p.IsA('Bot') )
-	    {
-		    p.PlayerReplicationInfo.bIsSpectator = true;
-		    p.PlayerReplicationInfo.bWaitingPlayer = true;
-		    p.GotoState('GameEnded');
+	if ( PRI != None &&
+		(PRI.Team < 0 || PRI.Team >= MaxSiegeTeams ||
+		Cores[PRI.Team] == None || Cores[PRI.Team].bCoreDisabled ) )
+	{
+		if ( P.IsA('Bot') )
+		{
+			PRI.bIsSpectator = true;
+			PRI.bWaitingPlayer = true;
+			P.GotoState('GameEnded');
 		    return false;
 	    }
-		SetHulls( false);
-	    startSpot = FindPlayerStart(p, 255);
-		SetHulls( true);
+		SetHulls(false);
+	    startSpot = FindPlayerStart(P, 255);
+		SetHulls(true);
 	    if ( startSpot == None )
 		    return false;
 
 	    foundStart = p.SetLocation(startSpot.Location);
 	    if ( foundStart )
 	    {
-		    startSpot.PlayTeleportEffect(p, true);
-		    p.SetRotation(startSpot.Rotation);
-		    p.ViewRotation = p.Rotation;
-		    p.Acceleration = vect(0,0,0);
-		    p.Velocity = vect(0,0,0);
-		    p.Health = p.Default.Health;
-		    p.ClientSetRotation( startSpot.Rotation );
-		    p.SoundDampening = p.Default.SoundDampening;
-			p.PlayerRestartState = 'PlayerSpectating';
+			startSpot.PlayTeleportEffect(p, true);
+			P.SetRotation(startSpot.Rotation);
+			P.ViewRotation = P.Rotation;
+			P.Acceleration = vect(0,0,0);
+			P.Velocity = vect(0,0,0);
+			P.Health = P.Default.Health;
+			P.ClientSetRotation( startSpot.Rotation );
+			P.SoundDampening = p.Default.SoundDampening;
+			P.PlayerRestartState = 'PlayerSpectating';
 	    }
 	    return foundStart;
     }
     //else
         //p.PlayerRestartState = 'PlayerWalking';
 
-
-
-    return Super.RestartPlayer(p);
+    return Super.RestartPlayer(P);
 
 
 }

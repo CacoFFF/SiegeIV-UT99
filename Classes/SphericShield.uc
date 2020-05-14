@@ -21,7 +21,6 @@ simulated function FinishBuilding()
 		newFX.NextFX = myFX;
 		myFX = newFX;
 	}
-
 }
 
 simulated function CompleteBuilding()
@@ -110,10 +109,7 @@ event TakeDamage( int Damage, Pawn instigatedBy, Vector HitLocation, Vector Mome
 		PlaySound(Sound'UnrealShare.General.Expla02',,7.0);
 	}
 	
-	ScanRadius = CollisionRadius;
-	if ( int(Level.EngineVersion) < 469 )
-		ScanRadius += 17;
-		
+	ScanRadius = CollisionRadius + 10;
 	InstigatorTeam = class'SiegeStatics'.static.GetTeam(instigatedBy);
 	ForEach VisibleCollidingActors( class'Pawn', P, ScanRadius)
 		if ( (sgBuilding(P) == None) && (class'SiegeStatics'.static.GetTeam(P) != InstigatorTeam) )

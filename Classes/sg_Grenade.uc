@@ -3,8 +3,8 @@
 //=============================================================================
 class sg_Grenade extends Projectile;
 
-#exec MESH IMPORT MESH=sg_Grenade ANIVFILE=GLauncher\sg_Grenade_a.3d DATAFILE=GLauncher\sg_Grenade_d.3d
-#exec MESH LODPARAMS MESH=sg_Grenade HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
+#exec MESH IMPORT MESH=sg_Grenade ANIVFILE=GLauncher\sg_Grenade_a.3d DATAFILE=GLauncher\sg_Grenade_d.3d MLOD=0
+//#exec MESH LODPARAMS MESH=sg_Grenade HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
 #exec MESH ORIGIN MESH=sg_Grenade X=0.00 Y=0.00 Z=0.00 YAW=0.00 ROLL=0.00 PITCH=0.00
 
 #exec MESH SEQUENCE MESH=sg_Grenade SEQ=All       STARTFRAME=0 NUMFRAMES=1
@@ -234,7 +234,7 @@ defaultproperties
 	RemoteRole=2
 	AnimSequence='WingIn'
 	Skin=Texture'Jsg_grenade1'
-	Mesh=LodMesh'sg_Grenade'
+	Mesh=Mesh'sg_Grenade'
 	DrawScale=1.3
 	AmbientGlow=64
 	SoundRadius=64

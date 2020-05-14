@@ -146,7 +146,6 @@ simulated event Timer()
 						vect(0,0,0),
 						'exploded'
 					);
-
 				}
 			}
 	}

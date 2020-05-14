@@ -5,8 +5,7 @@ class Berserk expands TournamentPickup;
 
 //#exec TEXTURE IMPORT NAME=I_Berserk FILE=Graphics\i_berserk.PCX GROUP="Icons" MIPS=OFF
 
-#exec MESH IMPORT MESH=BerserkM ANIVFILE=MODELS\BerserkM_a.3d DATAFILE=MODELS\BerserkM_d.3d
-#exec MESH LODPARAMS MESH=BerserkM STRENGTH=0.6
+#exec MESH IMPORT MESH=BerserkM ANIVFILE=MODELS\BerserkM_a.3d DATAFILE=MODELS\BerserkM_d.3d MLOD=0
 #exec MESH ORIGIN MESH=BerserkM X=0 Y=0 Z=0 ROLL=64
 #exec MESH SEQUENCE MESH=BerserkM SEQ=All     STARTFRAME=0 NUMFRAMES=1
 #exec MESH SEQUENCE MESH=BerserkM SEQ=Berserk STARTFRAME=0 NUMFRAMES=1
@@ -292,9 +291,9 @@ state Activated
 defaultproperties
 {
      bMeshEnviroMap=True
-     Mesh=LodMesh'BerserkM'
+     Mesh=Mesh'BerserkM'
      Texture=Texture'Botpack.GoldSkin2'
-     PickupViewMesh=LodMesh'BerserkM'
+     PickupViewMesh=Mesh'BerserkM'
      bAutoActivate=True
      bActivatable=True
      bDisplayableInv=True

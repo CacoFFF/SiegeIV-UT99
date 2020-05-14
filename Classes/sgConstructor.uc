@@ -2587,9 +2587,9 @@ function setHand(float Hand)
 	if ( Hand != 2 )
 	{
 		if ( Hand == 1 )
-			Mesh = LodMesh'Constructor';
+			Mesh = Mesh'Constructor';
 		else
-			Mesh = LodMesh'ConstructorL';
+			Mesh = Mesh'ConstructorL';
 	}
 }
 

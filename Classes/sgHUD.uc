@@ -119,6 +119,9 @@ simulated function PostBeginPlay()
 
 	bEnforceHealth = (Owner != None) && Owner.IsA('bbPlayer');  //UTPure being gay as usual
 	bShowNukers = Spectator(Owner) != None;
+	WhiteColor.R = 255;
+	WhiteColor.G = 255;
+	WhiteColor.B = 255;
 
 //	MyFonts.Destroy();
 //	MyFonts = Spawn( class'FontInfoSiege');
@@ -2197,6 +2200,7 @@ defaultproperties
      GreyColor=(R=128,G=128,B=128)
      RedColour=128
      TheWhiteStuff=(R=255,G=255,B=255)
+     WhiteColor=(R=255,G=255,B=255)
      nHUDDecPlaces=1
      I_Type(0)=Class'sgTeleNetwork'
      I_Type(1)=Class'sgVisor'

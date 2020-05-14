@@ -104,7 +104,7 @@ function RestoreData()
 	PRI.Score = Score;
 	PRI.Deaths = Deaths;
 //Announce recovery
-	if ( PRI.RU > 5 )
+	if ( (PRI.RU > 5) && (DeathMatchPlus(Level.Game) != none) && !DeathMatchPlus(Level.Game).bTournament )
 		class'SiegeStatics'.static.AnnounceAll( Pool, "Siege RU-Recovery:"@int(RU)@"RU recovered for"@PRI.PlayerName);
 
 }

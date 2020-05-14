@@ -4,8 +4,8 @@
 class sgGrenadeLauncher extends TournamentWeapon;
 
 //Pickup mesh
-#exec MESH IMPORT MESH=sg_GLpickup ANIVFILE=GLauncher\sg_GLpickup_a.3d DATAFILE=GLauncher\sg_GLpickup_d.3d
-#exec MESH LODPARAMS MESH=sg_GLpickup HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
+#exec MESH IMPORT MESH=sg_GLpickup ANIVFILE=GLauncher\sg_GLpickup_a.3d DATAFILE=GLauncher\sg_GLpickup_d.3d MLOD=0
+//#exec MESH LODPARAMS MESH=sg_GLpickup HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
 #exec MESH ORIGIN MESH=sg_GLpickup X=-50.00 Y=-200.00 Z=10.00 YAW=0.00 ROLL=0.00 PITCH=0.00
 
 #exec MESH SEQUENCE MESH=sg_GLpickup SEQ=All       STARTFRAME=0 NUMFRAMES=1
@@ -18,8 +18,8 @@ class sgGrenadeLauncher extends TournamentWeapon;
 
 
 //First person mesh
-#exec MESH IMPORT MESH=sg_GL1st ANIVFILE=GLauncher\sg_GL1st_a.3d DATAFILE=GLauncher\sg_GL1st_d.3d
-#exec MESH LODPARAMS MESH=sg_GL1st HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
+#exec MESH IMPORT MESH=sg_GL1st ANIVFILE=GLauncher\sg_GL1st_a.3d DATAFILE=GLauncher\sg_GL1st_d.3d MLOD=0
+//#exec MESH LODPARAMS MESH=sg_GL1st HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
 #exec MESH ORIGIN MESH=sg_GL1st X=-140.00 Y=-75.00 Z=20.00 YAW=0.00 ROLL=0.00 PITCH=0.00
 
 #exec MESH SEQUENCE MESH=sg_GL1st SEQ=All       STARTFRAME=0 NUMFRAMES=86
@@ -44,8 +44,8 @@ class sgGrenadeLauncher extends TournamentWeapon;
 
 
 //Third person mesh
-#exec MESH IMPORT MESH=sg_GL3rd ANIVFILE=GLauncher\sg_GL3rd_a.3d DATAFILE=GLauncher\sg_GL3rd_d.3d
-#exec MESH LODPARAMS MESH=sg_GL3rd HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
+#exec MESH IMPORT MESH=sg_GL3rd ANIVFILE=GLauncher\sg_GL3rd_a.3d DATAFILE=GLauncher\sg_GL3rd_d.3d MLOD=0
+//#exec MESH LODPARAMS MESH=sg_GL3rd HYSTERESIS=0.00 STRENGTH=1.00 MINVERTS=10.00 MORPH=0.30 ZDISP=0.00
 #exec MESH ORIGIN MESH=sg_GL3rd X=-90.00 Y=-20.00 Z=-20.00 YAW=0.00 ROLL=0.00 PITCH=0.00
 
 #exec MESH SEQUENCE MESH=sg_GL3rd SEQ=All       STARTFRAME=0 NUMFRAMES=11
@@ -584,12 +584,12 @@ defaultproperties
     PickupMessage="You got the Grenade Launcher."
     ItemName="GrenadeLauncher"
     PlayerViewOffset=(X=3.50,Y=-1.80,Z=-2.00),
-    PlayerViewMesh=LodMesh'sg_GL1st'
+    PlayerViewMesh=Mesh'sg_GL1st'
     BobDamping=0.987
-    PickupViewMesh=LodMesh'sg_GLpickup'
-    Mesh=LodMesh'sg_GLpickup'
+    PickupViewMesh=Mesh'sg_GLpickup'
+    Mesh=Mesh'sg_GLpickup'
     ThirdPersonMesh=LodMesh'sg_GL3rd'
-    Mesh=LodMesh'GLpickup'
+    Mesh=Mesh'GLpickup'
     AmbientGlow=15
     bNoSmooth=False
     CollisionRadius=21.00

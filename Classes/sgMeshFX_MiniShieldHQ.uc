@@ -4,7 +4,7 @@
 //=============================================================================
 class sgMeshFX_MiniShieldHQ extends sgMeshFX;
 
-#exec MESH IMPORT MESH=sgSphereMesh ANIVFILE=MODELS\sgSphereMesh_a.3d DATAFILE=MODELS\sgSphereMesh_d.3d X=0 Y=0 Z=0
+#exec MESH IMPORT MESH=sgSphereMesh ANIVFILE=MODELS\sgSphereMesh_a.3d DATAFILE=MODELS\sgSphereMesh_d.3d X=0 Y=0 Z=0 MLOD=0
 #exec MESH ORIGIN MESH=sgSphereMesh X=0 Y=0 Z=0
 
 #exec MESH SEQUENCE MESH=sgSphereMesh SEQ=All STARTFRAME=0 NUMFRAMES=1
@@ -53,6 +53,6 @@ defaultproperties
      Style=STY_Modulated
      bUnlit=True
      bMeshEnviroMap=False
-     Mesh=LodMesh'sgSphereMesh'
+     Mesh=Mesh'sgSphereMesh'
 	 MultiSkins(2)=IceTexture'SBG_IceEff_01'
 }
