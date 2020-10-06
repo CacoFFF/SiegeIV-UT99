@@ -78,7 +78,7 @@ function bool ShouldDetonate()
 
 		if ( !bSuccess && (CheckOn[i].Health > 0) && (VSize( CheckOn[i].Location - Location) < (DetRadius + CheckOn[i].CollisionRadius)) && FastTrace(CheckOn[i].Location) )
 		{
-			if ( sgPRI(CheckOn[i].PlayerReplicationInfo) != none && sgPRI(CheckOn[i].PlayerReplicationInfo).ProtectCount > 2 )
+			if ( SGS.static.IsSpawnProtected(CheckOn[i]) )
 				continue;
 			bSuccess = true;
 		}

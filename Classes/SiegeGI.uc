@@ -1043,13 +1043,14 @@ function ScoreKill( Pawn killer, Pawn other)
 			{
 				aKiller.Score += 1;
 				if ( killer.BaseEyeHeight < killer.default.BaseEyeHeight )
-					aKiller.sgInfoSpreeCount += 1;
+					aKiller.sgInfoSpreeCount += 2;
 					
 				ForEach RadiusActors( class'sgEquipmentSupplier', Supplier, 250, Other.Location)
 					if ( Supplier.Team == aVictim.Team )
 					{
-						SpamFactor = 1 + (250 - VSize(Other.Location-Supplier.Location)) / 50; //0 to 5.9
-						SupplierTicks += (1 + int(Supplier.bProtected)) * SpamFactor;
+						SpamFactor = 1 + (250 - VSize(Other.Location-Supplier.Location)) / 25; //0 to 11.9
+						SupplierTicks += (1 + int(Supplier.bProtected)*2) * SpamFactor;
+						aKiller.sgInfoSpreeCount += 2;
 					}
 				Cores[aVictim.Team].StoredRU += SupplierTicks * Teams[aVictim.Team].Size;
 					
@@ -1061,7 +1062,7 @@ function ScoreKill( Pawn killer, Pawn other)
 					PenalizeTeamForKill( Other, aKiller.Team);
 					aVictim.AddRU(10 * RuMult);
 					aVictim.sgInfoSpreeCount = 0;
-					SupplierTicks += 10 + int(aVictim.SupplierTimer);
+					SupplierTicks += 20 + int(aVictim.SupplierTimer) * 5;
 				}
 				else if ( aKiller != None )
 				{
@@ -1160,15 +1161,8 @@ function int ReduceDamage( int damage, name damageType, Pawn injured,  Pawn inst
 	//Building related
 	if ( sgBuilding(injured) != none )
 	{
-		if ( sgBaseCore(injured) != None )
-		{
-			if ( bPlayerInstigated &&
-				(DamageType == 'Decapitated' || SniperRifle(instigatedBy.Weapon) != None ||
-				Ripper(instigatedBy.Weapon) != None) &&
-				VSize(injured.Location - instigatedBy.Location) >
-				MaxCoreSnipeDistance )
-				return damage / 10;
-		}
+		if ( (sgBaseCore(injured) != None) && bPlayerInstigated )
+			damage *= BaseCoreDamageScale( sgBaseCore(Injured), instigatedBy, DamageType);
 	}
 	//Non-building related
 	else
@@ -1180,6 +1174,21 @@ function int ReduceDamage( int damage, name damageType, Pawn injured,  Pawn inst
 		}
 	}
 	return damage;
+}
+
+// Util for previous TakeDamage
+function float BaseCoreDamageScale( sgBaseCore BaseCore, Pawn DamageInstigator, name DamageType)
+{
+	if ( VSize(BaseCore.Location - DamageInstigator.Location) > MaxCoreSnipeDistance )
+	{
+		if ( DamageType == 'Decapitated' )
+			return 0.1;
+		if ( (DamageType == 'Shot') && SniperRifle(DamageInstigator.Weapon) != None )
+			return 0.1;
+		if ( (DamageType == 'Shredded') && (Ripper(DamageInstigator.Weapon) != None) )
+			return 0.15;
+	}
+	return 1.0;
 }
 
 function NavigationPoint FindPlayerStart( Pawn Player, optional byte InTeam, optional string IncomingName)
@@ -2064,7 +2073,7 @@ function PenalizeTeamForKill( Pawn Killed, byte aTeam)
 	ForEach Killed.RadiusActors( class'sgEquipmentSupplier', sS, 100)
 	{
 		if ( sS.bProtected && (sS.Team == Killed.PlayerReplicationInfo.Team) )
-			penalty += sS.PenaltyFactor * 10;
+			penalty += sS.PenaltyFactor * 15;
 	}
 
 	if ( penalty <= 0 )

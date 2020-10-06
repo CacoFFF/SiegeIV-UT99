@@ -123,9 +123,6 @@ simulated function PostBeginPlay()
 	WhiteColor.G = 255;
 	WhiteColor.B = 255;
 
-//	MyFonts.Destroy();
-//	MyFonts = Spawn( class'FontInfoSiege');
-		
 	if ( SiegeGI(Level.Game) != None )
 	{
 		NetworthStat[0] = SiegeGI(Level.Game).NetworthStat[0];
@@ -329,47 +326,70 @@ simulated function string GetPlural(int i, string sObject)
 
 simulated function DrawTeamRU(canvas C)
 {
-	local int i,y;
+	local int i, y;
+	local byte Team;
 	local sgPRI PRI;
-	local float widthtotal;
-	local float width, height;
+	local GameReplicationInfo GRI;
+	local float WidthTotal;
+	local float Width, Height;
+	local float FontSizeDirective;
 	local string s;
+	local float XBorder;
 
-	C.Font = Font'SmallFont';
+	PRI  = sgPRI(PlayerPawn(Owner).PlayerReplicationInfo);
+	if ( PRI == None )
+		return;
+		
+	Team = PRI.Team;
+	if ( (Team == 255) && (PRI.RemoveTimer < 20) ) //Spectator must wait
+		return;
+	
+	GRI  = PlayerPawn(Owner).GameReplicationInfo;
+	if ( GRI == None ) //GRI not received
+		return;
+	
+	FontSizeDirective = C.ClipX * 0.6 + C.ClipY * 0.5;
+	C.Font = MyFonts.GetSmallestFont( FontSizeDirective * 0.8 );
+//	C.Font = Font'SmallFont';
 	C.Style = ERenderStyle.STY_Normal;
-	for (i=0;i<32;i++)
+	for ( i=0; i<32; i++)
 	{
-		PRI = sgPRI(PlayerPawn(Owner).GameReplicationInfo.PRIArray[i]);
-		if (PRI != None)
+		PRI = sgPRI(GRI.PRIArray[i]);
+		if ( (PRI != None) && (!PRI.bIsSpectator || PRI.bWaitingPlayer) && (Team == 255 || Team == PRI.Team) )
 		{
-			if (PlayerPawn(Owner).PlayerReplicationInfo.Team == PRI.Team)
-			{
-				s = PRI.PlayerName @ int(PRI.RU) @ "RU";
-				C.TextSize(s, width, height);
-				if (width > widthtotal) widthtotal=width;
-				y++;
-			}
+			s = PRI.PlayerName @ int(PRI.RU) @ "RU";
+			C.TextSize(s, Width, Height);
+			WidthTotal = FMax( Width, WidthTotal);
+			y++;
 		}
 	}
 
-
-	C.DrawColor = TeamColor[Pawn(Owner).PlayerReplicationInfo.Team];
-	y = C.ClipY/3 - ((y * height)/2);
-	for (i=0;i<32;i++)
+	y = C.ClipY/3 - ((y * Height)/2);
+	for ( i=0; i<32; i++)
 	{
-		PRI = sgPRI(PlayerPawn(Owner).GameReplicationInfo.PRIArray[i]);
-		if (PRI != None)
+		PRI = sgPRI(GRI.PRIArray[i]);
+		if ( (PRI != None) && (!PRI.bIsSpectator || PRI.bWaitingPlayer) && (Team == 255 || Team == PRI.Team) )
 		{
-			if (PlayerPawn(Owner).PlayerReplicationInfo.Team == PRI.Team)
+			s = int(PRI.RU) @ "RU";
+			C.TextSize(s, Width, Height);
+/*			if ( FontSizeDirective > 1200 ) //Looks ugly in non-antialiased fonts, unfortunately.
 			{
-				C.SetPos(C.ClipX - widthtotal,y);
-				C.DrawText(PRI.PlayerName, true);
-				s = int(PRI.RU) @ "RU";
-				C.TextSize(s, width, height);
-				C.SetPos(C.ClipX - width,y);
-				C.DrawText(s, True);
-				y += height;
-			}
+				//Shade it
+				XBorder = C.ClipX - 1;
+				C.SetPos( XBorder-WidthTotal, y+1);
+				C.DrawColor = UnitColor;
+				C.DrawText(PRI.PlayerName, false);
+				C.SetPos( XBorder-Width, y+1);
+				C.DrawText(s, false);
+			}*/
+			//Draw it
+			XBorder = C.ClipX - 2;
+			C.SetPos( XBorder - WidthTotal,y);
+			C.DrawColor = TeamColor[PRI.Team & 3];
+			C.DrawText(PRI.PlayerName, false);
+			C.SetPos( XBorder - Width,y);
+			C.DrawText(s, false);
+			y += Height;
 		}
 	}
 
@@ -618,6 +638,7 @@ simulated function PostRender( canvas Canvas )
 
 	local Actor A;
 
+	
 	///////////////////////
 	//Thermal Visor Stuff//
 	///////////////////////

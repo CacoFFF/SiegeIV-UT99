@@ -7,7 +7,7 @@ function ModifyProduct( Inventory I, int Idx)
 {
 	local float Added;
 	Super.ModifyProduct( I, Idx);
-	Added = (Grade ** 1.6) * 10;
+	Added = (Grade ^ 1.6) * 10;
 	I.Charge = I.Charge * 1.5 + Added;
 }
 

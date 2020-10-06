@@ -53,6 +53,7 @@ event Tick( float DeltaTime)
 function PostBeginPlay()
 {
 	SiegeGI = SiegeGI(Level.Game);
+	SiegeGI.RegisterDamageMutator(self);
 	Pkg = Left( string(class), inStr(string(class),"."));
 	
 	TickCounter = 0;
@@ -124,4 +125,18 @@ function Mutate( string MutateString, PlayerPawn Sender)
 	}
 	if ( NextMutator != none )
 		NextMutator.Mutate( MutateString, Sender);
+}
+
+function MutatorTakeDamage( out int ActualDamage, Pawn Victim, Pawn InstigatedBy, out Vector HitLocation, 
+						out Vector Momentum, name DamageType)
+{
+	if ( NextDamageMutator != None )
+		NextDamageMutator.MutatorTakeDamage( ActualDamage, Victim, InstigatedBy, HitLocation, Momentum, DamageType );
+	
+	if ( class'SiegeStatics'.static.IsSpawnProtected(Victim) && (ActualDamage == 0)
+		&& (InstigatedBy != None) && (InstigatedBy.PlayerReplicationInfo != None)
+		&& (Victim.PlayerReplicationInfo.Team != InstigatedBy.PlayerReplicationInfo.Team) )
+	{
+		Momentum = vect(0,0,0);
+	}
 }

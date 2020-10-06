@@ -18,6 +18,7 @@ var int Count;
 var string ProtectionExpired;
 var float PenaltyFactor;
 var int MultiSupplyTicks;
+var float AccumulatedSpamDamage;
 
 var sgSupplierQueuer QueuerList;
 
@@ -66,8 +67,8 @@ simulated function CompleteBuilding()
 	if ( MultiSupplyTicks > 0 )
 	{
 		OldMultiSupplyTicks = MultiSupplyTicks;
-		Scale *= (1.0 + float(MultiSupplyTicks) * 0.1);
-		MultiSupplyTicks = Max( 0, MultiSupplyTicks-i);
+		Scale *= (1.0 + MultiSupplyTicks / 10);
+		MultiSupplyTicks = Max( 0, MultiSupplyTicks-i*(1+MultiSupplyTicks/10));
 	}	
 	
 	//Supply, first round (and only for global)
@@ -114,10 +115,10 @@ function CalculatePenalty()
 	local sgBuilding aBuild;
 
 	PenaltyFactor = 1;
-	ForEach VisibleCollidingActors( class'sgBuilding', aBuild, 170)
+	ForEach VisibleCollidingActors( class'sgBuilding', aBuild, 160)
 		if ( (sgEquipmentSupplier(aBuild) == none) && (aBuild.Team == Team) )
 		{
-			PenaltyFactor *= VSize( Location - aBuild.Location) / 170;
+			PenaltyFactor *= VSize( Location - aBuild.Location) / 160;
 			if ( class'SiegeStatics'.static.ActorsTouchingExt( self, aBuild, 10, 10) )
 				aBuild.bOnlyOwnerRemove = false;
 		}
@@ -176,7 +177,6 @@ function bool Supply( Pawn Other, sgSupplierQueuer Accumulator, float SupplyFact
 		PRI.bReachedSupplier = True;
 		if ( PRI.ProtectCount > 0 )
 		{
-			PRI.ProtTimer( 0.05);
 			if ( PRI.SupplierTimer > 0 )
 				PRI.SupplierTimer += 0.025;
 		}
@@ -189,8 +189,37 @@ function bool Supply( Pawn Other, sgSupplierQueuer Accumulator, float SupplyFact
 
 simulated event TakeDamage( int damage, Pawn instigatedBy, Vector hitLocation, Vector momentum, name damageType )
 {
-	if (!bProtected)
+	local int ExtraTicks;
+	local float SpamDamage;
+	local sgEquipmentSupplier OtherSupplier;
+
+	if ( !bProtected )
 		Super.TakeDamage(damage, instigatedBy, hitLocation, momentum, damageType);
+	else if	( class'SiegeStatics'.static.GetTeam( InstigatedBy, Team) != Team )
+	{
+		// Accumulate 'spam' damage
+		SpamDamage = Damage;
+		
+		// Hitscan weapons and combos are aggravating
+		if ( DamageType == 'Shot' || DamageType == 'Jolted' || DamageType == 'Decapitated' )
+			SpamDamage *= 2;
+			
+		// Reduce spam damage from nuke
+		if ( DamageType == 'Exploded' )
+			SpamDamage *= 0.1;
+			
+		// Give extra 'supply ticks' to all suppliers in vicinity
+		AccumulatedSpamDamage += SpamDamage;
+		ExtraTicks = int(AccumulatedSpamDamage / 16);
+		if ( ExtraTicks > 0 )
+		{
+			AccumulatedSpamDamage -= ExtraTicks * 16;
+			ForEach VisibleCollidingActors( class'sgEquipmentSupplier', OtherSupplier, 150)
+				if ( OtherSupplier.Team == Team )
+					OtherSupplier.MultiSupplyTicks += ExtraTicks;
+			
+		}
+	}
 }
 
 

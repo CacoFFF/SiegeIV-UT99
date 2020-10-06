@@ -30,7 +30,7 @@ var bool bFirstGlobal;
 
 replication
 {
-	reliable if ( bNetInitial && ROLE==ROLE_Authority )
+	reliable if ( ROLE==ROLE_Authority )
 		Team;
 	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
 		BuildingNetworth, CarriedNetworth, ItemNetworth, EventCodes, CurrentIndex, MaxTotalNetworth, MaxTeamNetworth;

@@ -20,9 +20,15 @@ var int ItemMinWeight[32];
 var int ItemMaxWeight[32];
 var string ItemProps[32];
 var byte OvertimeOnly[32];
+var class<Inventory> SpecialItemList[32];
+var int SpecialItemMinWeight[32];
+var int SpecialItemMaxWeight[32];
+var string SpecialItemProps[32];
+var byte SpecialOvertimeOnly[32];
 var int iItems;
 var float WeightToExtraTimeScale;
 var float OvertimeTimeScale;
+var float SpecialItemChance;
 var bool bRealTimer;
 var float fSecond;
 

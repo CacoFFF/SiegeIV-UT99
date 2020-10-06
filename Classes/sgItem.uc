@@ -186,7 +186,7 @@ function bool GiveItems( Pawn Other)
 	local Inventory I, inv;
 	local bool bReject;
 	
-	if ( (sgPRI(Other.PlayerReplicationInfo) != none) && (sgPRI(Other.PlayerReplicationInfo).ProtectCount > 0) ) 
+	if ( SGS.static.IsSpawnProtected(Other) )
 		return false;
 	
 	For ( I=Inventory ; I!=none ; I=I.Inventory )

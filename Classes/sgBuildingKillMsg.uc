@@ -11,10 +11,9 @@ static function string GetArticle(string noun)
         return "";
 
     letter = Caps(Left(noun, 1));
-    if ( letter == "A" || letter == "E" || letter == "I" || letter == "O" ||
-      letter == "U" )
-        return "A";
-    return "An";
+    if ( letter == "A" || letter == "E" || letter == "I" || letter == "O" || letter == "U" )
+        return "An";
+    return "A";
 }
 
 static function string GetString(

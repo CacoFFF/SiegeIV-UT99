@@ -508,6 +508,16 @@ static final function byte GetTeam( Pawn Other, optional byte DefaultNone)
 	return 255;
 }
 
+//*************************************
+//Get this Pawn's team*****************
+//*************************************
+static final function bool IsSpawnProtected( Pawn Other)
+{
+	return Other != None
+		&& sgPRI(Other.PlayerReplicationInfo) != None
+		&& sgPRI(Other.PlayerReplicationInfo).ProtectCount > 0;
+}
+
 //****************************************************
 //Get this Pawn's ammo amount of a specific ammo type*
 //****************************************************

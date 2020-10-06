@@ -60,6 +60,9 @@ simulated event PostBeginPlay()
 		SetOwner( LocalPlayer);
 	}
 		
+	if ( (Level.NetMode == NM_Client) && (LocalPlayer.PlayerReplicationInfo != None) && (LocalPlayer.PlayerReplicationInfo.Role == ROLE_DumbProxy) )
+		LocalPlayer.PlayerReplicationInfo.Role = ROLE_SimulatedProxy;
+		
 	bSendFingerPrint = true;
 	iChance = 2;
 	SetTimer(2.5 * Level.TimeDilation, false);
@@ -234,7 +237,13 @@ simulated event Tick( float DeltaTime)
 	{
 		//Hack to prevent client's timers from going bad after a pause
 		if ( (Level.NetMode == NM_Client) && (LocalPlayer.GameReplicationInfo != None) )
+		{
 			LocalPlayer.GameReplicationInfo.SecondCount += DeltaTime * 2;
+			// And just in case the tick bug was fixed...
+			if ( LocalPlayer.GameReplicationInfo.SecondCount >= Level.TimeSeconds )
+				LocalPlayer.GameReplicationInfo.SecondCount -= Level.TimeDilation;
+			
+		}
 		//This is an owned actor and the engine has a bug when ticking stuff during pause!!!
 		//This actor will only tick half the times!!!
 		return;

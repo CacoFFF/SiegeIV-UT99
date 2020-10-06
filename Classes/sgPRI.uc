@@ -163,7 +163,7 @@ simulated event SetInitialState()
 
 simulated state ClientOp
 {
-	function sgClientSetup()
+	simulated function sgClientSetup()
 	{
 		local sgClient aClient;
 		ForEach AllActors (class'sgClient', aClient)
@@ -172,9 +172,17 @@ simulated state ClientOp
 			Spawn( class'sgClient', Owner);
 	}
 Begin:
-	Sleep(0.1);
-	if ( (PlayerPawn(Owner) != none) && (Owner.RemoteRole == ROLE_AutonomousProxy) )
+	while ( Owner == None )
+		Sleep(0.2 * Level.TimeDilation);
+	if ( (PlayerPawn(Owner) != none) && (Owner.Role == ROLE_AutonomousProxy) )
+	{
 		sgClientSetup();
+		while ( true )
+		{
+			Sleep(1.98); //Ugly as hell
+			RemoveTimer += 2;
+		}
+	}
 }
 
 //Procedural one-time actions in the server
@@ -351,6 +359,8 @@ simulated event PostNetBeginPlay()
 			break;
 		if ( aClient == none )
 			Spawn(class'sgClient');
+		if ( (Owner != None) && (Owner.Role == ROLE_AutonomousProxy) )
+			Role = ROLE_SimulatedProxy;
 	}
 }
 
