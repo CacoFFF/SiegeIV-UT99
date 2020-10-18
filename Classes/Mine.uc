@@ -118,7 +118,7 @@ simulated function string KillMessage( name damageType, pawn Other )
 	{
 		PRI = P.PlayerReplicationInfo;
 		PRI.Score += 1 + WarheadCount * 3;
-
+		PRI.sgInfoMineFrags += 1;
 		s = " built by" @ PRI.PlayerName;
 	}
 

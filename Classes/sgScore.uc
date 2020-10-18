@@ -251,10 +251,10 @@ function ShowScores(Canvas Canvas)
 			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 7);
 			Canvas.DrawText(TimeString$":"@Time, false);
 			
-			 // Draw Buildings
-			 Canvas.DrawColor=getTeamColor[2];
+			 // Draw Mine Frags
+			 Canvas.DrawColor=Purple;
 			 Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + 7);
-			 Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+			 Canvas.DrawText("MnFrg:"@aPRI.sgInfoMineFrags, false);
 		  
 			// Draw Nuke Fails
 	  		Canvas.DrawColor=Peach;
@@ -265,7 +265,12 @@ function ShowScores(Canvas Canvas)
 			Canvas.DrawColor=getTeamColor[0];
 			Canvas.SetPos(X+xLen+paddingInfo+15, Y + yLen + 9);
 			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
-			
+
+			// Draw Buildings
+			Canvas.DrawColor=getTeamColor[2];
+			Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + yLen+ 9);
+			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+
 	  		// Draw Nuke Kills
 	  		Canvas.DrawColor=getTeamColor[2];
 			Canvas.SetPos(X+paddingInfo+15, Y + 2 * yLen + 11);
