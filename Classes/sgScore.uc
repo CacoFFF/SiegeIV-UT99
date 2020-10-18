@@ -279,7 +279,7 @@ function ShowScores(Canvas Canvas)
 			// Draw Effective
 			Canvas.DrawColor=Orange;
 			Canvas.SetPos(X+xLen+paddingInfo+20, Y + 2 * yLen + 11);
-			Canvas.DrawText("Eff :"@Eff[i]$"%", false);
+			Canvas.DrawText("Effn:"@Eff[i]$"%", false);
 
 			// Draw Buildings
 			Canvas.DrawColor=getTeamColor[2];
