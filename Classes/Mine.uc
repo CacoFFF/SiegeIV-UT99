@@ -128,7 +128,11 @@ simulated function string KillMessage( name damageType, pawn Other )
 		VictimStat = SGS.static.GetPlayerStat(Other);
 		
 		if ( Stat != None )
+		{
 			Stat.WarheadDestroyEvent( WarheadCount);
+			Stat.MineFragEvent(1);
+		}
+			
 		if(VictimStat != None)
 			VictimStat.WarheadFailEvent(WarheadCount);
 

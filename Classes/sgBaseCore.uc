@@ -296,7 +296,6 @@ simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, V
 			return;
 
 		instigatedBy.PlayerReplicationInfo.Score += tempScore/100;
-		instigatedBy.PlayerReplicationInfo.sgInfoCoreDmg = int(instigatedBy.PlayerReplicationInfo.sgInfoCoreDmg + actualDamage);
 		if ( sgPRI(instigatedBy.PlayerReplicationInfo) != None )
 		{
 			sgPRI(instigatedBy.PlayerReplicationInfo).AddRU((tempScore/7)*RuRewardScale);
