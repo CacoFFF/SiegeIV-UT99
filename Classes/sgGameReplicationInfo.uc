@@ -7,11 +7,11 @@ var float MaxRUs[4];
 var int EngineVersion;
 
 //Global stat counter
-var localized string      StatTop_Desc[8];
-var string                StatTop_Name[8];
-var byte                  StatTop_Team[8];
-var PlayerReplicationInfo StatTop_PRI[8];
-var float                 StatTop_Value[8];
+var localized string      StatTop_Desc[9];
+var string                StatTop_Name[9];
+var byte                  StatTop_Team[9];
+var PlayerReplicationInfo StatTop_PRI[9];
+var float                 StatTop_Value[9];
 
 //Format: "name;count;name;count;...;"
 var string Nukers_Red;
@@ -159,6 +159,7 @@ defaultproperties
 	StatTop_Desc(5)="Top Warhead maker"
 	StatTop_Desc(6)="Top Warhead defender"
 	StatTop_Desc(7)="Top repairer/upgrader"
+	StatTop_Desc(8)="Top Warhead failure"
 	StatTop_Team(0)=255
 	StatTop_Team(1)=255
 	StatTop_Team(2)=255

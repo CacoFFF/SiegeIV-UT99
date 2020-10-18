@@ -11,6 +11,7 @@ const GRI_Build          = 4;
 const GRI_WarheadBuild   = 5;
 const GRI_WarheadDestroy = 6;
 const GRI_UpgradeRepair  = 7;
+const GRI_WarheadFail	 = 8;
 
 var SiegeStatPool Pool;
 var Pawn Player;
@@ -20,8 +21,8 @@ var byte Team;
 var SiegeStatPlayer NextStat;
 
 
-var float InfoCoreDamage, InfoCoreRepair, InfoBuildingDamage, InfoUpgradeRepair;
-var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy;
+var float InfoCoreDamage, InfoCoreRepair, InfoBuildingDamage, InfoUpgradeRepair, InfoPlayerCoreDmg;
+var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy, InfoWarheadFail, InfoMineFrag;
 
 var int CarryingWarheads;
 
@@ -82,6 +83,9 @@ function UpdateData()
 	PRI.sgInfoBuildingMaker = InfoBuild;
 	PRI.sgInfoWarheadMaker = InfoWarheadBuild;
 	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
+	PRI.sgInfoWarheadFailCount = InfoWarheadFail;
+	PRI.sgInfoMineFrags = InfoMineFrag;
+	PRI.sgInfoCoreDmg = int(InfoPlayerCoreDmg);
 	Team = PRI.Team;
 	RU = PRI.RU;
 	Score = PRI.Score;
@@ -100,6 +104,9 @@ function RestoreData()
 	PRI.sgInfoBuildingMaker = InfoBuild;
 	PRI.sgInfoWarheadMaker = InfoWarheadBuild;
 	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
+	PRI.sgInfoWarheadFailCount = InfoWarheadFail;
+	PRI.sgInfoMineFrags = InfoMineFrag;
+	PRI.sgInfoCoreDmg = int(InfoPlayerCoreDmg);
 	PRI.RU = RU;
 	PRI.Score = Score;
 	PRI.Deaths = Deaths;
@@ -314,7 +321,21 @@ function WarheadPickupEvent()
 		SleepModify( 0.05);
 }
 
+function WarheadFailEvent(int Change)
+{
+	InfoWarheadFail += Change;
+	PropagateToGRI(GRI_WarheadFail, float(InfoWarheadFail) + 0.01);
+}
 
+function MineFragEvent(int Change)
+{
+	InfoMineFrag += Change;
+}
+
+function PlayerCoreDmgEvent(float Change)
+{
+	InfoPlayerCoreDmg += Change;
+}
 
 
 

@@ -502,7 +502,7 @@ simulated function DrawSiegeStats( Canvas C)
 	local string s1;
 	local int MaxPerColumn;
 
-	local string sInfo[8];
+	local string sInfo[9];
 
 	local sgGameReplicationInfo GRI;
 	local sgPRI PRI;
@@ -548,12 +548,13 @@ simulated function DrawSiegeStats( Canvas C)
 		if ( GRI.StatTop_Value[4] >= 1 ) sInfo[4] = GetPlural( GRI.StatTop_Value[4],"building")@"created";
 		if ( GRI.StatTop_Value[5] >= 1 ) sInfo[5] = GetPlural( GRI.StatTop_Value[5],"Warhead")@"created";
 		if ( GRI.StatTop_Value[6] >= 1 ) sInfo[6] = GetPlural( GRI.StatTop_Value[6],"Warhead")@"destroyed";
+		if ( GRI.StatTop_Value[8] >= 1 ) sInfo[8] = GetPlural( GRI.StatTop_Value[8],"Warhead")@"failed";
 
 		X = C.ClipX / 4;
 		if ( FontSizeDirective >= 800 )
 			X -= 128;
 
-		for ( i=0 ; i<8 ; i++ )
+		for ( i=0 ; i<9 ; i++ )
 		{
 			Y1 = YL + ((BigFontHeight+TinyFontHeight+1)*i);
 			C.Font = MyFonts.GetBigFont( FontSizeDirective );

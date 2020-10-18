@@ -12,7 +12,7 @@ var int iPRI;
 var int counter, tableWidth, tableHeaderHeight, cellHeight, CountTeams, saveindex, TeamPlayers[4], 
 		ShowMaxPlayer1, ShowMaxPlayer2, NotShownPlayers[4], LastSortTime, tableLine1,
 		tableLine2, paddingInfo, avgEff[4], avgPi[4], avgPl[4], avgY;
-var Color White, Pink, Orange, getHeaderColor[4], getTeamColor[4];
+var Color White, Pink, Orange, Peach, Purple, Brown, getHeaderColor[4], getTeamColor[4];
 var Font PtsFont26,PtsFont24,PtsFont22, PtsFont20, PtsFont18, PtsFont16, PtsFont14, PtsFont12;
 var Texture getIconTexture[4], getTeamIcon[4], getHeaderTexture[4];
 var string TeamNames[4];
@@ -239,7 +239,7 @@ function ShowScores(Canvas Canvas)
 		  
 			// Draw Nukes
 	  		Canvas.DrawColor=getTeamColor[3];
-			Canvas.SetPos(X+ paddingInfo+40, Y + 7);
+			Canvas.SetPos(X+ paddingInfo+15, Y + 7);
 //			Canvas.StrLen("Ping:     ", xLen, yLen);
 			xLen = 60; //Font is fixed, this should be faster here
 			yLen = 8;
@@ -248,29 +248,43 @@ function ShowScores(Canvas Canvas)
 			// Draw Time
 			Canvas.DrawColor=White;
 			Time = Max(1, (Level.TimeSeconds + PlayerPawn(Owner).PlayerReplicationInfo.StartTime - aPRI.StartTime)/60);
-			Canvas.SetPos(X+xLen+paddingInfo+40, Y + 7);
+			Canvas.SetPos(X+xLen+paddingInfo+20, Y + 7);
 			Canvas.DrawText(TimeString$":"@Time, false);
-		  
-			// Draw Nuke Takedowns
-	  		Canvas.DrawColor=getTeamColor[1];
-			Canvas.SetPos(X+paddingInfo+40, Y + yLen + 9);
-			Canvas.DrawText("NkKls:"@aPRI.sgInfoWarheadKiller, false);
-	  	
-			// Deaths && Eff
-			 // Draw Deaths
-			Canvas.DrawColor=getTeamColor[0];
-			Canvas.SetPos(X+xLen+paddingInfo+40, Y + yLen + 9);
-			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
 			
-	  		  // Draw Buildings
-	  		Canvas.DrawColor=getTeamColor[2];
-			Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
-			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+			 // Draw Core Dmg
+			 Canvas.DrawColor=Purple;
+			 Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + 7);
+			 Canvas.DrawText("CrDmg:"@aPRI.sgInfoCoreDmg, false);
+		  
+			// Draw Nuke Fails
+	  		Canvas.DrawColor=Peach;
+			Canvas.SetPos(X+paddingInfo+15, Y + yLen + 9);
+			Canvas.DrawText("NkFls:"@aPRI.sgInfoWarheadFailCount, false);
+
+			// Draw Deaths
+			Canvas.DrawColor=getTeamColor[0];
+			Canvas.SetPos(X+xLen+paddingInfo+20, Y + yLen + 9);
+			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
+
+			// Draw Mine Frags
+			Canvas.DrawColor=Brown;
+			Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + yLen+ 9);
+			Canvas.DrawText("MnFrg:"@aPRI.sgInfoMineFrags, false);
+
+	  		// Draw Nuke Kills
+	  		Canvas.DrawColor=getTeamColor[1];
+			Canvas.SetPos(X+paddingInfo+15, Y + 2 * yLen + 11);
+			Canvas.DrawText("NkKls:"@aPRI.sgInfoWarheadKiller, false);
 		  
 			// Draw Effective
 			Canvas.DrawColor=Orange;
-			Canvas.SetPos(X+xLen+paddingInfo+40, Y + 2 * yLen + 11);
-			Canvas.DrawText("Eff:"@Eff[i]$"%", false);
+			Canvas.SetPos(X+xLen+paddingInfo+20, Y + 2 * yLen + 11);
+			Canvas.DrawText("Eff :"@Eff[i]$"%", false);
+
+			// Draw Buildings
+			Canvas.DrawColor=getTeamColor[2];
+			Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + 2 * yLen+ 11);
+			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
 	  	
 			// Kills && Points
 			Canvas.Font = PtsFont16;
@@ -579,6 +593,9 @@ defaultproperties
 	 White=(R=255,G=255,B=255)
 	 Pink=(R=242,G=128,B=249)
 	 Orange=(R=255,G=128)
+	 Peach=(R=248,G=184,B=179)
+	 Purple=(R=177,G=156,B=217)
+	 Brown=(R=152,G=118,B=84)
 	 getHeaderColor(0)=(R=32)
 	 getHeaderColor(1)=(B=16)
 	 getHeaderColor(2)=(G=32)
