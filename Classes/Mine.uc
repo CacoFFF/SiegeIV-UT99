@@ -109,7 +109,7 @@ simulated function string KillMessage( name damageType, pawn Other )
 	local PlayerReplicationInfo PRI;
 	local SiegeGI Game;
 	local byte VictimTeam;
-	local SiegeStatPlayer Stat;
+	local SiegeStatPlayer Stat, VictimStat;
 	
 	WarheadCount = Min( SGS.static.GetAmmoAmount( Other, class'WarheadAmmo'), 2);
 
@@ -125,8 +125,12 @@ simulated function string KillMessage( name damageType, pawn Other )
 	if ( WarheadCount > 0 )
 	{
 		Stat = SGS.static.GetPlayerStat( P );
+		VictimStat = SGS.static.GetPlayerStat(Other);
+		
 		if ( Stat != None )
 			Stat.WarheadDestroyEvent( WarheadCount);
+		if(VictimStat != None)
+			VictimStat.WarheadFailEvent(WarheadCount);
 
 		if ( Other.PlayerReplicationInfo != None )
 		{

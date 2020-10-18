@@ -1010,7 +1010,7 @@ function ScoreKill( Pawn killer, Pawn other)
 	local vector TStart;
 	local sgEquipmentSupplier Supplier;
 	local int SupplierTicks;
-	local SiegeStatPlayer Stat;
+	local SiegeStatPlayer Stat, VictimStat;
 	local byte KillerTeam, VictimTeam;
 
 	RuMult = 1;
@@ -1020,6 +1020,7 @@ function ScoreKill( Pawn killer, Pawn other)
 	Stat = SGS.static.GetPlayerStat( killer);
 	KillerTeam = SGS.static.GetTeam(killer);
 	VictimTeam = SGS.static.GetTeam(other);
+	VictimStat = SGS.static.GetPlayerStat(other);
 
 	if ( killer == other || killer == None )
 	{
@@ -1114,6 +1115,9 @@ function ScoreKill( Pawn killer, Pawn other)
 			if ( Stat != None )
 				Stat.WarheadDestroyEvent( NukeAmmo );
 		}
+		
+		if(VictimStat != None)
+			VictimStat.WarheadFailEvent(NukeAmmo);
 
 		if ( (KillerTeam < 4) && (KillerTeam != VictimTeam) && (NetworthStat[KillerTeam] != None) )
 			NetworthStat[KillerTeam].AddEvent( 1);

@@ -84,7 +84,7 @@ singular function TakeDamage( int NDamage, Pawn instigatedBy, vector hitlocation
 {
 	local SiegeGI Game;
 	local byte OwnerTeam, DenierTeam;
-	local SiegeStatPlayer Stat;
+	local SiegeStatPlayer Stat, VictimStat;
 	
 	if ( bDeleteMe )
 		return;
@@ -94,6 +94,7 @@ singular function TakeDamage( int NDamage, Pawn instigatedBy, vector hitlocation
 	{
 		OwnerTeam = class'SiegeStatics'.static.GetTeam(Instigator);
 		DenierTeam = class'SiegeStatics'.static.GetTeam(instigatedBy);
+		VictimStat = class'SiegeStatics'.static.GetPlayerStat(Instigator);
 
 		if ( instigatedBy != Instigator )
 		{
@@ -109,6 +110,9 @@ singular function TakeDamage( int NDamage, Pawn instigatedBy, vector hitlocation
 			else
 				Level.Game.BroadcastMessage("The nuke was taken down by"@ instigatedBy.GetHumanName()$"!");
 		}
+
+		if(VictimStat != None) 
+			VictimStat.WarheadFailEvent(1);
 	
 		if ( (OwnerTeam != DenierTeam) && (instigatedBy != None) && (instigatedBy.PlayerReplicationInfo != None) )
 		{

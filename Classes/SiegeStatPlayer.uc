@@ -11,6 +11,7 @@ const GRI_Build          = 4;
 const GRI_WarheadBuild   = 5;
 const GRI_WarheadDestroy = 6;
 const GRI_UpgradeRepair  = 7;
+const GRI_WarheadFail	 = 8;
 
 var SiegeStatPool Pool;
 var Pawn Player;
@@ -21,7 +22,7 @@ var SiegeStatPlayer NextStat;
 
 
 var float InfoCoreDamage, InfoCoreRepair, InfoBuildingDamage, InfoUpgradeRepair;
-var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy;
+var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy, InfoWarheadFail;
 
 var int CarryingWarheads;
 
@@ -82,6 +83,7 @@ function UpdateData()
 	PRI.sgInfoBuildingMaker = InfoBuild;
 	PRI.sgInfoWarheadMaker = InfoWarheadBuild;
 	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
+	PRI.sgInfoWarheadFailCount = InfoWarheadFail;
 	Team = PRI.Team;
 	RU = PRI.RU;
 	Score = PRI.Score;
@@ -100,6 +102,7 @@ function RestoreData()
 	PRI.sgInfoBuildingMaker = InfoBuild;
 	PRI.sgInfoWarheadMaker = InfoWarheadBuild;
 	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
+	PRI.sgInfoWarheadFailCount = InfoWarheadFail;
 	PRI.RU = RU;
 	PRI.Score = Score;
 	PRI.Deaths = Deaths;
@@ -312,6 +315,12 @@ function WarheadPickupEvent()
 {
 	if ( LatentFloat > (0.1 * Level.TimeDilation) )
 		SleepModify( 0.05);
+}
+
+function WarheadFailEvent(int Change)
+{
+	InfoWarheadFail += Change;
+	PropagateToGRI(GRI_WarheadFail, float(InfoWarheadFail) + 0.01);
 }
 
 
