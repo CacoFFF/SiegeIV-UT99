@@ -13,7 +13,8 @@ var int		sgInfoKiller,
 		sgInfoWarheadKiller,
 		sgInfoSpreeCount,
 		sgInfoWarheadFailCount,
-		sgInfoMineFrags;
+		sgInfoMineFrags,
+		sgInfoCoreDmg;
 
 var string CountryPrefix;
 var Texture CachedFlag; //Client takes care of this
@@ -76,7 +77,7 @@ replication
 	reliable if ( (Role == ROLE_Authority) && (bNetOwner || class'XC_ReplicationNotify'.static.ReplicateVar(Team)) )
 		RU;
 	reliable if ( Role == ROLE_Authority )
-		/*RU,*/ XC_Orb, Orb, sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller, sgInfoWarheadFailCount, sgInfoMineFrags, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
+		/*RU,*/ XC_Orb, Orb, sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller, sgInfoWarheadFailCount, sgInfoMineFrags, sgInfoCoreDmg, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
 	reliable if ( Role == ROLE_Authority )
 		ReceiveMessage, RequestFingerPrint, ClientReceiveRU;
 	reliable if ( Role < ROLE_Authority )
