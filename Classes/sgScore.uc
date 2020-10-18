@@ -12,7 +12,7 @@ var int iPRI;
 var int counter, tableWidth, tableHeaderHeight, cellHeight, CountTeams, saveindex, TeamPlayers[4], 
 		ShowMaxPlayer1, ShowMaxPlayer2, NotShownPlayers[4], LastSortTime, tableLine1,
 		tableLine2, paddingInfo, avgEff[4], avgPi[4], avgPl[4], avgY;
-var Color White, Pink, Orange, getHeaderColor[4], getTeamColor[4];
+var Color White, Pink, Orange, Peach, Purple getHeaderColor[4], getTeamColor[4];
 var Font PtsFont26,PtsFont24,PtsFont22, PtsFont20, PtsFont18, PtsFont16, PtsFont14, PtsFont12;
 var Texture getIconTexture[4], getTeamIcon[4], getHeaderTexture[4];
 var string TeamNames[4];
@@ -241,7 +241,7 @@ function ShowScores(Canvas Canvas)
 	  		Canvas.DrawColor=getTeamColor[3];
 			Canvas.SetPos(X+ paddingInfo+15, Y + 7);
 //			Canvas.StrLen("Ping:     ", xLen, yLen);
-			xLen = 50; //Font is fixed, this should be faster here
+			xLen = 60; //Font is fixed, this should be faster here
 			yLen = 8;
 			Canvas.DrawText("Nukes:"@aPRI.sgInfoWarheadMaker, false);
 		  
@@ -257,7 +257,7 @@ function ShowScores(Canvas Canvas)
 			 Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
 		  
 			// Draw Nuke Fails
-	  		Canvas.DrawColor=getTeamColor[1];
+	  		Canvas.DrawColor=Peach;
 			Canvas.SetPos(X+paddingInfo+15, Y + yLen + 9);
 			Canvas.DrawText("NkFls:"@aPRI.sgInfoWarheadFailCount, false);
 
@@ -274,7 +274,7 @@ function ShowScores(Canvas Canvas)
 			// Draw Effective
 			Canvas.DrawColor=Orange;
 			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 2 * yLen + 11);
-			Canvas.DrawText("Effc:"@Eff[i]$"%", false);
+			Canvas.DrawText("Effn:"@Eff[i]$"%", false);
 	  	
 			// Kills && Points
 			Canvas.Font = PtsFont16;
@@ -583,6 +583,8 @@ defaultproperties
 	 White=(R=255,G=255,B=255)
 	 Pink=(R=242,G=128,B=249)
 	 Orange=(R=255,G=128)
+	 Peach=(R=248,G=184,B=179)
+	 Purple=(R=177,G=156,B=217)
 	 getHeaderColor(0)=(R=32)
 	 getHeaderColor(1)=(B=16)
 	 getHeaderColor(2)=(G=32)
