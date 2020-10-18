@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_0032);
+class SiegeGI extends TeamGamePlus config(SiegeIV_FWBv1);
 
 const SGS = class'SiegeStatics';
 
