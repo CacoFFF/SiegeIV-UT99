@@ -22,7 +22,7 @@ var SiegeStatPlayer NextStat;
 
 
 var float InfoCoreDamage, InfoCoreRepair, InfoBuildingDamage, InfoUpgradeRepair;
-var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy, InfoWarheadFail, InfoMineFrag;
+var int	InfoKill, InfoBuild, InfoWarheadBuild, InfoWarheadDestroy, InfoWarheadFail, InfoMineFrag, InfoPlayerCoreDmg;
 
 var int CarryingWarheads;
 
@@ -85,7 +85,7 @@ function UpdateData()
 	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
 	PRI.sgInfoWarheadFailCount = InfoWarheadFail;
 	PRI.sgInfoMineFrags = InfoMineFrag;
-	PRI.sgInfoCoreDmg = int(InfoCoreDamage);
+	PRI.sgInfoCoreDmg = InfoPlayerCoreDmg;
 	Team = PRI.Team;
 	RU = PRI.RU;
 	Score = PRI.Score;
@@ -106,7 +106,7 @@ function RestoreData()
 	PRI.sgInfoWarheadKiller = InfoWarheadDestroy;
 	PRI.sgInfoWarheadFailCount = InfoWarheadFail;
 	PRI.sgInfoMineFrags = InfoMineFrag;
-	PRI.sgInfoCoreDmg = int(InfoCoreDamage);
+	PRI.sgInfoCoreDmg = InfoPlayerCoreDmg;
 	PRI.RU = RU;
 	PRI.Score = Score;
 	PRI.Deaths = Deaths;
@@ -330,6 +330,11 @@ function WarheadFailEvent(int Change)
 function MineFragEvent(int Change)
 {
 	InfoMineFrag += Change;
+}
+
+function PlayerCoreDmgEvent(float Change)
+{
+	InfoPlayerCoreDmg =  int(InfoPlayerCoreDmg + Change);
 }
 
 

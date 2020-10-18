@@ -327,7 +327,10 @@ simulated event TakeDamage( int Damage, Pawn instigatedBy, Vector hitLocation, V
 		Energy -= actualDamage;
 		Stat = class'SiegeStatics'.static.GetPlayerStat( instigatedBy );
 		if ( Stat != None )
+		{
 			Stat.CoreDamageEvent( actualDamage);
+			Stat.PlayerCoreDmgEvent((actualDamage / MaxEnergy) * 100.0);
+		}
 		Spawn(class'sgFlash');
 	}
 

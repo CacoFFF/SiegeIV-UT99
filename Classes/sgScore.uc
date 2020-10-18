@@ -248,7 +248,7 @@ function ShowScores(Canvas Canvas)
 			// Draw Time
 			Canvas.DrawColor=White;
 			Time = Max(1, (Level.TimeSeconds + PlayerPawn(Owner).PlayerReplicationInfo.StartTime - aPRI.StartTime)/60);
-			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 7);
+			Canvas.SetPos(X+xLen+paddingInfo+20, Y + 7);
 			Canvas.DrawText(TimeString$":"@Time, false);
 			
 			 // Draw Core Dmg
@@ -263,7 +263,7 @@ function ShowScores(Canvas Canvas)
 
 			// Draw Deaths
 			Canvas.DrawColor=getTeamColor[0];
-			Canvas.SetPos(X+xLen+paddingInfo+15, Y + yLen + 9);
+			Canvas.SetPos(X+xLen+paddingInfo+20, Y + yLen + 9);
 			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
 
 			// Draw Mine Frags
@@ -272,14 +272,14 @@ function ShowScores(Canvas Canvas)
 			Canvas.DrawText("MnFrg:"@aPRI.sgInfoMineFrags, false);
 
 	  		// Draw Nuke Kills
-	  		Canvas.DrawColor=getTeamColor[2];
+	  		Canvas.DrawColor=getTeamColor[1];
 			Canvas.SetPos(X+paddingInfo+15, Y + 2 * yLen + 11);
 			Canvas.DrawText("NkKls:"@aPRI.sgInfoWarheadKiller, false);
 		  
 			// Draw Effective
 			Canvas.DrawColor=Orange;
-			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 2 * yLen + 11);
-			Canvas.DrawText("Effn:"@Eff[i]$"%", false);
+			Canvas.SetPos(X+xLen+paddingInfo+20, Y + 2 * yLen + 11);
+			Canvas.DrawText("Eff :"@Eff[i]$"%", false);
 
 			// Draw Buildings
 			Canvas.DrawColor=getTeamColor[2];
