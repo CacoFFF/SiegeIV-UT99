@@ -239,38 +239,42 @@ function ShowScores(Canvas Canvas)
 		  
 			// Draw Nukes
 	  		Canvas.DrawColor=getTeamColor[3];
-			Canvas.SetPos(X+ paddingInfo+40, Y + 7);
+			Canvas.SetPos(X+ paddingInfo+15, Y + 7);
 //			Canvas.StrLen("Ping:     ", xLen, yLen);
-			xLen = 60; //Font is fixed, this should be faster here
+			xLen = 50; //Font is fixed, this should be faster here
 			yLen = 8;
 			Canvas.DrawText("Nukes:"@aPRI.sgInfoWarheadMaker, false);
 		  
 			// Draw Time
 			Canvas.DrawColor=White;
 			Time = Max(1, (Level.TimeSeconds + PlayerPawn(Owner).PlayerReplicationInfo.StartTime - aPRI.StartTime)/60);
-			Canvas.SetPos(X+xLen+paddingInfo+40, Y + 7);
+			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 7);
 			Canvas.DrawText(TimeString$":"@Time, false);
+			
+			 // Draw Buildings
+			 Canvas.DrawColor=getTeamColor[2];
+			 Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + 7);
+			 Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
 		  
-			// Draw Nuke Takedowns
+			// Draw Nuke Fails
 	  		Canvas.DrawColor=getTeamColor[1];
-			Canvas.SetPos(X+paddingInfo+40, Y + yLen + 9);
-			Canvas.DrawText("NkKls:"@aPRI.sgInfoWarheadKiller, false);
-	  	
-			// Deaths && Eff
-			 // Draw Deaths
+			Canvas.SetPos(X+paddingInfo+15, Y + yLen + 9);
+			Canvas.DrawText("NkFls:"@aPRI.sgInfoWarheadFailCount, false);
+
+			// Draw Deaths
 			Canvas.DrawColor=getTeamColor[0];
-			Canvas.SetPos(X+xLen+paddingInfo+40, Y + yLen + 9);
+			Canvas.SetPos(X+xLen+paddingInfo+15, Y + yLen + 9);
 			Canvas.DrawText("Dths:"@int(aPRI.Deaths), false); //@sgPRI(PRI).sgInfoKiller
 			
-	  		  // Draw Buildings
+	  		// Draw Nuke Kills
 	  		Canvas.DrawColor=getTeamColor[2];
-			Canvas.SetPos(X+paddingInfo+40, Y + 2 * yLen + 11);
-			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+			Canvas.SetPos(X+paddingInfo+15, Y + 2 * yLen + 11);
+			Canvas.DrawText("NkKls:"@aPRI.sgInfoWarheadKiller, false);
 		  
 			// Draw Effective
 			Canvas.DrawColor=Orange;
-			Canvas.SetPos(X+xLen+paddingInfo+40, Y + 2 * yLen + 11);
-			Canvas.DrawText("Eff:"@Eff[i]$"%", false);
+			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 2 * yLen + 11);
+			Canvas.DrawText("Effc:"@Eff[i]$"%", false);
 	  	
 			// Kills && Points
 			Canvas.Font = PtsFont16;
