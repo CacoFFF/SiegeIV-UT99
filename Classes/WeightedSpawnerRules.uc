@@ -61,6 +61,7 @@ function FullParse( WeightedItemSpawner Other)
 		}
 		j++;
 	}
+	j = 0;
 	For ( i=0 ; i<ArrayCount(SpecialInventoryList) ; i++ )
 	{
 		if ( InventoryList[i] == "" )
