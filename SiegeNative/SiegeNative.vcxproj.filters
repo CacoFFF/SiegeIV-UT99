@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{151f17c4-3bc7-49b5-b8ef-a826eec1f88c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc">
+      <UniqueIdentifier>{be46ebe9-99c3-4cb2-8d87-20271c6e9a73}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Src\SiegeNative.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Inc\SiegeNative.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\SiegeNativeClasses.h">
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgBaseBuildRule.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgBuilding.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgBuildRuleCount.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgCategoryInfo.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgPlayerData.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgPRI.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgProtector.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\sgTranslocator.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\UtilClasses.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
