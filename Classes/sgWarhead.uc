@@ -58,7 +58,7 @@ function Destruct( optional pawn instigatedBy)
 	local sgPRI aPRI;
 	local SiegeGI Game;
 	local byte KillerTeam;
-	local SiegeStatPlayer Stat;
+	local SiegeStatPlayer Stat, VictimStat;
 	
 	Game = SiegeGI(Level.Game);
 	KillerTeam = class'SiegeStatics'.static.GetTeam(instigatedBy, Team);
@@ -78,8 +78,11 @@ function Destruct( optional pawn instigatedBy)
 		}
 		
 		Stat = SGS.static.GetPlayerStat( instigatedBy );
+		VictimStat = SGS.static.GetPlayerStat(Pawn(Owner));
 		if ( Stat != None )
 			Stat.WarheadDestroyEvent( 1 );
+		if (VictimStat != None)
+			VictimStat.WarheadFailEvent(1);
 	}
 	Super.Destruct( instigatedBy);
 }
