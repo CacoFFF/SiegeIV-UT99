@@ -28,22 +28,19 @@ public:
 	{
 		((AActorHook*)Owner)->ServerPlaySound( AltFireSound, SLOT_Misc, 4.0f * ((APawn*)Owner)->SoundDampening);
 		GetLevel()->DestroyActor( TTarget, false);
-		TTarget = NULL;
+		TTarget = nullptr;
 	}
 
 	DECLARE_FUNCTION(execAltFire);
 };
 
 
-static UClass* sgTranslocator_class = NULL;
+static UClass* sgTranslocator_class = nullptr;
 
 //sgTranslocator is preloaded by SiegeGI, finding it is enough
 static void Setup_sgTranslocator( UPackage* SiegePackage, ULevel* MyLevel)
 {
-	sgTranslocator_class = NULL;
-	
-	PRELOAD_CLASS(sgTranslocator,SiegePackage);
-	check( sgTranslocator_class != NULL);
+	sgTranslocator_class = GetClass( SiegePackage, TEXT("sgTranslocator"));
 	HOOK_SCRIPT_FUNCTION(sgTranslocator,AltFire);
 }
 
@@ -80,7 +77,7 @@ void sgTranslocator::execAltFire( FFrame& Stack, RESULT_DECL)
 		FVector ALocation = Location;
 		if ( Physics == PHYS_None )
 			ALocation.Z += Owner->CollisionHeight;
-		FCheckResult* Hit = GetLevel()->Hash->ActorEncroachmentCheck( GMem, Owner, ALocation, Rotation, 0 );
+		FCheckResult* Hit = GetLevel()->Hash->ActorEncroachmentCheck( GMem, Owner, ALocation, Rotation, TRACE_Pawns, 0 );
 		while ( Hit )
 		{
 			if ( Hit->Actor && Hit->Actor->IsA(sgBuilding_class) && ((sgBuilding*)(Hit->Actor))->Team != OwnerTeam )

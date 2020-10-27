@@ -10,11 +10,23 @@ public:
 	FLOAT RUinvested;
 	class sgPRI* OwnerPRI;
 	class sgBuildingVolume* MyVolume;
-	INT BlockedReachSpecs[3]; //TArray<INT>
-	INT iBlockPoll;
-	class ANavigationPoint* N;
+	class sgBuildingCH* CollisionHull;
+	FVector InitialLocation;
+	FLOAT BaseEnergy;
+	INT TimerCount;
+	INT PackedFlags;
+	// Flags:
+	// 0x00000003 = Team (2 bytes)
+	// 0x00000004 = bDisabledByEMP
+	// 0x00000008 = bSmokeStatus
+	// 0x00000010 = bIsOnFire
+	// 0x00000020 = bNoRemove
+	// 0x00000040 = bOnlyOwnerRemove
 
-	FLOAT SCount, TotalScount, GS;
+	class ANavigationPoint* N;
+	class EffectsPool* EffectsPool;
+
+	FLOAT SCount, TotalScount;
 	class sgMeshFX* myFX;
 	INT			 Team;
 	BITFIELD	DoneBuilding:1 GCC_PACK(4);
@@ -23,8 +35,7 @@ public:
 	FLOAT ScaleBox; //Scale a build'd collision once it's up and working
 
 	// vars for fire and EMP stuff
-	BITFIELD	bReplicateEMP:1 GCC_PACK(4);
-	BITFIELD	bReplicateMFX:1;
+	BITFIELD	bReplicateMFX:1 GCC_PACK(4);
 	BITFIELD	bDisabledByEMP:1;
 	BITFIELD	bIsOnFire:1;
 	class APawn* TehIncinerator GCC_PACK(4);
@@ -36,22 +47,34 @@ public:
 	class sg_XC_Orb* XC_Orb;
 
 	// Building's Attributes
-	FStringNoInit            BuildingName;
-	INT               BuildCost,UpgradeCost;
-	FLOAT             BuildTime,MaxEnergy;
-	FLOAT Energy,		 RuRewardScale,        Grade;
+	FStringNoInit BuildingName;
+	INT   BuildCost,UpgradeCost;
+	FLOAT BuildTime,MaxEnergy;
+	FLOAT Energy, RuRewardScale, Grade;
 	FLOAT BuildDistance;
-	BITFIELD	bCanTakeOrb:1 GCC_PACK(4);
-	BITFIELD	bOnlyOwnerRemove:1;
-	BITFIELD	bNoRemove:1; //Cannot be removed
-	BITFIELD	bStandable:1; //Used to prevent translocators from bouncing here
-	BITFIELD	bBlocksPath:1; //Blocks pathing
+	union
+	{
+		struct
+		{
+			BITFIELD bCanTakeOrb:1;
+			BITFIELD bOnlyOwnerRemove:1;
+			BITFIELD bTournamentTeamRemove:1;
+			BITFIELD bNoRemove:1; //Cannot be removed
+			BITFIELD bNoUpgrade:1;
+			BITFIELD bNoFractionUpgrade:1;
+			BITFIELD bStandable:1; //Used to prevent translocators from bouncing here
+			BITFIELD bDragable:1;
+			BITFIELD bExpandsTeamSpawn:1; //Increases PlayerStart's chance of being used
+		};
+		BITFIELD BIT_bOnlyOwnerRemove;
+		BITFIELD BIT_bNoUpgrade;
+	};
 
 	// Building's Apperance
 	FLOAT SpriteScale GCC_PACK(4);
 
 	class UMesh* Model;
-	INT VisualData[8];
+	PTRINT VisualData[8];
 //	class UTexture* SkinRedTeam, SkinBlueTeam, SkinGreenTeam, SkinYellowTeam;
 //	class UTexture* SpriteRedTeam, SpriteBlueTeam, SpriteGreenTeam, SpriteYellowTeam;
 	FLOAT DSofMFX;
@@ -60,13 +83,25 @@ public:
 	BYTE MFXFatness;
 	class UTexture* GUI_Icon;
 
-	BITFIELD	bNoUpgrade:1 GCC_PACK(4);
-	BITFIELD	bNoFractionUpgrade:1;
-	BITFIELD	bNoNotify:1;
-	BITFIELD	bNotifyDestroyed:1;
-	BITFIELD	bNotifyCreated:1;
-	BITFIELD	bSmokeStatus:1;
-	class sgSmokeGenerator* MyGen GCC_PACK(4);
+	union
+	{
+		struct
+		{
+			BITFIELD	bNoNotify:1;
+			BITFIELD	bNotifyDestroyed:1;
+			BITFIELD	bNotifyCreated:1;
+			BITFIELD	bSmokeStatus:1;
+		};
+		BITFIELD BIT_bNoNotify;
+	};
+	class sgSmokeGenerator* MyGen;
+
+	// Collision Hull damage
+	APawn* LastDamageInstigator;
+	FName LastDamageType;
+	INT LastDamageAmount;
+	UBOOL bLastDamageFromHull;
+
 	BYTE DestructionAnnounce;
 
 	
@@ -83,92 +118,72 @@ public:
 
 	DECLARE_FUNCTION(execTick);
 	NO_DEFAULT_CONSTRUCTOR(sgBuilding);
-	
-	static void InternalConstructor( void* X )
-	{	new( (EInternal*)X )sgBuilding();	}
+	DEFINE_SIEGENATIVE_CLASS(sgBuilding);
 
-	static UProperty* ST_BuildTime;
-	static UProperty* ST_MaxEnergy;
-	static UProperty* ST_Energy;
-	static UProperty* ST_SCount;
-	static UProperty* ST_TotalScount;
-	static UProperty* ST_GS;
-	static UProperty* ST_Grade;
-	static UProperty* ST_Team;
-	static UProperty* ST_OwnerPRI;
-	static UProperty* ST_iRULeech;
-	static UProperty* ST_bSmokeStatus;
-	static UProperty* ST_bNoRemove;
-	static UProperty* ST_bOnlyOwnerRemove;
-	static UProperty* ST_bDisabledByEMP;
-	static UProperty* ST_UpgradeCost;
-	static UProperty* ST_bNoUpgrade;
-	static UProperty* ST_DSofMFX;
-	static UProperty* ST_MFXFatness;
-	static UProperty* ST_NumOfMFX;
-	static UProperty* ST_MFXrotX;
-	static UProperty* ST_Model;
+	static INT ST_BuildTime;
+	static INT ST_MaxEnergy;
+	static INT ST_Energy;
+	static INT ST_SCount;
+	static INT ST_TotalScount;
+	static INT ST_Grade;
+	static INT ST_OwnerPRI;
+	static INT ST_iRULeech;
+	static INT ST_PackedFlags;
+	static INT ST_UpgradeCost;
+	static INT ST_bNoUpgrade;
+	static INT ST_DSofMFX;
+	static INT ST_MFXFatness;
+	static INT ST_NumOfMFX;
+	static INT ST_MFXrotX;
+	static INT ST_Model;
 	static void ReloadStatics( UClass* LoadFrom)
 	{
-
 		LOAD_STATIC_PROPERTY(BuildTime, LoadFrom);
 		LOAD_STATIC_PROPERTY(MaxEnergy, LoadFrom);
 		LOAD_STATIC_PROPERTY(Energy, LoadFrom);
 		LOAD_STATIC_PROPERTY(SCount, LoadFrom);
 		LOAD_STATIC_PROPERTY(TotalScount, LoadFrom);
-		LOAD_STATIC_PROPERTY(GS, LoadFrom);
 		LOAD_STATIC_PROPERTY(Grade, LoadFrom);
-		LOAD_STATIC_PROPERTY(Team, LoadFrom);
 		LOAD_STATIC_PROPERTY(OwnerPRI, LoadFrom);
 		LOAD_STATIC_PROPERTY(iRULeech, LoadFrom);
-		LOAD_STATIC_PROPERTY(bSmokeStatus, LoadFrom);
-		LOAD_STATIC_PROPERTY(bNoRemove, LoadFrom);
-		LOAD_STATIC_PROPERTY(bOnlyOwnerRemove, LoadFrom);
-		LOAD_STATIC_PROPERTY(bDisabledByEMP, LoadFrom);
+		LOAD_STATIC_PROPERTY(PackedFlags, LoadFrom);
 		LOAD_STATIC_PROPERTY(UpgradeCost, LoadFrom);
-		LOAD_STATIC_PROPERTY(bNoUpgrade, LoadFrom);
+		LOAD_STATIC_PROPERTY_BIT(bNoUpgrade, LoadFrom);
 		LOAD_STATIC_PROPERTY(DSofMFX, LoadFrom);
 		LOAD_STATIC_PROPERTY(MFXFatness, LoadFrom);
 		LOAD_STATIC_PROPERTY(NumOfMFX, LoadFrom);
 		LOAD_STATIC_PROPERTY(MFXrotX, LoadFrom);
 		LOAD_STATIC_PROPERTY(Model, LoadFrom);
+		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
-UProperty* sgBuilding::ST_BuildTime = NULL;
-UProperty* sgBuilding::ST_MaxEnergy = NULL;
-UProperty* sgBuilding::ST_Energy = NULL;
-UProperty* sgBuilding::ST_SCount = NULL;
-UProperty* sgBuilding::ST_TotalScount = NULL;
-UProperty* sgBuilding::ST_GS = NULL;
-UProperty* sgBuilding::ST_Grade = NULL;
-UProperty* sgBuilding::ST_Team = NULL;
-UProperty* sgBuilding::ST_OwnerPRI = NULL;
-UProperty* sgBuilding::ST_iRULeech = NULL;
-UProperty* sgBuilding::ST_bSmokeStatus = NULL;
-UProperty* sgBuilding::ST_bNoRemove = NULL;
-UProperty* sgBuilding::ST_bOnlyOwnerRemove = NULL;
-UProperty* sgBuilding::ST_bDisabledByEMP = NULL;
-UProperty* sgBuilding::ST_UpgradeCost = NULL;
-UProperty* sgBuilding::ST_bNoUpgrade = NULL;
-UProperty* sgBuilding::ST_DSofMFX = NULL;
-UProperty* sgBuilding::ST_MFXFatness = NULL;
-UProperty* sgBuilding::ST_NumOfMFX = NULL;
-UProperty* sgBuilding::ST_MFXrotX = NULL;
-UProperty* sgBuilding::ST_Model = NULL;
+INT sgBuilding::ST_BuildTime = NULL;
+INT sgBuilding::ST_MaxEnergy = NULL;
+INT sgBuilding::ST_Energy = NULL;
+INT sgBuilding::ST_SCount = NULL;
+INT sgBuilding::ST_TotalScount = NULL;
+INT sgBuilding::ST_Grade = NULL;
+INT sgBuilding::ST_OwnerPRI = NULL;
+INT sgBuilding::ST_iRULeech = NULL;
+INT sgBuilding::ST_PackedFlags = NULL;
+INT sgBuilding::ST_UpgradeCost = NULL;
+INT sgBuilding::ST_bNoUpgrade = NULL;
+INT sgBuilding::ST_DSofMFX = NULL;
+INT sgBuilding::ST_MFXFatness = NULL;
+INT sgBuilding::ST_NumOfMFX = NULL;
+INT sgBuilding::ST_MFXrotX = NULL;
+INT sgBuilding::ST_Model = NULL;
 
-static UClass* sgBuilding_class = NULL;
+static UClass* sgBuilding_class = nullptr;
 
 //sgBuilding is preloaded by SiegeGI, finding it is enough
 static void Setup_sgBuilding( UPackage* SiegePackage, ULevel* MyLevel)
 {
-	sgBuilding_class = NULL;
-	
-	FIND_PRELOADED_CLASS(sgBuilding,SiegePackage);
-	check( sgBuilding_class != NULL);
+	sgBuilding_class = GetClass( SiegePackage, TEXT("sgBuilding"));
 	PROPAGATE_CLASS_NATIVEREP(sgBuilding);
 	HOOK_SCRIPT_FUNCTION(sgBuilding,Tick);
-	sgBuilding::ReloadStatics( sgBuilding_class);
+	sgBuilding::ReloadStatics(sgBuilding_class);
 }
 
 void sgBuilding::execTick( FFrame& Stack, RESULT_DECL)
@@ -177,7 +192,7 @@ void sgBuilding::execTick( FFrame& Stack, RESULT_DECL)
 
 	//Classify our node's execution stack
 	UFunction* F = Cast<UFunction>(Stack.Node);
-	FLOAT DeltaTime = 0.f;
+	FLOAT DeltaTime;
 
 	//Called via ProcessEvent >>> Native to Script
 	if ( F && F->Func == (Native)&sgBuilding::execTick )
@@ -197,8 +212,6 @@ void sgBuilding::execTick( FFrame& Stack, RESULT_DECL)
 			bBuildInitialized = true;
 			eventPostBuild();
 		}
-//		if ( iBlockPoll >= 0 )
-//			PollBlock();
 	}
 	
 	//TickRate independant, keep sane timer values if tickrate gets messed up
@@ -208,6 +221,13 @@ void sgBuilding::execTick( FFrame& Stack, RESULT_DECL)
 		eventTimer();
 	}
 	
+	if ( CollisionHull && CollisionHull->bStatic )
+	{
+		CollisionHull->bStatic = false;
+		CollisionHull->eventTick(DeltaTime);
+		CollisionHull->bStatic = true;
+	}
+
 	unguard;
 }
 
@@ -216,7 +236,7 @@ INT* sgBuilding::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire,
 	guard(sgBuilding::GetOptimizedRepList);
 	if ( bNetInitial || NumReps & 1 ) //Half frequency
 		Ptr = APawn::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgBuilding_class != NULL);
+	check(sgBuilding_class);
 	if( sgBuilding_class->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
@@ -227,10 +247,9 @@ INT* sgBuilding::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire,
 				DOREP(sgBuilding,BuildTime);
 				DOREP(sgBuilding,SCount); //High frequency SCount
 				DOREP(sgBuilding,TotalScount);
-				DOREP(sgBuilding,GS);
 			}
-			if ( bReplicateEMP )
-				DOREP(sgBuilding,bDisabledByEMP);
+			DOREP(sgBuilding,PackedFlags);
+
 			//Initial replication
 			if ( bNetInitial )
 			{
@@ -253,19 +272,15 @@ INT* sgBuilding::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire,
 				DOREP(sgBuilding,MaxEnergy);
 				if ( !bNoUpgrade )
 					DOREP(sgBuilding,Grade);
-				DOREP(sgBuilding,Team);
 				if ( SCount <= 0 )
 					DOREP(sgBuilding,SCount); //SCount at lower frequency once finishes
 				if ( OwnerPRI )
 					DOREP(sgBuilding,OwnerPRI); //Never replicate 'NULL', not necessary
-				DOREP(sgBuilding,bSmokeStatus);
 
 				UNetConnection* Conn = ((UPackageMapLevel*)Map)->Connection;
 				if ( Conn->Actor && Conn->Actor->PlayerReplicationInfo && (Conn->Actor->PlayerReplicationInfo->Team == Team) )
 				{
 					DOREP(sgBuilding,iRULeech);
-					DOREP(sgBuilding,bNoRemove);
-					DOREP(sgBuilding,bOnlyOwnerRemove);
 				}
 			}
 		}

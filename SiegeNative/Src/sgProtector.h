@@ -30,15 +30,12 @@ public:
 };
 
 
-static UClass* sgProtector_class = NULL;
+static UClass* sgProtector_class = nullptr;
 
 //sgProtector is preloaded by SiegeGI, finding it is enough
 static void Setup_sgProtector( UPackage* SiegePackage, ULevel* MyLevel)
 {
-	sgProtector_class = NULL;
-	
-	FIND_PRELOADED_CLASS(sgProtector,SiegePackage);
-	check( sgProtector_class != NULL);
+	sgProtector_class = GetClass( SiegePackage, TEXT("sgProtector"));
 	HOOK_SCRIPT_FUNCTION(sgProtector,FindTeamTarget);
 }
 
@@ -52,7 +49,7 @@ void sgProtector::execFindTeamTarget( FFrame& Stack, RESULT_DECL)
 	
 	FLOAT DistSq = Dist*Dist;
 	FLOAT BestDistSq = DistSq;
-	*(APawn**)Result = NULL;
+	*(APawn**)Result = nullptr;
 	
 	if ( ScanCycle == 3 )
 	{
@@ -69,7 +66,8 @@ void sgProtector::execFindTeamTarget( FFrame& Stack, RESULT_DECL)
 	}
 	else
 	{
-		if ( Level->Game->IsA(SiegeClass) && (((DWORD)Level->Game)+SGI_Cores_Offset+4*aTeam) ) //Cores[aTeam] == None
+		APawn** Cores = (APawn**) (((PTRINT)Level->Game) + SGI_Cores_Offset);
+		if ( Level->Game->IsA(SiegeClass) && Cores[aTeam] )
 			return;
 		for ( APawn* P=Level->PawnList ; P ; P=P->nextPawn )
 			if ( P->bCollideActors )

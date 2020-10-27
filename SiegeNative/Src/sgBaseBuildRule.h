@@ -17,35 +17,31 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgBaseBuildRule);
-	
-	static void InternalConstructor( void* X )
-	{	new( (EInternal*)X )sgBaseBuildRule();	}
+	DEFINE_SIEGENATIVE_CLASS(sgBaseBuildRule)
 
-	static UProperty* ST_RuleName;
-	static UProperty* ST_Team;
-	static UProperty* ST_AppliedOn;
+	static INT ST_RuleName;
+	static INT ST_Team;
+	static INT ST_AppliedOn;
 	static void ReloadStatics( UClass* LoadFrom)
 	{
 		LOAD_STATIC_PROPERTY(RuleName, LoadFrom);
 		LOAD_STATIC_PROPERTY(Team, LoadFrom);
 		LOAD_STATIC_PROPERTY(AppliedOn, LoadFrom);
+		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
-UProperty* sgBaseBuildRule::ST_RuleName = NULL;
-UProperty* sgBaseBuildRule::ST_Team = NULL;
-UProperty* sgBaseBuildRule::ST_AppliedOn = NULL;
+INT sgBaseBuildRule::ST_RuleName = NULL;
+INT sgBaseBuildRule::ST_Team = NULL;
+INT sgBaseBuildRule::ST_AppliedOn = NULL;
 
 
-static UClass* sgBaseBuildRule_class = NULL;
+static UClass* sgBaseBuildRule_class = nullptr;
 
 //sgBaseBuildRule is preloaded by SiegeGI, finding it is enough
 static void Setup_sgBaseBuildRule( UPackage* SiegePackage, ULevel* MyLevel)
 {
-	sgBaseBuildRule_class = NULL;
-	
-	FIND_PRELOADED_CLASS(sgBaseBuildRule,SiegePackage);
-	check( sgBaseBuildRule_class != NULL);
+	sgBaseBuildRule_class = GetClass( SiegePackage, TEXT("sgBaseBuildRule"));
 	PROPAGATE_CLASS_NATIVEREP(sgBaseBuildRule);
 	sgBaseBuildRule::ReloadStatics( sgBaseBuildRule_class);
 }
@@ -56,7 +52,7 @@ INT* sgBaseBuildRule::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Re
 	guard(sgBaseBuildRule::GetOptimizedRepList);
 	if ( bNetInitial )
 		Ptr = AActor::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgBaseBuildRule_class != NULL);
+	check(sgBaseBuildRule_class);
 	if( sgBaseBuildRule_class->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )

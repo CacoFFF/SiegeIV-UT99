@@ -36,7 +36,7 @@ public:
 	//UObject interface
 	void InitExecution();
 	
-    DECLARE_CLASS(ASiegeNativeActor,AInfo,/*RF_Keep*/0,SiegeNative)
+    DECLARE_CLASS(ASiegeNativeActor,AInfo,0,SiegeNative)
     NO_DEFAULT_CONSTRUCTOR(ASiegeNativeActor)
 };
 

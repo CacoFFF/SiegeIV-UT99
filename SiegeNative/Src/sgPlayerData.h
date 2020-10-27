@@ -6,20 +6,34 @@ class sgPlayerData : public AReplicationInfo
 {
 public:
 	APawn* POwner;
-	APlayerPawn* PPOwner;
 	FLOAT BaseEyeHeight;
+	FLOAT SoundDampening;
+	FLOAT MaxStepHeight;
 	INT OwnerID;
-	sgPRI* OwnerPRI;
+	class sgPRI* OwnerPRI;
 	class SiegeGI* SiegeGame;
+	class XC_MovementAffector* MA_List;
 	INT RealHealth;
 	FVector LastRepLoc;
 	FLOAT LastRepLocTime;
-	BITFIELD bReplicateLoc:1 GCC_PACK(4);
-	BITFIELD bReplicateHealth:1;
-	BITFIELD bHudEnforceHealth:1;
-	BITFIELD bClientXCGEHash:1;
-	UEngine* ClientEngine GCC_PACK(4);
+	union
+	{
+		struct
+		{
+			BITFIELD bReplicateLoc:1;
+			BITFIELD bReplicateHealth:1;
+			BITFIELD bHudEnforceHealth:1;
+			BITFIELD bClientXCGEHash:1;
+			BITFIELD bForceMovement:1;
+			BITFIELD bSpawnProtected:1;
+		};
+		BITFIELD BIT_bSpawnProtected;
+	};
 
+	class SpawnProtEffect* SPEffect GCC_PACK(4);
+	UEngine* ClientEngine;
+
+	AActor* DebugAttachment[8];
 
 	//AActor interface, native netcode
 	virtual INT* GetOptimizedRepList( BYTE* InDefault, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps );
@@ -28,68 +42,95 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgPlayerData);
-	
-	static void InternalConstructor( void* X )
-	{	new( (EInternal*)X )sgPlayerData();	}
+	DEFINE_SIEGENATIVE_CLASS(sgPlayerData)
 
-	static UProperty* ST_BaseEyeHeight;
-	static UProperty* ST_RealHealth;
-	static UProperty* ST_OwnerID;
+	static INT ST_BaseEyeHeight;
+	static INT ST_RealHealth;
+	static INT ST_SoundDampening;
+	static INT ST_MaxStepHeight;
+	static INT ST_OwnerID;
+	static INT ST_bSpawnProtected;
 	static void ReloadStatics( UClass* LoadFrom)
 	{
 		LOAD_STATIC_PROPERTY(BaseEyeHeight, LoadFrom);
 		LOAD_STATIC_PROPERTY(RealHealth, LoadFrom);
+		LOAD_STATIC_PROPERTY(SoundDampening, LoadFrom);
+		LOAD_STATIC_PROPERTY(MaxStepHeight, LoadFrom);
 		LOAD_STATIC_PROPERTY(OwnerID, LoadFrom);
+		LOAD_STATIC_PROPERTY_BIT(bSpawnProtected, LoadFrom);
+		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
-UProperty* sgPlayerData::ST_BaseEyeHeight = NULL;
-UProperty* sgPlayerData::ST_RealHealth = NULL;
-UProperty* sgPlayerData::ST_OwnerID = NULL;
+INT sgPlayerData::ST_BaseEyeHeight = NULL;
+INT sgPlayerData::ST_RealHealth = NULL;
+INT sgPlayerData::ST_SoundDampening = NULL;
+INT sgPlayerData::ST_MaxStepHeight = NULL;
+INT sgPlayerData::ST_OwnerID = NULL;
+INT sgPlayerData::ST_bSpawnProtected = NULL;
 
-static UClass* sgPlayerData_class = NULL;
+static UClass* sgPlayerData_class = nullptr;
 
 //sgPlayerData is preloaded by SiegeGI, finding it is enough
 static void Setup_sgPlayerData( UPackage* SiegePackage, ULevel* MyLevel)
 {
-	sgPlayerData_class = NULL;
-	
-	FIND_PRELOADED_CLASS(sgPlayerData,SiegePackage);
-	check( sgPlayerData_class != NULL);
+	sgPlayerData_class = GetClass( SiegePackage, TEXT("sgPlayerData"));
 	SETUP_CLASS_NATIVEREP(sgPlayerData);
-	sgPlayerData::ReloadStatics( sgPlayerData_class);
+	sgPlayerData::ReloadStatics(sgPlayerData_class);
 }
 
 //This function isn't called if bNetInitial or Dirty has data to send
 UBOOL sgPlayerData::NoVariablesToReplicate( AActor *OldVer)
 {
-	if ( BaseEyeHeight != ((sgPlayerData*)OldVer)->BaseEyeHeight )
-		return 0;
-	if ( bReplicateHealth && (RealHealth == ((sgPlayerData*)OldVer)->RealHealth) )
-		return 0;
-	return 1;
+	sgPlayerData* Old = ((sgPlayerData*)OldVer);
+	if ( BaseEyeHeight != Old->BaseEyeHeight )
+		return false;
+	if ( bReplicateHealth && (RealHealth != Old->RealHealth) )
+		return false;
+	if ( bNetOwner && (SoundDampening != Old->SoundDampening || MaxStepHeight != Old->MaxStepHeight) )
+		return false;
+	return true;
 }
 
+/*
+	unreliable if ( !bNetOwner && Role==ROLE_Authority )
+		BaseEyeHeight;
+	unreliable if ( !bNetOwner && bReplicateHealth && Role==ROLE_Authority )
+		RealHealth;
+	unreliable if ( bNetOwner && Role==ROLE_Authority )
+		SoundDampening, MaxStepHeight;
+	reliable if ( Role==ROLE_Authority )
+		OwnerID, bSpawnProtected;
+*/
 
 INT* sgPlayerData::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps )
 {
 	guard(sgPlayerData::GetOptimizedRepList);
 	if ( bNetInitial )
 		Ptr = AReplicationInfo::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgPlayerData_class != NULL);
+	check(sgPlayerData_class);
 	if( sgPlayerData_class->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{
-			if ( bNetInitial || (NumReps % 64 == 0) )
+			if ( bNetInitial || (NumReps % 16 == 0) )
 				DOREP(sgPlayerData,OwnerID);
-			if ( !bNetOwner )
+			DOREP(sgPlayerData,bSpawnProtected);
+
+			// Only replicate modifiers if owner is relevant
+			if ( !Owner || Map->CanSerializeObject(Owner) )
 			{
-				if ( Owner && !Owner->bAlwaysRelevant && !Map->CanSerializeObject(Owner) )
-					return Ptr; //Deny replicating if owner isn't relevant
-				DOREP(sgPlayerData,BaseEyeHeight);
-				if ( bReplicateHealth )
-					DOREP(sgPlayerData,RealHealth)
+				if ( bNetOwner )
+				{
+					DOREP(sgPlayerData,MaxStepHeight);
+					DOREP(sgPlayerData,SoundDampening);
+				}
+				else
+				{
+					DOREP(sgPlayerData,BaseEyeHeight);
+					if ( bReplicateHealth )
+						DOREP(sgPlayerData,RealHealth)
+				}
 			}
 		}
 	}

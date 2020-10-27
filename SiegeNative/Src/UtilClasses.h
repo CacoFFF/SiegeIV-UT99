@@ -24,6 +24,17 @@ public:
 };
 
 
+class sgBuildingCH : public AMover
+{
+public:
+	BITFIELD bLocalHull:1 GCC_PACK(4);
+	BITFIELD bTransmitDamage:1;
+	class sgBuilding* MyBuild;
+
+	FLOAT RelX, RelY, RelZ;
+	FVector RelativePosition;
+};
+
 
 void AActorHook::FastGotoState( FName S, FName L)
 {
@@ -37,7 +48,6 @@ void AActorHook::FastGotoState( FName S, FName L)
 		GotoLabel( L==NAME_None ? NAME_Begin : L );
 }
 
-#pragma DISABLE_OPTIMIZATION
 void AActorHook::ServerPlaySound( USound* Sound, BYTE Slot, FLOAT Volume, UBOOL bNoOverride, FLOAT Radius, FLOAT Pitch)
 {
 	guard(AActorHook::ServerPlaySound);
@@ -66,4 +76,3 @@ void AActorHook::ServerPlaySound( USound* Sound, BYTE Slot, FLOAT Volume, UBOOL 
 			CheckHearSound(Hearer, Id, Sound, Parameters,RadiusSquared);
 	unguard;
 }
-#pragma ENABLE_OPTIMIZATION

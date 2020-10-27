@@ -31,6 +31,7 @@
     <OutDir>.\Release\</OutDir>
     <IntDir>.\Release\</IntDir>
     <LinkIncremental>true</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -52,6 +53,9 @@
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <SDLCheck>false</SDLCheck>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ControlFlowGuard>false</ControlFlowGuard>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -75,6 +79,7 @@
       <OutputFile>..\System\SiegeNative.dll</OutputFile>
       <ImportLibrary>.\Lib\SiegeNative.lib</ImportLibrary>
       <AdditionalDependencies>..\Core\Lib\Core.lib;..\Engine\Lib\Engine.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EnableUAC>false</EnableUAC>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
