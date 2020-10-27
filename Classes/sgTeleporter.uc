@@ -35,8 +35,8 @@ var float LastFired;
 
 replication
 {
-    reliable if( Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
-        URL1, TargetLoc, TelenetLoc;
+    reliable if( Role==ROLE_Authority )
+        URL1, TargetLoc, TelenetLoc; //SiegeNative: team only
 }
 
 

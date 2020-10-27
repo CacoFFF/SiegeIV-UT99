@@ -50,7 +50,6 @@ var byte sColors[20];
 var byte iHistory;
 
 var Pawn PushedBy;
-var XC_ReplicationNotify RepNotify;
 var SiegeStatPlayer Stat;
 
 //Remove protection
@@ -74,10 +73,9 @@ var sgAIqueuer AIQueuer;
 
 replication
 {
-	reliable if ( (Role == ROLE_Authority) && (bNetOwner || class'XC_ReplicationNotify'.static.ReplicateVar(Team)) )
-		RU;
 	reliable if ( Role == ROLE_Authority )
-		/*RU,*/ XC_Orb, Orb, sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller, sgInfoWarheadFailCount, sgInfoMineFrags, sgInfoCoreDmg, CountryPrefix, bReadyToPlay, bHideIdentify, Orders;
+		RU, Orders, // SiegeNative: spectators and team only
+		XC_Orb, Orb, sgInfoKiller, sgInfoBuildingMaker, sgInfoWarheadMaker, sgInfoWarheadKiller, sgInfoWarheadFailCount, sgInfoMineFrags, sgInfoCoreDmg, CountryPrefix, bReadyToPlay, bHideIdentify;
 	reliable if ( Role == ROLE_Authority )
 		ReceiveMessage, RequestFingerPrint, ClientReceiveRU;
 	reliable if ( Role < ROLE_Authority )
@@ -95,8 +93,6 @@ event PostBeginPlay()
 event Destroyed()
 {
 	Super.Destroyed();
-	if ( RepNotify != None )
-		RepNotify.Destroy();
 	Stat = None;
 }
 
@@ -209,9 +205,6 @@ state ServerOp
 			SendFingerPrint("LOCALPLAYER_"$PlayerID);
 			Owner.Spawn(class'sgClient');
 		}
-		//Remote Player
-		else if ( NetConnection(PlayerPawn(Owner).Player) != None )
-			RepNotify = Spawn( class'XC_ReplicationNotify', self);
 	}
 	
 Begin:
@@ -240,8 +233,6 @@ state ServerSpectatorOp
 	
 	function LocalInit()
 	{
-		if ( NetConnection(Spectator(Owner).Player) != None )
-			RepNotify = Spawn( class'XC_ReplicationNotify', self);
 	}
 	
 Begin:

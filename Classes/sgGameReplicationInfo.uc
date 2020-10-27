@@ -32,15 +32,9 @@ replication
 		StatTop_Name, StatTop_Team, StatTop_Value,
 		bTeamDrag;
 		
-	// Reverendously ugly but secure.
-	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(0) )
-		Nukers_Red;
-	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(1) )
-		Nukers_Blue;
-	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(2) )
-		Nukers_Green;
-	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(3) )
-		Nukers_Yellow;
+	// SiegeNative: spectators and team only
+	reliable if ( !bNetInitial && Role==ROLE_Authority )
+		Nukers_Red, Nukers_Blue, Nukers_Green, Nukers_Yellow;
 }
 
 

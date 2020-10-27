@@ -32,7 +32,9 @@ replication
 {
 	reliable if ( ROLE==ROLE_Authority )
 		Team;
-	reliable if ( !bNetInitial && Role==ROLE_Authority && class'XC_ReplicationNotify'.static.ReplicateVar(Team) )
+	
+	// SiegeNative: spectators and team only
+	reliable if ( !bNetInitial && Role==ROLE_Authority )
 		BuildingNetworth, CarriedNetworth, ItemNetworth, EventCodes, CurrentIndex, MaxTotalNetworth, MaxTeamNetworth;
 }
 
