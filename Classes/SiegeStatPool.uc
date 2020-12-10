@@ -44,6 +44,13 @@ function SiegeStatPlayer LocateFingerPrint( SiegeStatPlayer List, string FP)
 	return List;
 }
 
+function UpdatePlayerStats()
+{
+	local SiegeStatPlayer Stat;
+	
+	for ( Stat=Active; Stat!=None; Stat=Stat.NextStat)
+		Stat.UpdateData();
+}
 
 
 defaultproperties
