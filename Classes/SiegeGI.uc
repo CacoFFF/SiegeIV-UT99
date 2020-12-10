@@ -2138,6 +2138,7 @@ function SetHulls( bool bEnable)
 
 function LogSiegeSummary()
 {
+	local SiegeStatPlayer SSP;
 	local StatLogFile file;
 	local int i;
 	local string space;
@@ -2151,9 +2152,9 @@ function LogSiegeSummary()
 	if ( SiegeGI(Level.Game) != None ) 
 	{
 		if(FreeBuild)
-			file.FileLog("FreeBuild");
+			file.FileLog(" FreeBuild");
 		else 
-			file.FileLog("Regular");
+			file.FileLog(" Regular");
 
 		// Map name
 		file.FileLog(""@String(Outer.Name));
@@ -2171,11 +2172,11 @@ function LogSiegeSummary()
 		}
 
 		// Player Stats
-		ForEach AllActors( class'sgPRI', aPRI) 
+		ForEach AllActors(class'SiegeStatPlayer', SSP) 
 		{
-			if( !aPRI.bIsSpectator ) 
+			if( SSP.Score != 0 ) 
 			{
-				file.FileLog(""@aPRI.PlayerName$space@aPRI.Team$space@aPRI.Score$space@aPRI.sgInfoKiller$space@aPRI.sgInfoWarheadMaker$space@aPRI.sgInfoWarheadFailCount$space@aPRI.sgInfoWarheadKiller$space@aPRI.Deaths$space@aPRI.sgInfoCoreDmg$space@aPRI.sgInfoMineFrags$space@aPRI.sgInfoBuildingMaker$space@aPRI.CountryPrefix);
+				file.FileLog(""@SSP.ExportText());
 			}			
 		}
 	}
