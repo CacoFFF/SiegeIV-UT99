@@ -604,6 +604,8 @@ function EndGame( string Reason)
 	local int i;
 	local sgBuildRuleCount RuleCounts;
 
+	StatPool.UpdatePlayerStats();
+	
 	bOldOverTime = bOverTime;
 	Super.EndGame( Reason);
 	if ( !bOldOverTime && bOverTime )

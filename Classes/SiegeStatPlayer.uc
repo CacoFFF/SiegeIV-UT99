@@ -17,6 +17,8 @@ var SiegeStatPool Pool;
 var Pawn Player;
 var string MyFP; //Quick fingerprint access
 var byte Team;
+var string PlayerName;
+var string CountryPrefix;
 
 var SiegeStatPlayer NextStat;
 
@@ -71,6 +73,9 @@ function UpdateData()
 	local sgPRI PRI;
 	local int OldCarryingWarheads;
 	
+	if ( Player == None || Player.bDeleteMe )
+		return;
+	
 	OldCarryingWarheads = CarryingWarheads;
 	CarryingWarheads = SGS.static.GetAmmoAmount( Player, class'WarheadAmmo');
 	if ( (CarryingWarheads != OldCarryingWarheads) && (sgGameReplicationInfo(Level.Game.GameReplicationInfo) != None) )
@@ -90,11 +95,14 @@ function UpdateData()
 	RU = PRI.RU;
 	Score = PRI.Score;
 	Deaths = PRI.Deaths;
+	PlayerName = PRI.PlayerName;
+	CountryPrefix = PRI.CountryPrefix;
 }
 
 function RestoreData()
 {
 	local sgPRI PRI;
+	local string Announcement;
 	
 	CarryingWarheads = 0;
 	PRI = sgPRI(Player.PlayerReplicationInfo);
@@ -110,9 +118,21 @@ function RestoreData()
 	PRI.RU = RU;
 	PRI.Score = Score;
 	PRI.Deaths = Deaths;
-//Announce recovery
+
+	//Announce recovery (and player name change)
 	if ( (PRI.RU > 5) && (DeathMatchPlus(Level.Game) != none) && !DeathMatchPlus(Level.Game).bTournament )
-		class'SiegeStatics'.static.AnnounceAll( Pool, "Siege RU-Recovery:"@int(RU)@"RU recovered for"@PRI.PlayerName);
+	{
+		Announcement = "Siege RU-Recovery:"@int(RU)@"RU recovered for"@PRI.PlayerName;
+		if ( PRI.PlayerName != PlayerName )
+			Announcement = Announcement @ "("$PlayerName$")";
+			
+		if ( DeathMatchPlus(Level.Game) != None && DeathMatchPlus(Level.Game).bTournament )
+		{
+			// TODO: Announce to old team
+		}
+		else
+			class'SiegeStatics'.static.AnnounceAll( Pool, Announcement);
+	}
 
 }
 
@@ -337,8 +357,29 @@ function PlayerCoreDmgEvent(float Change)
 	InfoPlayerCoreDmg += Change;
 }
 
+//========================================
+//======= Misc
+//========================================
 
-
+function string ExportText()
+{
+	local string Result;
+	
+	Result = PlayerName          $ Chr(9)
+	       $ Team                $ Chr(9)
+	       $ Score               $ Chr(9)
+	       $ InfoKill            $ Chr(9)
+	       $ InfoWarheadBuild    $ Chr(9)
+	       $ InfoWarheadFail     $ Chr(9)
+	       $ InfoWarheadDestroy  $ Chr(9)
+	       $ Deaths              $ Chr(9)
+	       $ InfoCoreDamage      $ Chr(9)
+	       $ InfoMineFrag        $ Chr(9)
+	       $ InfoBuild           $ Chr(9)
+	       $ CountryPrefix;
+		   
+	return Result;
+}
 
 
 defaultproperties
