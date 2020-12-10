@@ -1568,6 +1568,7 @@ function CoreDestroyed( sgBaseCore Core)
 	if ( remainingTeams <= 1 )
 	{
 		EndGame("teamscorelimit");
+		LogSiegeSummary();
 		return;
 	}
 
@@ -2130,6 +2131,55 @@ function SetHulls( bool bEnable)
 	local sgBuildingCH CH;
 	ForEach AllActors (class'sgBuildingCH', CH)
 		CH.SetCollision(bEnable);
+}
+
+
+function LogSiegeSummary()
+{
+	local StatLogFile file;
+	local int i;
+	local string space;
+	
+	space = " ";
+	file = Spawn(class'StatLogFile');
+	file.StatLogFile = "../Pugs/siege_game_summary.tmp";
+	file.StatLogFinal = "../Pugs/siege_game_summary.log";
+
+	file.OpenLog();
+	if ( SiegeGI(Level.Game) != None ) 
+	{
+		if(FreeBuild)
+			file.FileLog("FreeBuild");
+		else 
+			file.FileLog("Regular");
+
+		// Map name
+		file.FileLog(""@String(Outer.Name));
+		
+		// Remaining Time
+		file.FileLog(""@GameReplicationInfo.RemainingTime);
+
+		// Core Scores
+		for(i = 0; i < 4; i++) 
+		{
+			if(SiegeGI(Level.Game).Teams[i] != None) 
+			{
+				file.FileLog(""@SiegeGI(Level.Game).Teams[i].Score);
+			}
+		}
+
+		// Player Stats
+		ForEach AllActors( class'sgPRI', aPRI) 
+		{
+			if( !aPRI.bIsSpectator ) 
+			{
+				file.FileLog(""@aPRI.PlayerName$space@aPRI.Team$space@aPRI.Score$space@aPRI.sgInfoKiller$space@aPRI.sgInfoWarheadMaker$space@aPRI.sgInfoWarheadFailCount$space@aPRI.sgInfoWarheadKiller$space@aPRI.Deaths$space@aPRI.sgInfoCoreDmg$space@aPRI.sgInfoMineFrags$space@aPRI.sgInfoBuildingMaker$space@aPRI.CountryPrefix);
+			}			
+		}
+	}
+
+	file.FileFlush();
+	file.CloseLog();
 }
 
 defaultproperties
