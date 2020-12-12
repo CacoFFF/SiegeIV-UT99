@@ -605,7 +605,8 @@ function EndGame( string Reason)
 	local sgBuildRuleCount RuleCounts;
 
 	StatPool.UpdatePlayerStats();
-	
+	LogSiegeSummary();
+
 	bOldOverTime = bOverTime;
 	Super.EndGame( Reason);
 	if ( !bOldOverTime && bOverTime )
@@ -1570,7 +1571,6 @@ function CoreDestroyed( sgBaseCore Core)
 	if ( remainingTeams <= 1 )
 	{
 		EndGame("teamscorelimit");
-		LogSiegeSummary();
 		return;
 	}
 
@@ -2141,9 +2141,12 @@ function LogSiegeSummary()
 	local SiegeStatPlayer SSP;
 	local StatLogFile file;
 	local int i;
-	local string space;
-	
-	space = " ";
+	local string sFreeBuild;
+	local string sRegular;
+
+	sFreeBuild = "FreeBuild";
+	sRegular = "Regular";
+
 	file = Spawn(class'StatLogFile');
 	file.StatLogFile = "../Pugs/siege_game_summary.tmp";
 	file.StatLogFinal = "../Pugs/siege_game_summary.log";
@@ -2152,9 +2155,9 @@ function LogSiegeSummary()
 	if ( SiegeGI(Level.Game) != None ) 
 	{
 		if(FreeBuild)
-			file.FileLog(" FreeBuild");
+			file.FileLog(""@sFreeBuild);
 		else 
-			file.FileLog(" Regular");
+			file.FileLog(""@sRegular);
 
 		// Map name
 		file.FileLog(""@String(Outer.Name));
@@ -2180,7 +2183,6 @@ function LogSiegeSummary()
 			}			
 		}
 	}
-
 	file.FileFlush();
 	file.CloseLog();
 }
