@@ -635,8 +635,9 @@ function StartMatch()
 		if ( Cores[i] != none )
 			Cores[i].bCoreDisabled = false;
 
-	sgGameReplicationInfo(GameReplicationInfo).bTeamDrag = bTournament;
-			
+	sgGameReplicationInfo(GameReplicationInfo).bTeamDrag        = bTournament;
+	sgGameReplicationInfo(GameReplicationInfo).bHideEnemyBuilds = bTournament;
+
 	Super.StartMatch();
 }
 

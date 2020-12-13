@@ -21,6 +21,7 @@ var string Nukers_Yellow;
 
 //Global game settings
 var bool bTeamDrag;
+var bool bHideEnemyBuilds;
 
 
 replication
@@ -30,7 +31,7 @@ replication
 	reliable if ( !bNetInitial && Role==ROLE_Authority )
 		MaxRUs,
 		StatTop_Name, StatTop_Team, StatTop_Value,
-		bTeamDrag;
+		bTeamDrag, bHideEnemyBuilds;
 		
 	// SiegeNative: spectators and team only
 	reliable if ( !bNetInitial && Role==ROLE_Authority )

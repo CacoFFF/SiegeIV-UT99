@@ -55,6 +55,7 @@ function ShowScores(Canvas Canvas)
 	local string s;
 	local sgPRI aPRI;
 	local int Cycles;
+	local byte MyTeam;
 
 	if ( sgGRI == None )
 	{
@@ -63,6 +64,10 @@ function ShowScores(Canvas Canvas)
 		return;
 	}
 
+	MyTeam = 255;
+	if ( (PlayerPawn(Owner) != None) && (PlayerPawn(Owner).PlayerReplicationInfo != None) )
+		MyTeam = PlayerPawn(Owner).PlayerReplicationInfo.Team;
+	
 	Cycles = GetCycles();
 
 	if(Canvas.ClipX < 900)
@@ -280,13 +285,22 @@ function ShowScores(Canvas Canvas)
 			// Draw Buildings
 			Canvas.DrawColor=getTeamColor[2];
 			Canvas.SetPos(X+xLen+paddingInfo+15, Y + 2 * yLen + 14);
-			Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
-		  
+			if(sgGRI.bHideEnemyBuilds)					
+			{
+				// If config var is set, we will render Build: 0 for enemy team for viewing consistency purposes
+				if((MyTeam == aPRI.Team) || (MyTeam == 255))
+					Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+				else
+					Canvas.DrawText("Build: 0", false);
+			}
+			else
+				Canvas.DrawText("Build:"@aPRI.sgInfoBuildingMaker, false);
+	  
 			// Draw Effective
 			Canvas.DrawColor=Orange;
 			Canvas.SetPos(X + (2 * xLen) + paddingInfo + 15, Y + 2 * yLen+ 14);
 			Canvas.DrawText("Effn:"@Eff[i]$"%", false);
-	  	
+
 			// Kills && Points
 			Canvas.Font = PtsFont16;
 			Canvas.DrawColor = getTeamColor[aPRI.Team];
