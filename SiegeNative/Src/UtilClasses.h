@@ -23,6 +23,26 @@ public:
 	FLOAT FireStartTime;
 };
 
+class ATournamentGameReplicationInfo : public AGameReplicationInfo
+{
+public:
+	FStringNoInit HumanString, CommanderString, SupportString, DefendString, AttackString, HoldString, FreelanceString;
+	class ATeamInfo* Teams[4];
+
+	INT GoalTeamScore;
+	INT FragLimit;
+	INT TimeLimit;
+
+	INT TotalGames;
+	INT TotalFrags;
+	INT TotalDeaths;
+	INT TotalFlags;
+	FStringNoInit BestPlayers[3];
+	INT BestFPHs[3];
+	FStringNoInit BestRecordDate[3];
+	FStringNoInit SupportStringTrailer;
+};
+
 
 class sgBuildingCH : public AMover
 {

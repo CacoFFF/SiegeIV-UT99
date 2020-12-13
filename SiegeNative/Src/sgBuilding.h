@@ -118,7 +118,7 @@ public:
 
 	DECLARE_FUNCTION(execTick);
 	NO_DEFAULT_CONSTRUCTOR(sgBuilding);
-	DEFINE_SIEGENATIVE_CLASS(sgBuilding);
+	DEFINE_SIEGENATIVE_CLASS(sgBuilding,sgNative::NativeRep);
 
 	static INT ST_BuildTime;
 	static INT ST_MaxEnergy;
@@ -154,7 +154,11 @@ public:
 		LOAD_STATIC_PROPERTY(NumOfMFX, LoadFrom);
 		LOAD_STATIC_PROPERTY(MFXrotX, LoadFrom);
 		LOAD_STATIC_PROPERTY(Model, LoadFrom);
-		VERIFY_CLASS_SIZE(LoadFrom);
+	}
+
+	static void InitDerived( UClass* Class)
+	{
+		HOOK_SCRIPT_FUNCTION(sgBuilding,Tick);
 	}
 };
 
@@ -174,17 +178,6 @@ INT sgBuilding::ST_MFXFatness = NULL;
 INT sgBuilding::ST_NumOfMFX = NULL;
 INT sgBuilding::ST_MFXrotX = NULL;
 INT sgBuilding::ST_Model = NULL;
-
-static UClass* sgBuilding_class = nullptr;
-
-//sgBuilding is preloaded by SiegeGI, finding it is enough
-static void Setup_sgBuilding( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgBuilding_class = GetClass( SiegePackage, TEXT("sgBuilding"));
-	PROPAGATE_CLASS_NATIVEREP(sgBuilding);
-	HOOK_SCRIPT_FUNCTION(sgBuilding,Tick);
-	sgBuilding::ReloadStatics(sgBuilding_class);
-}
 
 void sgBuilding::execTick( FFrame& Stack, RESULT_DECL)
 {
@@ -236,8 +229,7 @@ INT* sgBuilding::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire,
 	guard(sgBuilding::GetOptimizedRepList);
 	if ( bNetInitial || NumReps & 1 ) //Half frequency
 		Ptr = APawn::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgBuilding_class);
-	if( sgBuilding_class->ClassFlags & CLASS_NativeReplication )
+	if( StaticClass()->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{

@@ -1,6 +1,6 @@
 //Utilitary file for all sgBaseBuildRule hooks
 
-class sgBaseBuildRule : public AInfo
+class sgBaseBuildRule : public AInfo, public sgNative::Base
 {
 public:
 	FStringNoInit RuleString;			//String used to create this rule
@@ -17,7 +17,7 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgBaseBuildRule);
-	DEFINE_SIEGENATIVE_CLASS(sgBaseBuildRule)
+	DEFINE_SIEGENATIVE_CLASS(sgBaseBuildRule,sgNative::NativeRep)
 
 	static INT ST_RuleName;
 	static INT ST_Team;
@@ -27,7 +27,6 @@ public:
 		LOAD_STATIC_PROPERTY(RuleName, LoadFrom);
 		LOAD_STATIC_PROPERTY(Team, LoadFrom);
 		LOAD_STATIC_PROPERTY(AppliedOn, LoadFrom);
-		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
@@ -35,25 +34,12 @@ INT sgBaseBuildRule::ST_RuleName = NULL;
 INT sgBaseBuildRule::ST_Team = NULL;
 INT sgBaseBuildRule::ST_AppliedOn = NULL;
 
-
-static UClass* sgBaseBuildRule_class = nullptr;
-
-//sgBaseBuildRule is preloaded by SiegeGI, finding it is enough
-static void Setup_sgBaseBuildRule( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgBaseBuildRule_class = GetClass( SiegePackage, TEXT("sgBaseBuildRule"));
-	PROPAGATE_CLASS_NATIVEREP(sgBaseBuildRule);
-	sgBaseBuildRule::ReloadStatics( sgBaseBuildRule_class);
-}
-
-
 INT* sgBaseBuildRule::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps )
 {
 	guard(sgBaseBuildRule::GetOptimizedRepList);
 	if ( bNetInitial )
 		Ptr = AActor::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgBaseBuildRule_class);
-	if( sgBaseBuildRule_class->ClassFlags & CLASS_NativeReplication )
+	if( StaticClass()->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{

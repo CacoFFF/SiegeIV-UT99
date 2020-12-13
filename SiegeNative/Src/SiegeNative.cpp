@@ -73,12 +73,52 @@ inline bool FASTCALL NEQ( BITFIELD A, BITFIELD B, UPackageMap* Map)
 	Entry point methods.
 -----------------------------------------------------------------------------*/
 
+namespace sgNative
+{
+	constexpr DWORD None        = 0x0000;
+	constexpr DWORD VfTable     = 0x0001;
+	constexpr DWORD NativeRep   = 0x0002;
+
+	struct Base
+	{
+		static void InitDerived( UClass* Class) {}
+		static void ReloadStatics( UClass* Class) {}
+	};
+};
+
+static UPackage* SiegePackage = nullptr;
 static UClass* SiegeClass = nullptr;
 static PTRINT SGI_Cores_Offset = 0;
 
-#define DEFINE_SIEGENATIVE_CLASS(newclass) \
+#define DEFINE_SIEGENATIVE_CLASS(newclass,options) \
 	typedef newclass ThisClass; \
-	static void InternalConstructor( void* X ) { new( (EInternal*)X )newclass(); }
+	static void InternalConstructor( void* X ) { new( (EInternal*)X )newclass(); } \
+	static UClass*& StaticClass() { static UClass* InternalClass=nullptr; return InternalClass; } \
+	\
+	static UClass* InitClass() \
+	{	\
+		UClass* Class = StaticClass() = ::GetClass( TEXT(#newclass)); \
+		if ( Class ) \
+		{	\
+			if ( options & (sgNative::VfTable|sgNative::NativeRep) ) \
+			{ \
+				if ( options & sgNative::NativeRep ) \
+					Class->ClassFlags |= CLASS_NativeReplication; \
+				Class->ClassConstructor = newclass::InternalConstructor; \
+				for ( TObjectIterator<UClass> It; It; ++It ) \
+					if ( It->IsChildOf(Class) ) \
+						It->ClassConstructor = newclass::InternalConstructor; \
+			} \
+			Class->Bind(); \
+			if ( sizeof(ThisClass) != (PTRINT)Class->PropertiesSize ) \
+				appErrorf(TEXT("Class %s size mismatch: Script=%i C++=%i"), Class->GetName(), (INT)Class->PropertiesSize, sizeof(ThisClass)); \
+			InitDerived(Class); \
+			ReloadStatics(Class); \
+		}	\
+		else	\
+			appErrorf( TEXT("SiegeNative: Class %s not found."), TEXT(#newclass) ); \
+		return Class; \
+	}
 
 #define LOAD_STATIC_PROPERTY(prop,onclass) \
 	{ \
@@ -104,51 +144,14 @@ static PTRINT SGI_Cores_Offset = 0;
 		ST_##prop = Property->RepIndex; \
 	}
 
-#undef VERIFY_CLASS_SIZE
-#define VERIFY_CLASS_SIZE(onclass) \
-	onclass->Bind(); \
-	if ( sizeof(ThisClass) != (PTRINT)onclass->PropertiesSize ) \
-		appErrorf(TEXT("Class %s size mismatch: Script=%i C++=%i"), onclass->GetName(), (INT)onclass->PropertiesSize, sizeof(ThisClass));
-
-
-//Macro: find a class in a package, store in static variable: [classname]_class
-#define FIND_PRELOADED_CLASS(clname,onpackage) \
-	{for ( TObjectIterator<UClass> It; It; ++It ) \
-		if ( (It->GetOuter() == onpackage) && !appStricmp(It->GetName(),TEXT(#clname)) )	\
-		{	\
-			clname##_class = *It;	\
-			break;	\
-	}	}
-	
-//Macro: load a class in a package, store in static variable: [classname]_class
-#define PRELOAD_CLASS(clname,onpackage) \
-	clname##_class = UObject::StaticLoadClass( UObject::StaticClass(), onpackage, TEXT(#clname), NULL, LOAD_NoWarn | LOAD_Quiet, NULL)
-//	static UClass* StaticLoadClass( UClass* BaseClass, UObject* InOuter, const TCHAR* Name, const TCHAR* Filename, DWORD LoadFlags, UPackageMap* Sandbox );
-
-//Macro: Make class able to use NativeReplication features
-#define SETUP_CLASS_NATIVEREP(clname) \
-	if ( clname##_class->ClassConstructor != clname::InternalConstructor ) \
-	{ \
-		clname##_class->ClassConstructor = clname::InternalConstructor; \
-		clname##_class->ClassFlags |= CLASS_NativeReplication; \
-	}
-
-//Macro: Make this class and it's derivate inherit this NativeReplication
-//Other classes loaded after this macro will inherit ClassConstructor
-#define PROPAGATE_CLASS_NATIVEREP(clname) \
-	{ clname##_class->ClassFlags |= CLASS_NativeReplication; \
-	for ( TObjectIterator<UClass> It; It; ++It ) \
-		if ( It->IsChildOf(clname##_class) ) \
-			It->ClassConstructor = clname::InternalConstructor; \
-	}
-	
-
-static UClass* GetClass( UPackage* Package, const TCHAR* ClassName)
+static UClass* GetClass( const TCHAR* ClassName)
 {
 //	debugf( NAME_SiegeNative, TEXT("Loading class %s"), ClassName);
-	UClass* Result = FindObject<UClass>( Package, ClassName, true);
+	if ( !SiegePackage )
+		appErrorf( TEXT("SiegeNative: SiegePackage not loaded"));
+	UClass* Result = FindObject<UClass>( SiegePackage, ClassName, true);
 	if ( !Result )
-		Result = LoadClass<AActor>( Package, ClassName, TEXT(""), 0, nullptr);
+		Result = LoadClass<AActor>( SiegePackage, ClassName, TEXT(""), 0, nullptr);
 	if ( !Result )
 		appErrorf( TEXT("SiegeNative: unable to load class %s"), ClassName );
 	return Result;
@@ -195,7 +198,7 @@ protected:
 
 //Macro: Make this script function become a native function
 #define HOOK_SCRIPT_FUNCTION(clname,funcname) \
-	{ for ( TStrictFieldIterator<UFunction> It(clname##_class) ; It ; ++It ) \
+	{ for ( TStrictFieldIterator<UFunction> It(clname::StaticClass()) ; It ; ++It ) \
 		if ( !appStricmp(It->GetName(),TEXT(#funcname)) ) \
 		{	It->Func = (Native)&clname::exec##funcname; \
 			It->FunctionFlags |= FUNC_Native; \
@@ -223,8 +226,18 @@ UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
 	unguardf( (PropName) );
 }
 
+/*-----------------------------------------------------------------------------
+	Other utils
+-----------------------------------------------------------------------------*/
+	
+static inline APlayerReplicationInfo* GetPRI( UNetConnection* Connection)
+{
+	APlayerPawn* PlayerPawn = Connection->Actor;
+	return PlayerPawn ? PlayerPawn->PlayerReplicationInfo : nullptr;
+}
 
 #include "UtilClasses.h"
+#include "sgGameReplicationInfo.h"
 #include "sgPRI.h"
 #include "sgCategoryInfo.h"
 #include "sgBuilding.h"
@@ -233,6 +246,7 @@ UProperty* FindStrictScriptVariable( UStruct* InStruct, const TCHAR* PropName)
 #include "sgBuildRuleCount.h"
 #include "sgPlayerData.h"
 #include "sgTranslocator.h"
+
 
 //
 // First function called upon actor spawn.
@@ -275,15 +289,16 @@ void ASiegeNativeActor::InitExecution()
 		SGI_Cores_Offset = FindStrictScriptVariable( SiegeClass, TEXT("Cores"))->Offset;
 
 		//Setup individual classes
-		UPackage* SiegePackage = (UPackage*) SiegeClass->GetOuter();
-		Setup_sgPRI				( SiegePackage, GetLevel());
-		Setup_sgCategoryInfo	( SiegePackage, GetLevel());
-		Setup_sgBuilding		( SiegePackage, GetLevel());
-		Setup_sgProtector		( SiegePackage, GetLevel());
-		Setup_sgBaseBuildRule	( SiegePackage, GetLevel());
-		Setup_sgBuildRuleCount	( SiegePackage, GetLevel());
-		Setup_sgPlayerData		( SiegePackage, GetLevel());
-		Setup_sgTranslocator	( SiegePackage, GetLevel());
+		SiegePackage = (UPackage*) SiegeClass->GetOuter();
+		sgGameReplicationInfo::InitClass();
+		sgPRI::InitClass();
+		sgCategoryInfo::InitClass();
+		sgBuilding::InitClass();
+		sgProtector::InitClass();
+		sgBaseBuildRule::InitClass();
+		sgBuildRuleCount::InitClass();
+		sgPlayerData::InitClass();
+		sgTranslocator::InitClass();
 		debugf( NAME_SiegeNative, TEXT("Initialization complete") );
 	}
 

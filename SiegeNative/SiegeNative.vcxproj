@@ -92,6 +92,7 @@
     <ClInclude Include="Src\sgBuilding.h" />
     <ClInclude Include="Src\sgBuildRuleCount.h" />
     <ClInclude Include="Src\sgCategoryInfo.h" />
+    <ClInclude Include="Src\sgGameReplicationInfo.h" />
     <ClInclude Include="Src\sgPlayerData.h" />
     <ClInclude Include="Src\sgPRI.h" />
     <ClInclude Include="Src\sgProtector.h" />

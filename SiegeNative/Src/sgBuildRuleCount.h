@@ -32,7 +32,7 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgBuildRuleCount);
-	DEFINE_SIEGENATIVE_CLASS(sgBuildRuleCount)
+	DEFINE_SIEGENATIVE_CLASS(sgBuildRuleCount,sgNative::NativeRep)
 	
 	static INT ST_TargetTimer;
 	static INT ST_BuildCount;
@@ -55,7 +55,6 @@ public:
 		LOAD_STATIC_PROPERTY_BIT(bPersistantTimer, LoadFrom);
 		LOAD_STATIC_PROPERTY_BIT(bOvertime, LoadFrom);
 		LOAD_STATIC_PROPERTY(MyTimer, LoadFrom);
-		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
@@ -69,18 +68,6 @@ INT sgBuildRuleCount::ST_bOnceOnly = NULL;
 INT sgBuildRuleCount::ST_bPersistantTimer = NULL;
 INT sgBuildRuleCount::ST_bOvertime = NULL;
 INT sgBuildRuleCount::ST_MyTimer = NULL;
-
-
-static UClass* sgBuildRuleCount_class = nullptr;
-
-//sgBuildRuleCount is preloaded by SiegeGI, finding it is enough
-static void Setup_sgBuildRuleCount( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgBuildRuleCount_class = GetClass( SiegePackage, TEXT("sgBuildRuleCount"));
-	SETUP_CLASS_NATIVEREP(sgBuildRuleCount);
-	sgBuildRuleCount::ReloadStatics(sgBuildRuleCount_class);
-}
-
 
 
 /*
@@ -99,8 +86,7 @@ INT* sgBuildRuleCount::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* R
 {
 	guard(sgBuildRuleCount::GetOptimizedRepList);
 	Ptr = sgBaseBuildRule::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgBuildRuleCount_class);
-	if( sgBuildRuleCount_class->ClassFlags & CLASS_NativeReplication )
+	if( StaticClass()->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{
