@@ -605,7 +605,8 @@ function EndGame( string Reason)
 	local sgBuildRuleCount RuleCounts;
 
 	StatPool.UpdatePlayerStats();
-	LogSiegeSummary();
+	if(bTournament)
+		LogSiegeSummary();
 
 	bOldOverTime = bOverTime;
 	Super.EndGame( Reason);
