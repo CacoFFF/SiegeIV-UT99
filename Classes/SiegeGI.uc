@@ -3,7 +3,7 @@
 // * Extended by WILDCARD
 // * Optimized and improved by Higor
 //=============================================================================
-class SiegeGI extends TeamGamePlus config(SiegeIV_FWBv1);
+class SiegeGI extends TeamGamePlus config(SiegeIV_FWBv1a);
 
 const SGS = class'SiegeStatics';
 
@@ -605,7 +605,9 @@ function EndGame( string Reason)
 	local sgBuildRuleCount RuleCounts;
 
 	StatPool.UpdatePlayerStats();
-	
+	if(bTournament)
+		LogSiegeSummary();
+
 	bOldOverTime = bOverTime;
 	Super.EndGame( Reason);
 	if ( !bOldOverTime && bOverTime )
@@ -2133,6 +2135,58 @@ function SetHulls( bool bEnable)
 	local sgBuildingCH CH;
 	ForEach AllActors (class'sgBuildingCH', CH)
 		CH.SetCollision(bEnable);
+}
+
+
+function LogSiegeSummary()
+{
+	local SiegeStatPlayer SSP;
+	local StatLogFile file;
+	local int i;
+	local string sFreeBuild;
+	local string sRegular;
+
+	sFreeBuild = "FreeBuild";
+	sRegular = "Regular";
+
+	file = Spawn(class'StatLogFile');
+	file.StatLogFile = "../Pugs/siege_game_summary.tmp";
+	file.StatLogFinal = "../Pugs/siege_game_summary.log";
+
+	file.OpenLog();
+	if ( SiegeGI(Level.Game) != None ) 
+	{
+		if(FreeBuild)
+			file.FileLog(""@sFreeBuild);
+		else 
+			file.FileLog(""@sRegular);
+
+		// Map name
+		file.FileLog(""@String(Outer.Name));
+		
+		// Remaining Time
+		file.FileLog(""@GameReplicationInfo.RemainingTime);
+
+		// Core Scores
+		for(i = 0; i < 4; i++) 
+		{
+			if(SiegeGI(Level.Game).Teams[i] != None) 
+			{
+				file.FileLog(""@SiegeGI(Level.Game).Teams[i].Score);
+			}
+		}
+
+		// Player Stats
+		ForEach AllActors(class'SiegeStatPlayer', SSP) 
+		{
+			if( SSP.Score != 0 ) 
+			{
+				file.FileLog(""@SSP.ExportText());
+			}			
+		}
+	}
+	file.FileFlush();
+	file.CloseLog();
 }
 
 defaultproperties
