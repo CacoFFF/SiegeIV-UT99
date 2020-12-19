@@ -1,6 +1,6 @@
 //Utilitary file for all sgCategoryInfo hooks
 
-class sgCategoryInfo : public AReplicationInfo
+class sgCategoryInfo : public AReplicationInfo, public sgNative::Base
 {
 public:
 	// Native replication tag
@@ -39,7 +39,7 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgCategoryInfo);
-	DEFINE_SIEGENATIVE_CLASS(sgCategoryInfo);
+	DEFINE_SIEGENATIVE_CLASS(sgCategoryInfo,sgNative::NativeRep);
 
 	static INT ST_iBuilds;
 	static INT ST_Team;
@@ -65,7 +65,6 @@ public:
 		LOAD_STATIC_PROPERTY(NetCategoryWeight, LoadFrom);
 		LOAD_STATIC_PROPERTY(NetCategoryMaxWeight, LoadFrom);
 		LOAD_STATIC_PROPERTY(NetCatIcons, LoadFrom);
-		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
@@ -82,24 +81,12 @@ INT sgCategoryInfo::ST_NetCategoryMaxWeight = 0;
 INT sgCategoryInfo::ST_NetCatIcons = 0;
 
 
-static UClass* sgCategoryInfo_class = nullptr;
-
-//sgCategoryInfo is preloaded by SiegeGI, finding it is enough
-static void Setup_sgCategoryInfo( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgCategoryInfo_class = GetClass( SiegePackage, TEXT("sgCategoryInfo"));;
-	SETUP_CLASS_NATIVEREP(sgCategoryInfo);
-	sgCategoryInfo::ReloadStatics( sgCategoryInfo_class);
-}
-
-
 INT* sgCategoryInfo::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps )
 {
 	guard(sgCategoryInfo::GetOptimizedRepList);
 	if ( bNetInitial )
 		Ptr = AReplicationInfo::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgCategoryInfo_class);
-	if( sgCategoryInfo_class->ClassFlags & CLASS_NativeReplication )
+	if( StaticClass()->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{

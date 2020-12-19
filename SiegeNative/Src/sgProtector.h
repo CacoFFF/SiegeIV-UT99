@@ -27,17 +27,12 @@ public:
 	}
 	
 	DECLARE_FUNCTION(execFindTeamTarget);
+
+	void InitDerived( UClass* Class)
+	{
+		HOOK_SCRIPT_FUNCTION(sgProtector,FindTeamTarget);
+	}
 };
-
-
-static UClass* sgProtector_class = nullptr;
-
-//sgProtector is preloaded by SiegeGI, finding it is enough
-static void Setup_sgProtector( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgProtector_class = GetClass( SiegePackage, TEXT("sgProtector"));
-	HOOK_SCRIPT_FUNCTION(sgProtector,FindTeamTarget);
-}
 
 void sgProtector::execFindTeamTarget( FFrame& Stack, RESULT_DECL)
 {
