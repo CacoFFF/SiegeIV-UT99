@@ -1,6 +1,6 @@
 //Utilitary file for all sgPRI hooks
 
-class sgPRI : public APlayerReplicationInfo
+class sgPRI : public APlayerReplicationInfo, public sgNative::Base
 {
 public:
 	INT sgInfoKiller;
@@ -69,7 +69,7 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgPRI);
-	DEFINE_SIEGENATIVE_CLASS(sgPRI)
+	DEFINE_SIEGENATIVE_CLASS(sgPRI,sgNative::NativeRep)
 	
 	static INT ST_sgInfoKiller;
 	static INT ST_sgInfoBuildingMaker;
@@ -99,9 +99,9 @@ public:
 		LOAD_STATIC_PROPERTY(Orders, LoadFrom);
 		LOAD_STATIC_PROPERTY(RU, LoadFrom);
 		LOAD_STATIC_PROPERTY_BIT(bHideIdentify, LoadFrom);
-		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
+
 
 INT sgPRI::ST_sgInfoKiller = 0;
 INT sgPRI::ST_sgInfoBuildingMaker = 0;
@@ -118,22 +118,11 @@ INT sgPRI::ST_RU = 0;
 INT sgPRI::ST_bHideIdentify = 0;
 
 
-static UClass* sgPRI_class = nullptr;
-
-//sgPRI is preloaded by SiegeGI, finding it is enough
-static void Setup_sgPRI( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgPRI_class = GetClass( SiegePackage, TEXT("sgPRI"));
-	SETUP_CLASS_NATIVEREP(sgPRI);
-	sgPRI::ReloadStatics(sgPRI_class);
-}
-
 INT* sgPRI::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT* Ptr, UPackageMap* Map, INT NumReps )
 {
 	guard(sgPRI::GetOptimizedRepList);
 	Ptr = APlayerReplicationInfo::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgPRI_class);
-	if( sgPRI_class->ClassFlags & CLASS_NativeReplication )
+	if( sgPRI::StaticClass()->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{
@@ -149,24 +138,23 @@ INT* sgPRI::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retire, INT*
 				DOREP(sgPRI,sgInfoCoreDmg);
 				if ( IpToCountry )
 					DOREP(sgPRI,CountryPrefix);
+
+				APlayerReplicationInfo* PRI = GetPRI( ((UPackageMapLevel*)Map)->Connection );
+				UBOOL bSameTeam = PRI && (PRI->bIsSpectator || PRI->Team == Team);
+
+				if ( bSameTeam )
+				{
+					DOREP(sgPRI,Orders);
+					DOREP(sgPRI,RU);
+				}
+				if ( bSameTeam || !sgGameReplicationInfo::GLOBAL_bHideEnemyBuilds )
+				{
+					DOREP(sgPRI,sgInfoBuildingMaker);
+				}
+
 			}
 			if ( bNetOwner )
 				DOREP(sgPRI,XC_Orb);
-
-			UNetConnection* Conn = ((UPackageMapLevel*)Map)->Connection;
-			if ( Conn->Actor && Conn->Actor->PlayerReplicationInfo )
-			{
-				if ( Conn->Actor->PlayerReplicationInfo->bIsSpectator || (Conn->Actor->PlayerReplicationInfo->Team == Team) )
-				{
-					if ( bNetOwner || NumReps % 4 == 0 ) //No need to spam RU updates if core is simulating
-					{
-						DOREP(sgPRI,Orders);
-						DOREP(sgPRI,RU);
-					}
-				}
-				else
-					DOREP(sgPRI,bHideIdentify);
-			}
 		}
 	}
 	return Ptr;

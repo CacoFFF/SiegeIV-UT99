@@ -2,7 +2,7 @@
 
 
 //Designed to be bAlwaysRelevant
-class sgPlayerData : public AReplicationInfo
+class sgPlayerData : public AReplicationInfo, public sgNative::Base
 {
 public:
 	APawn* POwner;
@@ -42,7 +42,7 @@ public:
 //	virtual UBOOL ShouldDoScriptReplication() {return 1;}
 
 	NO_DEFAULT_CONSTRUCTOR(sgPlayerData);
-	DEFINE_SIEGENATIVE_CLASS(sgPlayerData)
+	DEFINE_SIEGENATIVE_CLASS(sgPlayerData,sgNative::NativeRep)
 
 	static INT ST_BaseEyeHeight;
 	static INT ST_RealHealth;
@@ -58,7 +58,6 @@ public:
 		LOAD_STATIC_PROPERTY(MaxStepHeight, LoadFrom);
 		LOAD_STATIC_PROPERTY(OwnerID, LoadFrom);
 		LOAD_STATIC_PROPERTY_BIT(bSpawnProtected, LoadFrom);
-		VERIFY_CLASS_SIZE(LoadFrom);
 	}
 };
 
@@ -68,16 +67,6 @@ INT sgPlayerData::ST_SoundDampening = NULL;
 INT sgPlayerData::ST_MaxStepHeight = NULL;
 INT sgPlayerData::ST_OwnerID = NULL;
 INT sgPlayerData::ST_bSpawnProtected = NULL;
-
-static UClass* sgPlayerData_class = nullptr;
-
-//sgPlayerData is preloaded by SiegeGI, finding it is enough
-static void Setup_sgPlayerData( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgPlayerData_class = GetClass( SiegePackage, TEXT("sgPlayerData"));
-	SETUP_CLASS_NATIVEREP(sgPlayerData);
-	sgPlayerData::ReloadStatics(sgPlayerData_class);
-}
 
 //This function isn't called if bNetInitial or Dirty has data to send
 UBOOL sgPlayerData::NoVariablesToReplicate( AActor *OldVer)
@@ -108,8 +97,7 @@ INT* sgPlayerData::GetOptimizedRepList( BYTE* Recent, FPropertyRetirement* Retir
 	guard(sgPlayerData::GetOptimizedRepList);
 	if ( bNetInitial )
 		Ptr = AReplicationInfo::GetOptimizedRepList(Recent,Retire,Ptr,Map,NumReps);
-	check(sgPlayerData_class);
-	if( sgPlayerData_class->ClassFlags & CLASS_NativeReplication )
+	if( sgPlayerData::StaticClass()->ClassFlags & CLASS_NativeReplication )
 	{
 		if( Role==ROLE_Authority )
 		{

@@ -1,6 +1,6 @@
 //Utilitary file for sgTranslocator hooks
 
-class sgTranslocator : public TournamentWeapon
+class sgTranslocator : public TournamentWeapon, public sgNative::Base
 {
 public:
 //	class TranslocatorTarget* TTarget;
@@ -31,18 +31,16 @@ public:
 		TTarget = nullptr;
 	}
 
+	NO_DEFAULT_CONSTRUCTOR(sgTranslocator);
+	DEFINE_SIEGENATIVE_CLASS(sgTranslocator,sgNative::None)
 	DECLARE_FUNCTION(execAltFire);
+
+	static void InitDerived( UClass* Class)
+	{
+		HOOK_SCRIPT_FUNCTION(sgTranslocator,AltFire);
+	}
 };
 
-
-static UClass* sgTranslocator_class = nullptr;
-
-//sgTranslocator is preloaded by SiegeGI, finding it is enough
-static void Setup_sgTranslocator( UPackage* SiegePackage, ULevel* MyLevel)
-{
-	sgTranslocator_class = GetClass( SiegePackage, TEXT("sgTranslocator"));
-	HOOK_SCRIPT_FUNCTION(sgTranslocator,AltFire);
-}
 
 void sgTranslocator::execAltFire( FFrame& Stack, RESULT_DECL)
 {
@@ -80,7 +78,7 @@ void sgTranslocator::execAltFire( FFrame& Stack, RESULT_DECL)
 		FCheckResult* Hit = GetLevel()->Hash->ActorEncroachmentCheck( GMem, Owner, ALocation, Rotation, TRACE_Pawns, 0 );
 		while ( Hit )
 		{
-			if ( Hit->Actor && Hit->Actor->IsA(sgBuilding_class) && ((sgBuilding*)(Hit->Actor))->Team != OwnerTeam )
+			if ( Hit->Actor && Hit->Actor->IsA(sgBuilding::StaticClass()) && ((sgBuilding*)(Hit->Actor))->Team != OwnerTeam )
 			{
 				CancelXLoc();
 				Mark.Pop();
