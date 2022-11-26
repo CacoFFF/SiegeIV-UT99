@@ -373,7 +373,7 @@ function string ExportText()
 	       $ InfoWarheadFail     $ Chr(9)
 	       $ InfoWarheadDestroy  $ Chr(9)
 	       $ Deaths              $ Chr(9)
-	       $ InfoCoreDamage      $ Chr(9)
+	       $ InfoPlayerCoreDmg 	 $ Chr(9)
 	       $ InfoMineFrag        $ Chr(9)
 	       $ InfoBuild           $ Chr(9)
 	       $ CountryPrefix;
